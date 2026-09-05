@@ -5,8 +5,12 @@ set -euo pipefail
 # Replaces the old i386 binaries with our 64-bit arm64 build, fixing install names
 # so the dylibs resolve against @loader_path (portable). Same engine as HL2.
 
-BUILD_DIR="/Users/jesus/Desktop/Source-Engine-macos-port/SOURCE-ENGINE-ORIGINAL/source/build"
-PORTAL_DIR="/Users/jesus/Library/Application Support/Steam/steamapps/common/Portal"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="${BUILD_DIR:-$SOURCE_DIR/build}"
+USER_HOME_DIR="$(dscl . -read "/Users/$(id -un)" NFSHomeDirectory | awk '{print $2}')"
+[ -n "$USER_HOME_DIR" ] && [ "$USER_HOME_DIR" != "/" ] || { echo "ERROR: could not resolve the user home directory"; exit 1; }
+PORTAL_DIR="${PORTAL_DIR:-$USER_HOME_DIR/Library/Application Support/Steam/steamapps/common/Portal}"
 BIN_DIR="$PORTAL_DIR/bin"
 HOMEBREW="/opt/homebrew/opt"
 
@@ -16,9 +20,11 @@ SERVER_CACHE="$BUILD_DIR/c4che/game/server_cache.py"
 if ! grep -q "^GAMES = 'portal'$" "$CLIENT_CACHE" 2>/dev/null ||
    ! grep -q "^GAMES = 'portal'$" "$SERVER_CACHE" 2>/dev/null; then
   echo "ERROR: client/server were not configured for Portal."
-  echo "Run: ./scripts/build-macos-arm64.sh"
+  echo "Run: ./scripts/build-macos-arm64.sh portal"
   exit 1
 fi
+
+[ -d "$PORTAL_DIR/portal" ] || { echo "ERROR: Portal not found at $PORTAL_DIR"; exit 1; }
 
 MODULES=(
   "liblauncher.dylib:launcher/liblauncher.dylib"
@@ -68,6 +74,13 @@ for pair in "${THIRDPARTY[@]}"; do
 done
 
 echo "==> Staging all dylibs into $BIN_DIR"
+if [ ! -d "$PORTAL_DIR/backup_bin_i386/bin" ] &&
+   [ -f "$BIN_DIR/engine.dylib" ] &&
+   file "$BIN_DIR/engine.dylib" | grep -q 'i386'; then
+  echo "==> Preserving the original bin directory"
+  mkdir -p "$PORTAL_DIR/backup_bin_i386"
+  cp -R "$BIN_DIR" "$PORTAL_DIR/backup_bin_i386/bin"
+fi
 mkdir -p "$BIN_DIR"
 for pair in "${MODULES[@]}"; do
   name="${pair%%:*}"; rel="${pair#*:}"
@@ -148,7 +161,7 @@ fi
 echo "==> Replacing portal/bin client/server with arm64 versions"
 mkdir -p "$PORTAL_DIR/backup_bin_i386/portalbin"
 for mod in client server; do
-  if [ -f "$PORTAL_DIR/portal/bin/$mod.dylib" ]; then
+  if [ -f "$PORTAL_DIR/portal/bin/$mod.dylib" ] && [ ! -f "$PORTAL_DIR/backup_bin_i386/portalbin/$mod.dylib" ]; then
     cp -f "$PORTAL_DIR/portal/bin/$mod.dylib" "$PORTAL_DIR/backup_bin_i386/portalbin/$mod.dylib"
   fi
   cp -f "$BIN_DIR/lib$mod.dylib" "$PORTAL_DIR/portal/bin/$mod.dylib"

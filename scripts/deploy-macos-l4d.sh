@@ -1,30 +1,36 @@
 #!/bin/bash
 set -euo pipefail
 
-# Deploy the freshly-built arm64 Source Engine into the Half-Life 2 Steam install.
+# Deploy the freshly-built arm64 Source Engine into the Left 4 Dead Steam install.
 # Replaces the old i386 binaries with our 64-bit arm64 build, fixing install names
 # so the dylibs resolve against @loader_path (portable).
+#
+# IMPORTANT: L4D uses its own (evergreen) engine branch. This repo ISN'T that
+# branch, so client/server plugins are the Orange Box game code compiled here.
+# Expect graphics/maps to load but l4d-specific gameplay logic to be missing.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$SOURCE_DIR/build}"
 USER_HOME_DIR="$(dscl . -read "/Users/$(id -un)" NFSHomeDirectory | awk '{print $2}')"
 [ -n "$USER_HOME_DIR" ] && [ "$USER_HOME_DIR" != "/" ] || { echo "ERROR: could not resolve the user home directory"; exit 1; }
-HL2_DIR="${HL2_DIR:-$USER_HOME_DIR/Library/Application Support/Steam/steamapps/common/Half-Life 2}"
-BIN_DIR="$HL2_DIR/bin"
+L4D_DIR="${L4D_DIR:-$USER_HOME_DIR/Library/Application Support/Steam/steamapps/common/left 4 dead}"
+BIN_DIR="$L4D_DIR/bin"
+GAME_BIN_DIR="$L4D_DIR/left4dead/bin"
 HOMEBREW="/opt/homebrew/opt"
 
+# The deployment just stages whatever was built; warn if it wasn't configured
+# for a single-game build, but don't block (we deploy engine + OB game code).
 CLIENT_CACHE="$BUILD_DIR/c4che/game/client_cache.py"
 SERVER_CACHE="$BUILD_DIR/c4che/game/server_cache.py"
-
-if ! grep -q "^GAMES = 'hl2'$" "$CLIENT_CACHE" 2>/dev/null ||
-   ! grep -q "^GAMES = 'hl2'$" "$SERVER_CACHE" 2>/dev/null; then
-  echo "ERROR: client/server were not configured for Half-Life 2."
-  echo "Run: ./scripts/build-macos-arm64.sh hl2"
-  exit 1
+if [ -f "$CLIENT_CACHE" ] && grep -q "^GAMES = " "$CLIENT_CACHE"; then
+  GAMES_BUILT="$(grep "^GAMES = " "$CLIENT_CACHE" | sed "s/^GAMES = '\(.*\)'$/\1/")"
+  echo "==> client/server built for game: $GAMES_BUILT (Orange Box code)"
+else
+  echo "WARN: client/server caches not found; deploying as-is."
 fi
 
-[ -d "$HL2_DIR/hl2" ] || { echo "ERROR: Half-Life 2 not found at $HL2_DIR"; exit 1; }
+[ -d "$L4D_DIR/left4dead" ] || { echo "ERROR: Left 4 Dead not found at $L4D_DIR"; exit 1; }
 
 # Module pairs "staged_name:build_relpath" (lib-prefixed is what foundLibraryWithPrefix expects)
 MODULES=(
@@ -77,12 +83,12 @@ for pair in "${THIRDPARTY[@]}"; do
 done
 
 echo "==> Staging all dylibs into $BIN_DIR"
-if [ ! -d "$HL2_DIR/backup_bin_i386/bin" ] &&
+if [ ! -d "$L4D_DIR/backup_bin_i386/bin" ] &&
    [ -f "$BIN_DIR/engine.dylib" ] &&
    file "$BIN_DIR/engine.dylib" | grep -q 'i386'; then
   echo "==> Preserving the original bin directory"
-  mkdir -p "$HL2_DIR/backup_bin_i386"
-  cp -R "$BIN_DIR" "$HL2_DIR/backup_bin_i386/bin"
+  mkdir -p "$L4D_DIR/backup_bin_i386"
+  cp -R "$BIN_DIR" "$L4D_DIR/backup_bin_i386/bin"
 fi
 mkdir -p "$BIN_DIR"
 for pair in "${MODULES[@]}"; do
@@ -136,7 +142,7 @@ for f in "$BIN_DIR"/*.dylib; do
   # Own id
   id="$(otool -D "$f" | tail -1)"
   case "$id" in
-    /Users/jesus/Desktop/Source-Engine-macos-port/*|/opt/homebrew/opt/*)
+    /Users/*/Source-Engine-macos-port/*|/opt/homebrew/opt/*)
       install_name_tool -id "@loader_path/$base" "$f"
       ;;
   esac
@@ -156,8 +162,8 @@ for f in "$BIN_DIR"/*.dylib; do
 done
 
 echo "==> Installing launcher as hl2_osx"
-cp -f "$BUILD_DIR/launcher_main/hl2_launcher" "$HL2_DIR/hl2_osx"
-chmod +x "$HL2_DIR/hl2_osx"
+cp -f "$BUILD_DIR/launcher_main/hl2_launcher" "$L4D_DIR/hl2_osx"
+chmod +x "$L4D_DIR/hl2_osx"
 
 echo "==> Deploying SDL3 runtime (required by sdl2-compat shim)"
 SDL3_SRC="$HOMEBREW/sdl3/lib/libSDL3.0.dylib"
@@ -170,14 +176,14 @@ else
   echo "WARN: SDL3 not found at $SDL3_SRC"
 fi
 
-echo "==> Replacing hl2/bin client/server with arm64 versions"
-mkdir -p "$HL2_DIR/backup_bin_i386/hl2bin"
+echo "==> Replacing left4dead/bin client/server with arm64 versions (Orange Box code)"
+mkdir -p "$L4D_DIR/backup_bin_i386/l4dbin"
 for mod in client server; do
-  if [ -f "$HL2_DIR/hl2/bin/$mod.dylib" ] && [ ! -f "$HL2_DIR/backup_bin_i386/hl2bin/$mod.dylib" ]; then
-    cp -f "$HL2_DIR/hl2/bin/$mod.dylib" "$HL2_DIR/backup_bin_i386/hl2bin/$mod.dylib"
+  if [ -f "$L4D_DIR/left4dead/bin/$mod.dylib" ] && [ ! -f "$L4D_DIR/backup_bin_i386/l4dbin/$mod.dylib" ]; then
+    cp -f "$L4D_DIR/left4dead/bin/$mod.dylib" "$L4D_DIR/backup_bin_i386/l4dbin/$mod.dylib"
   fi
-  cp -f "$BIN_DIR/lib$mod.dylib" "$HL2_DIR/hl2/bin/$mod.dylib"
-  codesign -f -s - "$HL2_DIR/hl2/bin/$mod.dylib" 2>/dev/null
+  cp -f "$BIN_DIR/lib$mod.dylib" "$L4D_DIR/left4dead/bin/$mod.dylib"
+  codesign -f -s - "$L4D_DIR/left4dead/bin/$mod.dylib" 2>/dev/null
 done
 
 echo "==> Removing stale i386-only modules that have no arm64 equivalent"
@@ -187,5 +193,5 @@ done
 rm -rf "$BIN_DIR/osx32"
 
 echo "==> Done. Deploy summary:"
-echo "  launcher: $HL2_DIR/hl2_osx ($(file -b "$HL2_DIR/hl2_osx" | cut -d, -f1-2))"
+echo "  launcher: $L4D_DIR/hl2_osx ($(file -b "$L4D_DIR/hl2_osx" | cut -d, -f1-2))"
 echo "  dylibs in bin/: $(ls "$BIN_DIR"/*.dylib | wc -l | tr -d ' ') files"
