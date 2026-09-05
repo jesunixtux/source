@@ -28,7 +28,11 @@
 // C RunTime Header Files
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <memory.h>
 #include <tchar.h>
 #include <d3d8.h>

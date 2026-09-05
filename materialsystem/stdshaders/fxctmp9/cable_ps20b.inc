@@ -38,7 +38,7 @@ public:
 		bool bAllStaticVarsDefined = m_bCONVERT_TO_SRGB;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 4 * m_nCONVERT_TO_SRGB ) + 0;
+		return ( 6 * m_nCONVERT_TO_SRGB ) + 0;
 	}
 };
 #define shaderStaticTest_cable_ps20b 0
@@ -52,7 +52,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 2 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -106,7 +106,7 @@ public:
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE && m_bWRITE_DEPTH_TO_DESTALPHA;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nWRITE_DEPTH_TO_DESTALPHA ) + 0;
+		return ( 1 * m_nPIXELFOGTYPE ) + ( 3 * m_nWRITE_DEPTH_TO_DESTALPHA ) + 0;
 	}
 };
 #define shaderDynamicTest_cable_ps20b psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0

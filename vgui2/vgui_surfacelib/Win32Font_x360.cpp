@@ -9,7 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <tier0/dbg.h>
 #include <vgui/ISurface.h>
 #include <tier0/mem.h>

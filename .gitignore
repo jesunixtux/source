@@ -5,6 +5,7 @@
 *.project
 *obj_*
 .waf*
+.waf3-*/
 .lock-waf*
 __pycache__
 *.pyc
@@ -17,15 +18,25 @@ Release_*/
 *.obj
 *.pch
 *.log
+*.tlo
+*.la
+*.lo
+*.dep
 *.idb
 *.pdb
 *.rc
 *.bin
-*.vcxproj*
-*.sln
-*.dll*
+*.lib
 *.exp
 *.ilk
+*.dll*
+*.vcxproj*
+*.sln
+*.dylib
+*.dylib.dSYM/
+*.so
+*.snap
+*.a
 ValveETWProviderEvents.h
 game/client/*/client.lib
 game/server/*/server.lib
@@ -37,3 +48,20 @@ waf3*/
 .vscode/
 .depproj/
 source-engine.sln
+
+# vim / CLion
+*.swp
+*.swo
+.idea/
+*.iml
+CMakeLists.txt.user
+
+# xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# waf / build helpers
+compile_commands.json
+config.log

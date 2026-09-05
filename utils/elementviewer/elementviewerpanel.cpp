@@ -7,7 +7,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "tier0/dbg.h"
 #include "vgui_controls/Panel.h"
 #include "elementviewer.h"

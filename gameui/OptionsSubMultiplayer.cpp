@@ -50,7 +50,11 @@
 
 // use the JPEGLIB_USE_STDIO define so that we can read in jpeg's from outside the game directory tree.  For Spray Import.
 #define JPEGLIB_USE_STDIO
+#if defined( POSIX ) && !defined( ANDROID )
+#include <jpeglib.h>
+#else
 #include "jpeglib/jpeglib.h"
+#endif
 #undef JPEGLIB_USE_STDIO
 
 #include <setjmp.h>
@@ -1887,4 +1891,3 @@ Panel *COptionsSubMultiplayer::CreateControlByName( const char *controlName )
 		return BaseClass::CreateControlByName( controlName );
 	}
 }
-

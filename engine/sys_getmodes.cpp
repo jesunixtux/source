@@ -41,7 +41,11 @@ typedef void *HDC;
 #include "materialsystem/materialsystem_config.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
+#if defined( POSIX ) && !defined( ANDROID )
+#include <jpeglib.h>
+#else
 #include "jpeglib/jpeglib.h"
+#endif
 #include "vgui/ISurface.h"
 #include "vgui_controls/Controls.h"
 #include "gl_shader.h"

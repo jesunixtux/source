@@ -8,7 +8,11 @@
 #include <assert.h>
 #include <io.h>
 #include <stdio.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <windows.h>
 #include "depcheck_util.h"
 #include "icodeprocessor.h"

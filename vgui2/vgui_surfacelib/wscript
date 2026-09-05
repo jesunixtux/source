@@ -28,6 +28,13 @@ def build(bld):
 		source += [
 			'Win32Font.cpp'
 		]
+	elif bld.env.DEST_OS == 'darwin':
+		# osxfont.cpp uses deprecated Carbon/ATSUI APIs that were removed
+		# from the modern macOS SDK. linuxfont.cpp uses FreeType/fontconfig
+		# (available via Homebrew) and compiles on macOS.
+		source += [
+			'linuxfont.cpp'
+		]
 	else:
 		source += [
 			'linuxfont.cpp'

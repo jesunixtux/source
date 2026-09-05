@@ -2746,6 +2746,13 @@ void CL_InitLanguageCvar()
 	}
 	else
 	{
+		const char *pszSteamLang = Steam_GetGameLanguage();
+		if ( pszSteamLang )
+		{
+			cl_language.SetValue( pszSteamLang );
+			return;
+		}
+
 		char *szLang = getenv("LANG");
 
 		if ( CommandLine()->CheckParm( "-language" ) )

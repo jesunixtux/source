@@ -23,8 +23,8 @@ CXX:=g++
 
 ifeq ($(OS),Darwin)
 SDKROOT:=$(shell xcodebuild -sdk macosx -version Path)
-CC:=clang -m32
-CXX:=clang++ -m32
+CC:=clang
+CXX:=clang++
 EXE_POSTFIX:=_osx
 endif
 
@@ -203,7 +203,7 @@ endif
 ifeq "$(OS)" "Darwin"
 CFLAGS+=-I$(SDKROOT)/usr/include/malloc
 CFLAGS+= -DOSX -D_OSX
-CFLAGS+= -arch i386 -fasm-blocks
+CFLAGS+= -DPLATFORM_64BITS
 endif
 
 ifeq "$(OS)" "Linux"
@@ -227,7 +227,7 @@ LINK+=-liconv -framework Foundation
 endif
 
 ifeq "$(OS)" "Darwin"
-LINK+= -arch i386
+LINK+= -arch x86_64
 endif
 
 

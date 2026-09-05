@@ -38,7 +38,7 @@ public:
 		bool bAllStaticVarsDefined = m_bCONVERT_TO_SRGB;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 2 * m_nCONVERT_TO_SRGB ) + 0;
+		return ( 3 * m_nCONVERT_TO_SRGB ) + 0;
 	}
 };
 #define shaderStaticTest_decalmodulate_ps20b 0
@@ -52,7 +52,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 2 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;

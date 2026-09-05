@@ -1,90 +1,265 @@
-# Source Engine: Community Edition
+# Source Engine: macOS Port (Community Edition)
 
-[![Build Status](https://github.com/SourceEngine-CommunityEdition/source/actions/workflows/build.yml/badge.svg)](https://github.com/SourceEngine-CommunityEdition/source/actions/workflows/build.yml)
-[![Travis CI Status](https://api.travis-ci.com/SourceEngine-CommunityEdition/source.svg?branch=main)](https://github.com/SourceEngine-CommunityEdition/source/.travis.yml)
+Port del **Source Engine (Community Edition)** para macOS, compilado de forma nativa en **arm64 (Apple Silicon)** y también **x86_64 (Intel)**.
 
-## Overview
+> **Aviso importante:** Este motor solo debe usarse con **copias legales** de los juegos
+> que hayas adquirido (p. ej., a través de Steam). No se distribuye ningún juego, asset ni
+> contenido de los mismos junto a este repositorio. El proyecto es únicamente para fines
+> educativos y no está afiliado ni respaldado por Valve Corporation.
+> No se permite el uso comercial de este código.
 
-Welcome to the **Source Engine: Community Edition**, an open-source project aimed at education and research, inspired by the 2017 leak of *Team Fortress 2*'s source code. The original leak is believed to have occurred privately in 2018 and was made public in 2020. This project serves as a learning platform for C++ development, game engine architecture, and modding, focusing on Valve's iconic Source Engine.
+---
 
-The Source Engine, which succeeded GoldSrc, was first introduced with *Half-Life: Source* in June 2004 and was later used in critically acclaimed titles like *Counter-Strike: Source* and *Half-Life 2*. Through this community-driven initiative, developers and enthusiasts can explore and understand the inner workings of one of the most influential game engines in history.
+## Índice
 
-> **Please Note:** This project is strictly for **educational purposes**. It is neither endorsed by nor affiliated with Valve Corporation. The code provided is for learning and personal development only. Any commercial use or distribution of this code is prohibited.
+1. [Juegos compatibles](#juegos-compatibles)
+2. [Requisitos y dependencias](#requisitos-y-dependencias)
+3. [Compilar en macOS (Apple Silicon / arm64)](#compilar-en-macos-apple-silicon--arm64)
+4. [Compilar en macOS (Intel / x86_64)](#compilar-en-macos-intel--x86_64)
+5. [Desplegar el motor en un juego](#desplegar-el-motor-en-un-juego)
+6. [Ejecutar el juego](#ejecutar-el-juego)
+7. [Solución de problemas](#solución-de-problemas)
 
-For more information about the Source Engine, check out its [Wikipedia page](https://wikipedia.org/wiki/Source_(game_engine)).
+---
 
-## Important Notice
+## Juegos compatibles
 
-This repository is provided for **educational and research purposes only**. The content here is based on a leaked version of the Source Engine's code, which was not intended for public release. Therefore, the following terms apply:
+> **Nota:** esta lista la mantiene el autor del port. Se irá actualizando conforme se
+> verifiquen los juegos. Antes de instalar, confirma tu juego está en la lista o en las
+> issue/notes del proyecto.
 
-- **No Commercial Use:** You may not use this code, or any derivatives thereof, for commercial purposes.
-- **No Association with Valve:** This project is not affiliated with, endorsed by, or connected to Valve Corporation. Valve remains the rightful owner of the original Source Engine and all associated intellectual property.
-- **Use at Your Own Risk:** The code is provided "as-is" with no warranties. By accessing or using this repository, you accept full responsibility for any consequences that may arise.
+| Juego | App ID Steam | Estado |
+|---|---|---|
+| Portal | 400 | ✅ Probado (testchmb_a_05) |
+| Half-Life 2 | 220 | ✅ Probado |
+| Half-Life 2: Episode One | 380 | ⏳ Pendiente de probar |
+| Half-Life 2: Episode Two | 420 | ⏳ Pendiente de probar |
+| Half-Life 2: Lost Coast | 340 | ⏳ Pendiente de probar |
+| Counter-Strike: Source | 240 | ⏳ Pendiente de probar |
+| Day of Defeat: Source | 300 | ⏳ Pendiente de probar |
+| Team Fortress 2 | 440 | ⏳ Pendiente de probar |
+| Source SDK Base 2007 | 218 | ⏳ Pendiente de probar |
 
-Should Valve Corporation or its representatives request the removal or modification of any content within this repository, we will comply promptly to respect their intellectual property rights.
+Requisitos generales para que un juego sea compatible:
 
-## Getting Started
+- Debe usar el **Source Engine clásico (Source 1)** de la era HL2/Portal.
+- Debe tener su propia carpeta de juego con `gameinfo.txt` y los `.vpk` correspondientes.
+- No se revisan ni incluyen archivos de juego: solo ejecutas los binarios compilados aquí
+  sobre tu instalación legal existente.
 
-### Prerequisites
+---
 
-Before you begin, ensure that you have the following tools installed:
+## Requisitos y dependencias
 
-- **WAF Build System:** A powerful tool for compiling and managing the source code. Refer to the [WAF Book](https://waf.io/book) for detailed instructions.
-- **Git:** For cloning the repository, including its submodules.
-- **C++ Compiler:** This project has been tested with MSVC on Windows. Ensure you have an appropriate C++ compiler installed and configured.
+### Herramientas base
 
-### Cloning the Repository
+| Herramienta | Por qué | Comprobar con |
+|---|---|---|
+| macOS 13+ (Ventura o superior) | Sistema base | `sw_vers` |
+| Xcode Command Line Tools | Compilador clang (en Apple Silicon viene con el SDK). También sirve con Xcode completo | `xcode-select -p` |
+| Homebrew | Gestor de paquetes de las librerías | `brew --version` |
+| Python 3.9+ | WAF (sistema de build) está escrito en Python | `python3 --version` |
+| `pkg-config` | Configurar el build de WAF | `pkgconf --version` |
+| `cmake` | Algunos submodulos (thirdparty) | `cmake --version` |
+| `ffplay` (paquete `ffmpeg`) | Reproduce la intro del juego en el port | `/opt/homebrew/bin/ffplay` |
 
-To clone this repository along with its submodules, use the following command:
+### Librerías (instalar con Homebrew)
+
+El motor enlaza contra los siguientes paquetes. En Apple Silicon Homebrew instala en
+`/opt/homebrew`; en Intel en `/usr/local`.
 
 ```bash
-git clone --recurse-submodules git@github.com:SourceEngine-CommunityEdition/source.git
+brew install \
+  sdl2 \
+  sdl2-compat \
+  sdl3 \
+  freetype \
+  fontconfig \
+  jpeg \
+  libpng \
+  libcurl \
+  zlib \
+  openal-soft \
+  gettext \
+  pkgconf \
+  ffmpeg
 ```
 
-### Building the Source Engine: Community Edition on Windows
+Dependencias adicionales que pueden hacer falta si usas funcionalidades opcionales:
 
-Once the repository is cloned, you can build the project using the WAF build system. Follow these steps:
+```bash
+brew install opus   # códec de voz (build con --enable-opus)
+brew install libedit # build del servidor dedicado (--dedicated)
+```
 
-1. **Configure the Build Environment:**
+Notas:
 
-   Open a command prompt, navigate to the project directory, and run:
+- `sdl2-compat` + `sdl3` son los que aportan el runtime SDL que el port copia a la carpeta
+  `bin/` del juego (`libSDL2-2.0.0.dylib`, `libSDL3.0.dylib`).
+- `gettext` aporta `libintl.8.dylib`, dependencia indirecta de fontconfig.
+- Algunas fórmulas son *keg-only* (opacas): por eso los scripts de build exportan
+  `PKG_CONFIG_PATH` apuntando a `/opt/homebrew/opt/...` (ver abajo).
 
-   ```cmd
-   waf.bat configure
-   ```
+---
 
-   This command configures the build environment, ensuring all dependencies are in place.
+## Compilar en macOS (Apple Silicon / arm64)
 
-2. **Build the Project:**
+> En Apple Silicon el compilador produce binarios arm64 por defecto. Es la vía
+> recomendada: nativa, sin Rosetta.
 
-   After configuration, compile the project with:
+### Paso 1 — Clonar el repositorio con submódulos
 
-   ```cmd
-   waf.bat build
-   ```
+```bash
+git clone --recurse-submodules <URL-del-repo>
+cd source
+```
 
-   This process will generate the necessary binaries, such as `hl2.exe`, `tier0.dll`, and others.
+Si ya clonaste sin submódulos:
 
-### Need Help with WAF?
+```bash
+git submodule init
+git submodule update
+```
 
-If you encounter any issues during the build process or have questions about using WAF, refer to the [official WAF documentation](https://waf.io/book) or seek assistance from the community.
+### Paso 2 — Preparar el entorno
 
-## Contributing and Feedback
+```bash
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+export HOMEBREW_PREFIX="/opt/homebrew"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/openal-soft/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
 
-We encourage contributions to improve the Source Engine: Community Edition. Whether you're fixing bugs, enhancing documentation, or adding new features, your input is invaluable. To contribute:
+### Paso 3 — Configurar el build
 
-1. Fork the repository.
-2. Create a branch for your changes.
-3. Submit a pull request once your changes are ready for review.
+Usa el script incluido (hace lo del paso 2 automáticamente):
 
-## Support the Project
+```bash
+./scripts/build-macos-arm64.sh
+```
 
-If you'd like to support the ongoing development and maintenance of this project, consider contributing through the following platforms:
+o manualmente:
 
-- **[Ko-fi](https://ko-fi.com/mykytashcherbyna)**
-- **[Buy Me a Coffee](https://www.buymeacoffee.com/nsherbina1999)**
-- **[Thanks.dev](https://thanks.dev/nsherbina1999)**
-- **[Patreon](https://www.patreon.com/mykytashcherbyna)**
-- **[PayPal Donation](https://www.paypal.com/donate/?hosted_button_id=9ETHFD5CQZVHL)**
+```bash
+./waf configure -T debug --disable-warns --arch=arm64
+```
 
-Your support helps me continue learning, growing, and contributing to the open-source community.
+Variantes de configuración útiles:
+
+```bash
+./waf configure -T release --disable-warns --arch=arm64   # build optimizado
+./waf configure -T debug  --disable-warns --arch=arm64 --enable-opus   # con voz
+./waf configure -T debug  --disable-warns --arch=arm64 -d # solo servidor dedicado
+```
+
+### Paso 4 — Compilar
+
+```bash
+./waf build
+```
+
+Para compilar solo un subconjunto de módulos (más rápido durante el desarrollo):
+
+```bash
+./waf build --targets=togl,shaderapidx9,stdshader_dx9 -j 10
+```
+
+### Paso 5 — Verificar los binarios
+
+Los `.dylib` y el launcher quedan en `build/`:
+
+```bash
+ls -la build/launcher_main/hl2_launcher
+file build/launcher_main/hl2_launcher   # debe decir arm64
+```
+
+---
+
+## Compilar en macOS (Intel / x86_64)
+
+Igual que arm64 pero forzando arquitectura y (en Apple Silicon) usando Rosetta 2:
+
+```bash
+./scripts/build-macos-amd64.sh
+```
+
+o manualmente:
+
+```bash
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/openal-soft/lib/pkgconfig:$PKG_CONFIG_PATH"
+./waf configure -T debug --disable-warns --arch=x86_64
+./waf build
+```
+
+En hardware Intel los prefijos serán `/usr/local` en lugar de `/opt/homebrew`.
+
+---
+
+## Desplegar el motor en un juego
+
+El port se ejecuta **sobre una instalación legal del juego** (p. ej. la de Steam).
+El despliegue copia los `.dylib` compilados a `bin/` del juego, reescribe los
+*install names* a `@loader_path` y coloca el launcher como `hl2_osx`.
+
+### Half-Life 2
+
+```bash
+./scripts/deploy-macos-hl2.sh
+```
+
+### Portal
+
+```bash
+./scripts/deploy-macos-portal.sh
+```
+
+**Importante:** los scripts hacen copias de seguridad del contenido i386 original en
+`backup_bin_i386/` dentro de la carpeta del juego. Para restaurar el juego original,
+devuelve esos archivos o verifica la integridad desde Steam.
+
+---
+
+## Ejecutar el juego
+
+Desde la carpeta del juego (p. ej. `.../common/Portal`):
+
+```bash
+./hl2.sh -game portal
+```
+
+Con opciones útiles durante el desarrollo:
+
+```bash
+./hl2.sh -game portal -novid -windowed -condebug "+map testchmb_a_05"
+```
+
+- `-game <carpeta>` → elige el juego (carpeta con `gameinfo.txt`).
+- `-novid` → omite la intro (evita también que `hl2.sh` la intente reproducir).
+- `-windowed` → ventana en vez de pantalla completa.
+- `-condebug` → vuelca la consola a `portal/console.log`.
+- `HL2_SKIP_INTRO=1` → desactiva la reproducción externa de la intro.
+
+---
+
+## Solución de problemas
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| `Couldn't load combo ... (dyn=...)` en consola | Fallo de lookup shader/vcs (HDR vs LDR) | Recompilar `shaderapidx9` + `stdshader_dx9` con el fix del divisor de vcs |
+| `pixel shader null!` / pantalla corrupta | Consecuencia del combo no cargado | Ver fila anterior |
+| `Couldn't load library ...dylib` | Faltan dylibs en `bin/` del juego | Repetir el script de deploy de ese juego |
+| `install_name_tool: ... link edit command` | Binarios sin firmar tras modificar | Ya lo hace el deploy (codesign ad-hoc); si falla, firma manual: `codesign -f -s - bin/*.dylib` |
+| `libSDL2` o `libSDL3` no encontrada | Runtime SDL no copiado | Re-empaquetar con el deploy o copiar `libSDL2-2.0.0.dylib`, `libSDL3.0.dylib` desde Homebrew |
+| Compilación falla por encabezados faltantes | faltan paquetes brew | Revisar lista de dependencias e instalar las que falten |
+| `--arch` no se reconoce | waf sin configuración previa | Correr `./waf configure` antes |
+
+---
+
+## Contribuir
+
+Contribuciones bienvenidas (fixes de port, compatibilidad de juegos, documentación).
+Cuando verifiques un juego nuevo, actualiza la [tabla de juegos compatibles](#juegos-compatibles).
+
+---
+
+*Proyecto educativo y sin fines comerciales. No afiliado a Valve Corporation.*

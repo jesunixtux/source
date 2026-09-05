@@ -10,6 +10,8 @@
 #pragma once
 #endif
 
+#include "tier0/dbg.h"
+
 // 1 = hl2 shipped
 // 2 = compressed with diffs version (lostcoast)
 // 3 = compressed with bzip
@@ -67,6 +69,9 @@ struct StaticComboAliasRecord_t								// for duplicate static combos
 	uint32 m_nStaticComboID;								// this combo
 	uint32 m_nSourceStaticCombo;							// the combo it is the same as
 };
+
+COMPILE_TIME_ASSERT( sizeof( StaticComboRecord_t ) == 8 );
+COMPILE_TIME_ASSERT( sizeof( ShaderHeader_t ) == 28 );
 
 
 

@@ -18,6 +18,7 @@
 #include "common.h"
 #ifdef OSX
 #include <malloc/malloc.h>
+#include <dirent.h>
 #else
 #include <malloc.h>
 #endif
@@ -863,6 +864,322 @@ bool BLoadHDContent( const char *pchModDir, const char *pchBaseDir )
 
 extern void Host_CheckGore( void );
 
+#if defined( OSX )
+//-----------------------------------------------------------------------------
+// Minimal VDF helpers used to read Steam's language configuration from disk.
+// Only the small subset of the VDF format (quoted keys/values, nested blocks)
+// that Steam's config files use is handled here.
+//-----------------------------------------------------------------------------
+static void VDF_SkipWS( const char **pp )
+{
+	for ( ;; )
+	{
+		const char *p = *pp;
+		if ( *p == ' ' || *p == '\t' || *p == '\r' || *p == '\n' )
+		{
+			++p;
+			*pp = p;
+		}
+		else if ( *p == '/' && p[ 1 ] == '/' )
+		{
+			p += 2;
+			while ( *p && *p != '\n' )
+				++p;
+			*pp = p;
+		}
+		else
+		{
+			break;
+		}
+	}
+}
+
+static void VDF_ReadQuoted( const char **pp, char *szOut, int outLen )
+{
+	const char *p = *pp;
+	if ( *p == '"' )
+		++p;
+	int n = 0;
+	while ( *p && *p != '"' && n < outLen - 1 )
+		szOut[ n++ ] = *p++;
+	szOut[ n ] = 0;
+	if ( *p == '"' )
+		++p;
+	*pp = p;
+}
+
+static void VDF_SkipBlock( const char **pp )
+{
+	const char *p = *pp;
+	if ( *p != '{' )
+		return;
+	int depth = 0;
+	for ( ;; )
+	{
+		if ( *p == '{' )
+		{
+			++depth;
+			++p;
+		}
+		else if ( *p == '}' )
+		{
+			--depth;
+			++p;
+			if ( depth == 0 )
+				break;
+		}
+		else if ( *p == '"' )
+		{
+			++p;
+			while ( *p && *p != '"' )
+				++p;
+			if ( *p == '"' )
+				++p;
+		}
+		else
+		{
+			++p;
+		}
+	}
+	*pp = p;
+}
+
+// Recurse into the block at *pp following the key path pComp[].  When the final
+// component is found as a leaf string its value is copied into szOut.
+static bool VDF_Recurse( const char **pp, const char * const *pComp, int iComp, int nComp, char *szOut, int outLen )
+{
+	const char *p = *pp;
+	if ( *p != '{' )
+		return false;
+	++p;
+	for ( ;; )
+	{
+		VDF_SkipWS( &p );
+		if ( *p == '}' )
+		{
+			++p;
+			*pp = p;
+			return false;
+		}
+		if ( *p != '"' )
+		{
+			++p;
+			continue;
+		}
+		char szKey[ 128 ];
+		VDF_ReadQuoted( &p, szKey, sizeof( szKey ) );
+		VDF_SkipWS( &p );
+		if ( *p == '{' )
+		{
+			if ( !Q_stricmp( szKey, pComp[ iComp ] ) && iComp + 1 < nComp )
+			{
+				if ( VDF_Recurse( &p, pComp, iComp + 1, nComp, szOut, outLen ) )
+					return true;
+			}
+			else
+			{
+				VDF_SkipBlock( &p );
+			}
+		}
+		else if ( *p == '"' )
+		{
+			char szVal[ 256 ];
+			VDF_ReadQuoted( &p, szVal, sizeof( szVal ) );
+			if ( iComp == nComp - 1 && !Q_stricmp( szKey, pComp[ iComp ] ) )
+			{
+				Q_strncpy( szOut, szVal, outLen );
+				return true;
+			}
+		}
+		else
+		{
+			++p;
+		}
+	}
+}
+
+static bool VDF_ReadPathValue( const char *pData, const char *pKeyPath, char *szOut, int outLen )
+{
+	char szBuf[ 256 ];
+	Q_strncpy( szBuf, pKeyPath, sizeof( szBuf ) );
+
+	const char *pComp[ 16 ];
+	int nComp = 0;
+	for ( char *p = szBuf; ; )
+	{
+		while ( *p == '/' )
+			++p;
+		if ( !*p )
+			break;
+		pComp[ nComp++ ] = p;
+		while ( *p && *p != '/' )
+			++p;
+		if ( *p )
+			*p++ = 0;
+	}
+	if ( nComp == 0 )
+		return false;
+
+	// The document root is a sequence of <key> { block } pairs; match the first
+	// component there, then recurse into the remaining components.
+	const char *p = pData;
+	for ( ;; )
+	{
+		VDF_SkipWS( &p );
+		if ( *p != '"' )
+			return false;
+		char szKey[ 128 ];
+		VDF_ReadQuoted( &p, szKey, sizeof( szKey ) );
+		VDF_SkipWS( &p );
+		if ( *p != '{' )
+			return false;
+		if ( !Q_stricmp( szKey, pComp[ 0 ] ) )
+		{
+			if ( nComp == 1 )
+				return false;
+			return VDF_Recurse( &p, pComp, 1, nComp, szOut, outLen );
+		}
+		VDF_SkipBlock( &p );
+	}
+}
+
+// Steam client language values -> engine short language names.  "latam"/"es_419"
+// is Latin American Spanish, which Half-Life 2 localizes as regular Spanish.
+static bool Steam_MapLanguageName( const char *pSteamLang, char *szOut, int outLen )
+{
+	static const struct
+	{
+		const char *pSteam;
+		const char *pEngine;
+	} s_LanguageMap[] =
+	{
+		{ "english",              "english" },
+		{ "german",               "german" },
+		{ "french",               "french" },
+		{ "italian",              "italian" },
+		{ "koreana",              "koreana" },
+		{ "korean",               "koreana" },
+		{ "spanish",              "spanish" },
+		{ "latam",                "spanish" },
+		{ "es_419",               "spanish" },
+		{ "es-419",               "spanish" },
+		{ "schinese",             "schinese" },
+		{ "simplified_chinese",   "schinese" },
+		{ "tchinese",             "tchinese" },
+		{ "traditional_chinese",  "tchinese" },
+		{ "russian",              "russian" },
+		{ "thai",                 "thai" },
+		{ "japanese",             "japanese" },
+		{ "portuguese",           "portuguese" },
+		{ "polish",               "polish" },
+		{ "danish",               "danish" },
+		{ "dutch",                "dutch" },
+		{ "finnish",              "finnish" },
+		{ "norwegian",            "norwegian" },
+		{ "swedish",              "swedish" },
+		{ "romanian",             "romanian" },
+		{ "turkish",              "turkish" },
+		{ "hungarian",            "hungarian" },
+		{ "czech",                "czech" },
+		{ "brazilian",            "brazilian" },
+		{ "bulgarian",            "bulgarian" },
+		{ "greek",                "greek" },
+		{ "ukrainian",            "ukrainian" },
+	};
+
+	for ( int i = 0; i < Q_ARRAYSIZE( s_LanguageMap ); ++i )
+	{
+		if ( !Q_stricmp( pSteamLang, s_LanguageMap[ i ].pSteam ) )
+		{
+			Q_strncpy( szOut, s_LanguageMap[ i ].pEngine, outLen );
+			return true;
+		}
+	}
+	return false;
+}
+#endif // OSX
+
+//-----------------------------------------------------------------------------
+// Purpose: return the language Steam is configured to use for this game.
+// Our libsteam_api stub can't reach the running Steam client, so read Steam's
+// own config files instead.
+//-----------------------------------------------------------------------------
+const char *Steam_GetGameLanguage( void )
+{
+#if defined( OSX )
+	const char *pszHome = getenv( "HOME" );
+	if ( !pszHome || !*pszHome )
+		return NULL;
+
+	static char szRet[ 64 ];
+	const char *pszSteamPath = "/Library/Application Support/Steam";
+
+	// 1) Per-game language override set in Steam -> game Properties -> language.
+	//    (Persisted under userdata/<id>/config/localconfig.vdf)
+	int iAppID = 220; // hl2
+	if ( !Q_stricmp( COM_GetModDirectory(), "portal" ) )
+		iAppID = 400;
+	char szPathKey[ 64 ];
+	Q_snprintf( szPathKey, sizeof( szPathKey ), "UserLocalConfigStore/apps/%d/Language", iAppID );
+
+	char szPath[ MAX_PATH ];
+	Q_snprintf( szPath, sizeof( szPath ), "%s%s/userdata", pszHome, pszSteamPath );
+	DIR *pDir = opendir( szPath );
+	if ( pDir )
+	{
+		struct dirent *pEntry;
+		while ( ( pEntry = readdir( pDir ) ) != NULL )
+		{
+			if ( pEntry->d_name[ 0 ] == '.' )
+				continue;
+			char szLocalCfg[ MAX_PATH ];
+			Q_snprintf( szLocalCfg, sizeof( szLocalCfg ), "%s/%s/config/localconfig.vdf", szPath, pEntry->d_name );
+			FILE *pFile = fopen( szLocalCfg, "rb" );
+			if ( !pFile )
+				continue;
+			char szBuf[ 1 << 20 ];
+			size_t nRead = fread( szBuf, 1, sizeof( szBuf ), pFile );
+			fclose( pFile );
+			if ( nRead > 0 && nRead < sizeof( szBuf ) )
+			{
+				szBuf[ nRead ] = 0;
+				char szVal[ 64 ];
+				if ( VDF_ReadPathValue( szBuf, szPathKey, szVal, sizeof( szVal ) ) )
+				{
+					if ( Steam_MapLanguageName( szVal, szRet, sizeof( szRet ) ) )
+					{
+						closedir( pDir );
+						return szRet;
+					}
+				}
+			}
+		}
+		closedir( pDir );
+	}
+
+	// 2) Fall back to the Steam client language itself.
+	Q_snprintf( szPath, sizeof( szPath ), "%s%s/registry.vdf", pszHome, pszSteamPath );
+	FILE *pFile = fopen( szPath, "rb" );
+	if ( pFile )
+	{
+		char szBuf[ 1 << 20 ];
+		size_t nRead = fread( szBuf, 1, sizeof( szBuf ), pFile );
+		fclose( pFile );
+		if ( nRead > 0 && nRead < sizeof( szBuf ) )
+		{
+			szBuf[ nRead ] = 0;
+			char szVal[ 64 ];
+			if ( VDF_ReadPathValue( szBuf, "Registry/HKCU/Software/Valve/Steam/language", szVal, sizeof( szVal ) ) )
+			{
+				if ( Steam_MapLanguageName( szVal, szRet, sizeof( szRet ) ) )
+					return szRet;
+			}
+		}
+	}
+#endif
+	return NULL;
+}
+
 /*
 ================
 COM_InitFilesystem
@@ -895,11 +1212,17 @@ void COM_InitFilesystem( const char *pFullModPath )
 		else
 		{
 			char *szLang = getenv("LANG");
+			const char *pszSteamLang = NULL;
 
 			// still allow command line override even when not running steam
 			if (CommandLine()->CheckParm("-audiolanguage"))
 			{
 				Q_strncpy(language, CommandLine()->ParmValue("-audiolanguage", "english"), sizeof( language ) - 1);
+			}
+			else if( ( pszSteamLang = Steam_GetGameLanguage() ) != NULL )
+			{
+				// our steam api is a stub; follow the language Steam is set to
+				Q_strncpy(language, pszSteamLang, sizeof( language ) - 1);
 			}
 			else if( szLang )
 			{

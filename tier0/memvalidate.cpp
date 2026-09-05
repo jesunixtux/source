@@ -11,7 +11,11 @@
 
 #ifdef TIER0_VALIDATE_HEAP
 
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "tier0/dbg.h"
 #include "tier0/memalloc.h"
 #include "mem_helpers.h"

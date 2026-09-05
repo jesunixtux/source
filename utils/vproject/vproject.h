@@ -11,7 +11,11 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <stdio.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <richedit.h>
 #include <assert.h>
 #include <time.h>

@@ -10,7 +10,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "vgui_surfacelib/Win32Font.h"
 #include <tier0/dbg.h>
 #include <vgui/ISurface.h>

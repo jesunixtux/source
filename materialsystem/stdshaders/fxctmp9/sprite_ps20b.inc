@@ -163,7 +163,7 @@ public:
 		bool bAllStaticVarsDefined = m_bCONVERT_TO_SRGB && m_bVERTEXCOLOR && m_bCONSTANTCOLOR && m_bHDRTYPE && m_bSRGB && m_bSRGB_OUTPUT_ADAPTER;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 4 * m_nCONVERT_TO_SRGB ) + ( 8 * m_nVERTEXCOLOR ) + ( 16 * m_nCONSTANTCOLOR ) + ( 32 * m_nHDRTYPE ) + ( 96 * m_nSRGB ) + ( 192 * m_nSRGB_OUTPUT_ADAPTER ) + 0;
+		return ( 6 * m_nCONVERT_TO_SRGB ) + ( 12 * m_nVERTEXCOLOR ) + ( 24 * m_nCONSTANTCOLOR ) + ( 48 * m_nHDRTYPE ) + ( 144 * m_nSRGB ) + ( 288 * m_nSRGB_OUTPUT_ADAPTER ) + 0;
 	}
 };
 #define shaderStaticTest_sprite_ps20b psh_forgot_to_set_static_VERTEXCOLOR + psh_forgot_to_set_static_CONSTANTCOLOR + psh_forgot_to_set_static_HDRTYPE + psh_forgot_to_set_static_SRGB + psh_forgot_to_set_static_SRGB_OUTPUT_ADAPTER + 0
@@ -198,7 +198,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 2 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;

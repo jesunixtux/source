@@ -1116,7 +1116,7 @@ bool CGLMShaderPair::SetProgramPair( CGLMProgram *vp, CGLMProgram *fp )
 	// building in parallels)
 	bool vpgood = (vp != NULL);
 	bool fpgood = (fp != NULL);
-	
+
 	if ( !fpgood )
 	{
 		// fragment side allowed to be "null".
@@ -1567,5 +1567,4 @@ void			CGLMShaderPairCache::DumpStats			( void )
 }
 	
 	//===============================
-
 

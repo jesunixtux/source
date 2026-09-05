@@ -7,7 +7,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <io.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 
 #define max(x,y) ( ((x) > (y)) ? (x) : (y) )
 

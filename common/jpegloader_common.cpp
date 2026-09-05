@@ -8,7 +8,11 @@
 #include "tier0/dbg.h"
 #include "tier1/utlvector.h"
 #include "tier0/vprof.h"
+#if defined( POSIX ) && !defined( ANDROID )
+#include <jpeglib.h>
+#else
 #include "jpeglib/jpeglib.h"
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Takes a RGBA image buffer and resizes it using linear interpolation.

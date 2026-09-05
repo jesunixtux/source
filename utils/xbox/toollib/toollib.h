@@ -18,7 +18,11 @@
 #include <conio.h>
 #include <math.h>
 #include <limits.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <errno.h>
 #include <time.h>
 #include <assert.h>

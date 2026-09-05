@@ -7,7 +7,11 @@
 //=============================================================================//
 
 #include <stdafx.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "FaceEditSheet.h"
 #include "MainFrm.h"
 #include "GlobalFunctions.h"

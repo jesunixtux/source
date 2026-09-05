@@ -28,8 +28,8 @@
 
 #undef ALIGN4
 #undef ALIGN16
-#define ALIGN4( a ) a = (byte *)((int)((byte *)a + 3) & ~ 3)
-#define ALIGN16( a ) a = (byte *)((int)((byte *)a + 15) & ~ 15)
+#define ALIGN4( a ) a = (byte *)((uintp)((byte *)a + 3) & ~ 3)
+#define ALIGN16( a ) a = (byte *)((uintp)((byte *)a + 15) & ~ 15)
 
 char const *GetGlobalFlexControllerName( int index );
 int GetGlobalFlexControllerCount( void );

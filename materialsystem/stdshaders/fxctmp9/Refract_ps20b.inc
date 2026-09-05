@@ -263,7 +263,7 @@ public:
 		bool bAllStaticVarsDefined = m_bCONVERT_TO_SRGB && m_bBLUR && m_bFADEOUTONSILHOUETTE && m_bCUBEMAP && m_bREFRACTTINTTEXTURE && m_bMASKED && m_bCOLORMODULATE && m_bSECONDARY_NORMAL && m_bNORMAL_DECODE_MODE && m_bSHADER_SRGB_READ;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 4 * m_nCONVERT_TO_SRGB ) + ( 8 * m_nBLUR ) + ( 16 * m_nFADEOUTONSILHOUETTE ) + ( 32 * m_nCUBEMAP ) + ( 64 * m_nREFRACTTINTTEXTURE ) + ( 128 * m_nMASKED ) + ( 256 * m_nCOLORMODULATE ) + ( 512 * m_nSECONDARY_NORMAL ) + ( 1024 * m_nNORMAL_DECODE_MODE ) + ( 1024 * m_nSHADER_SRGB_READ ) + 0;
+		return ( 6 * m_nCONVERT_TO_SRGB ) + ( 12 * m_nBLUR ) + ( 24 * m_nFADEOUTONSILHOUETTE ) + ( 48 * m_nCUBEMAP ) + ( 96 * m_nREFRACTTINTTEXTURE ) + ( 192 * m_nMASKED ) + ( 384 * m_nCOLORMODULATE ) + ( 768 * m_nSECONDARY_NORMAL ) + ( 1536 * m_nNORMAL_DECODE_MODE ) + ( 1536 * m_nSHADER_SRGB_READ ) + 0;
 	}
 };
 #define shaderStaticTest_refract_ps20b psh_forgot_to_set_static_BLUR + psh_forgot_to_set_static_FADEOUTONSILHOUETTE + psh_forgot_to_set_static_CUBEMAP + psh_forgot_to_set_static_REFRACTTINTTEXTURE + psh_forgot_to_set_static_MASKED + psh_forgot_to_set_static_COLORMODULATE + psh_forgot_to_set_static_SECONDARY_NORMAL + psh_forgot_to_set_static_NORMAL_DECODE_MODE + psh_forgot_to_set_static_SHADER_SRGB_READ + 0
@@ -277,7 +277,7 @@ private:
 public:
 	void SetPIXELFOGTYPE( int i )
 	{
-		Assert( i >= 0 && i <= 1 );
+		Assert( i >= 0 && i <= 2 );
 		m_nPIXELFOGTYPE = i;
 #ifdef _DEBUG
 		m_bPIXELFOGTYPE = true;
@@ -331,7 +331,7 @@ public:
 		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE && m_bWRITE_DEPTH_TO_DESTALPHA;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nPIXELFOGTYPE ) + ( 2 * m_nWRITE_DEPTH_TO_DESTALPHA ) + 0;
+		return ( 1 * m_nPIXELFOGTYPE ) + ( 3 * m_nWRITE_DEPTH_TO_DESTALPHA ) + 0;
 	}
 };
 #define shaderDynamicTest_refract_ps20b psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_WRITE_DEPTH_TO_DESTALPHA + 0

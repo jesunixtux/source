@@ -106,6 +106,13 @@ const char *COM_FormatSeconds( int seconds ); // returns seconds as hh:mm:ss str
 
 const char *COM_GetModDirectory(); // return the mod dir (rather than the complete -game param, which can be a path)
 
+// Returns the language Steam is configured to use (as an engine short name such
+// as "spanish"), by reading Steam's own config files.  Returns NULL if the
+// language can't be determined.  Our libsteam_api is a stub that can't reach the
+// running Steam client, so this mirrors what SteamAPI's GetCurrentGameLanguage()
+// would have returned.
+const char *Steam_GetGameLanguage();
+
 void *COM_CompressBuffer_LZSS( const void *source, unsigned int sourceLen, unsigned int *compressedLen, unsigned int maxCompressedLen = 0 );
 bool COM_BufferToBufferCompress_LZSS( void *dest, unsigned int *destLen, const void *source, unsigned int sourceLen );
 unsigned int COM_GetIdealDestinationCompressionBufferSize_LZSS( unsigned int uncompressedSize );

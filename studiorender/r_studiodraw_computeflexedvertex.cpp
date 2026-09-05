@@ -15,7 +15,11 @@
 #include "optimize.h"
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "mathlib/vmatrix.h"
 #include "studiorendercontext.h"
 #include "tier2/tier2.h"

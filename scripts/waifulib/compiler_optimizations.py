@@ -36,7 +36,7 @@ LINKFLAGS = {
 	'common': {
 		'msvc':  ['/DEBUG'], # always create PDB, doesn't affect result binaries
 		'clang': ['-fvisibility=hidden'],
-		'gcc':   ['-Wl,--no-undefined'],
+		'gcc':   ['-fvisibility=hidden'],
 		'owcc':  ['-Wl,option stack=512k', '-fvisibility=hidden']
 	},
 	'sanitize': {
@@ -149,6 +149,10 @@ def get_optimization_flags(conf):
 	:returns: tuple of cflags and linkflags
 	'''
 	linkflags = conf.get_flags_by_type(LINKFLAGS, conf.options.BUILD_TYPE, conf.env.COMPILER_CC, conf.env.CC_VERSION[0])
+
+	# --no-undefined is a GNU-ld flag; on macOS (ld64) it is not supported
+	if conf.env.DEST_OS in ['linux', 'freebsd', 'openbsd', 'netbsd', 'dragonflybsd']:
+		linkflags += ['-Wl,--no-undefined']
 
 	cflags = conf.get_flags_by_type(CFLAGS, conf.options.BUILD_TYPE, conf.env.COMPILER_CC, conf.env.CC_VERSION[0])
 

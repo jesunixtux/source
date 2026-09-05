@@ -926,6 +926,10 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( LIGHTING_PREVIEW, nFixedLightingMode );
+			// The post-Anniversary Steam shader adds this combo. The legacy
+			// renderer does not expose bicubic lightmaps, so select its original
+			// bilinear path explicitly to keep the VCS index layout in sync.
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( BICUBIC_LIGHTMAP, 0 );
 			
 			SET_DYNAMIC_PIXEL_SHADER_CMD( DynamicCmdsOut, lightmappedgeneric_ps20b );
 		}

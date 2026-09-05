@@ -313,12 +313,33 @@ public:
 		bool bAllStaticVarsDefined = m_bCUBEMAP && m_bDIFFUSELIGHTING && m_bLIGHTWARPTEXTURE && m_bSELFILLUM && m_bSELFILLUMFRESNEL && m_bNORMALMAPALPHAENVMAPMASK && m_bHALFLAMBERT && m_bFLASHLIGHT && m_bDETAILTEXTURE && m_bDETAIL_BLEND_MODE && m_bFLASHLIGHTDEPTHFILTERMODE && m_bBLENDTINTBYBASEALPHA;
 		Assert( bAllStaticVarsDefined );
 #endif // _DEBUG
-		return ( 20 * m_nCUBEMAP ) + ( 40 * m_nDIFFUSELIGHTING ) + ( 80 * m_nLIGHTWARPTEXTURE ) + ( 160 * m_nSELFILLUM ) + ( 320 * m_nSELFILLUMFRESNEL ) + ( 640 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 1280 * m_nHALFLAMBERT ) + ( 2560 * m_nFLASHLIGHT ) + ( 5120 * m_nDETAILTEXTURE ) + ( 10240 * m_nDETAIL_BLEND_MODE ) + ( 71680 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 215040 * m_nBLENDTINTBYBASEALPHA ) + 0;
+		return ( 60 * m_nCUBEMAP ) + ( 120 * m_nDIFFUSELIGHTING ) + ( 240 * m_nLIGHTWARPTEXTURE ) + ( 480 * m_nSELFILLUM ) + ( 960 * m_nSELFILLUMFRESNEL ) + ( 1920 * m_nNORMALMAPALPHAENVMAPMASK ) + ( 3840 * m_nHALFLAMBERT ) + ( 7680 * m_nFLASHLIGHT ) + ( 15360 * m_nDETAILTEXTURE ) + ( 30720 * m_nDETAIL_BLEND_MODE ) + ( 215040 * m_nFLASHLIGHTDEPTHFILTERMODE ) + ( 645120 * m_nBLENDTINTBYBASEALPHA ) + 0;
 	}
 };
 #define shaderStaticTest_vertexlit_and_unlit_generic_bump_ps20b psh_forgot_to_set_static_CUBEMAP + psh_forgot_to_set_static_DIFFUSELIGHTING + psh_forgot_to_set_static_LIGHTWARPTEXTURE + psh_forgot_to_set_static_SELFILLUM + psh_forgot_to_set_static_SELFILLUMFRESNEL + psh_forgot_to_set_static_NORMALMAPALPHAENVMAPMASK + psh_forgot_to_set_static_HALFLAMBERT + psh_forgot_to_set_static_FLASHLIGHT + psh_forgot_to_set_static_DETAILTEXTURE + psh_forgot_to_set_static_DETAIL_BLEND_MODE + psh_forgot_to_set_static_FLASHLIGHTDEPTHFILTERMODE + psh_forgot_to_set_static_BLENDTINTBYBASEALPHA + 0
 class vertexlit_and_unlit_generic_bump_ps20b_Dynamic_Index
 {
+private:
+	int m_nPIXELFOGTYPE;
+#ifdef _DEBUG
+	bool m_bPIXELFOGTYPE;
+#endif
+public:
+	void SetPIXELFOGTYPE( int i )
+	{
+		Assert( i >= 0 && i <= 2 );
+		m_nPIXELFOGTYPE = i;
+#ifdef _DEBUG
+		m_bPIXELFOGTYPE = true;
+#endif
+	}
+	void SetPIXELFOGTYPE( bool i )
+	{
+		m_nPIXELFOGTYPE = i ? 1 : 0;
+#ifdef _DEBUG
+		m_bPIXELFOGTYPE = true;
+#endif
+	}
 private:
 	int m_nNUM_LIGHTS;
 #ifdef _DEBUG
@@ -386,6 +407,10 @@ public:
 	vertexlit_and_unlit_generic_bump_ps20b_Dynamic_Index()
 	{
 #ifdef _DEBUG
+		m_bPIXELFOGTYPE = false;
+#endif // _DEBUG
+		m_nPIXELFOGTYPE = 0;
+#ifdef _DEBUG
 		m_bNUM_LIGHTS = false;
 #endif // _DEBUG
 		m_nNUM_LIGHTS = 0;
@@ -403,10 +428,10 @@ public:
 		// Asserts to make sure that we aren't using any skipped combinations.
 		// Asserts to make sure that we are setting all of the combination vars.
 #ifdef _DEBUG
-		bool bAllDynamicVarsDefined = m_bNUM_LIGHTS && m_bAMBIENT_LIGHT && m_bFLASHLIGHTSHADOWS;
+		bool bAllDynamicVarsDefined = m_bPIXELFOGTYPE && m_bNUM_LIGHTS && m_bAMBIENT_LIGHT && m_bFLASHLIGHTSHADOWS;
 		Assert( bAllDynamicVarsDefined );
 #endif // _DEBUG
-		return ( 1 * m_nNUM_LIGHTS ) + ( 5 * m_nAMBIENT_LIGHT ) + ( 10 * m_nFLASHLIGHTSHADOWS ) + 0;
+		return ( 1 * m_nPIXELFOGTYPE ) + ( 3 * m_nNUM_LIGHTS ) + ( 15 * m_nAMBIENT_LIGHT ) + ( 30 * m_nFLASHLIGHTSHADOWS ) + 0;
 	}
 };
-#define shaderDynamicTest_vertexlit_and_unlit_generic_bump_ps20b psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + 0
+#define shaderDynamicTest_vertexlit_and_unlit_generic_bump_ps20b psh_forgot_to_set_dynamic_PIXELFOGTYPE + psh_forgot_to_set_dynamic_NUM_LIGHTS + psh_forgot_to_set_dynamic_AMBIENT_LIGHT + psh_forgot_to_set_dynamic_FLASHLIGHTSHADOWS + 0

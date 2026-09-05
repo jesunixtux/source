@@ -8,7 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef OSX
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "mapdoc.h"
 #include "MapWorld.h"
 #include "Material.h"

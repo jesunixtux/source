@@ -2921,7 +2921,7 @@ void CShaderManager::WarmShaderCache()
 #ifdef DX_TO_GL_ABSTRACTION
 // if shaders are changed in a way that requires the client-side cache to be invalidated,
 // increment this string - such changes include combo changes (skips, adding combos)
-const char *k_pszShaderCacheRootKey = "glshadercachev002";
+const char *k_pszShaderCacheRootKey = "glshadercachev004";
 #endif
 
 void	CShaderManager::SaveShaderCache( char *cacheName )
@@ -3783,4 +3783,3 @@ void	CShaderManager::DoStartupShaderPreloading()
 	}
 }
 #endif
-
