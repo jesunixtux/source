@@ -103,7 +103,7 @@ Los scripts admiten instalaciones no estándar mediante variables de entorno:
 PORTAL_DIR="/Volumes/Games/SteamLibrary/steamapps/common/Portal" \
   ./scripts/deploy-macos-portal.sh
 
-HL2_DIR="/Volumes/Games/SteamLibrary/Application Support/Steam/steamapps/common/Half-Life 2" \
+HL2_DIR="/Volumes/Games/SteamLibrary/steamapps/common/Half-Life 2" \
   ./scripts/deploy-macos-hl2.sh
 ```
 
