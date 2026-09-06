@@ -1,6 +1,6 @@
 [submodule "ivp"]
 	path = ivp
-	url = https://github.com/SourceEngine-CommunityEdition/source-ivp.git
+	url = https://github.com/jesunixtux/source-ivp.git
 [submodule "lib"]
 	path = lib
 	url = https://github.com/SourceEngine-CommunityEdition/source-lib.git
