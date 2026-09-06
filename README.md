@@ -13,6 +13,7 @@ este repositorio no incluye ni redistribuye contenido de Valve.
 |---|---:|---|---|
 | Half-Life 2 | 220 | `hl2` | Probado en Apple Silicon |
 | Portal | 400 | `portal` | Probado en Apple Silicon, incluidos shaders Anniversary |
+| Left 4 Dead | 500 | `l4d` | Experimental: arranque/render; sin gameplay completo |
 | Otros juegos Source 1 | — | — | No probados todavía |
 
 Los módulos `client.dylib` y `server.dylib` no son intercambiables entre juegos.
@@ -45,6 +46,20 @@ HL2_SKIP_INTRO=1 ./hl2.sh -game portal -novid
 ./scripts/deploy-macos-hl2.sh
 cd "$HOME/Library/Application Support/Steam/steamapps/common/Half-Life 2"
 HL2_SKIP_INTRO=1 ./hl2.sh -game hl2 -novid
+```
+
+### Left 4 Dead (experimental)
+
+Este árbol no contiene las fuentes propias de L4D. `l4d` es un objetivo aislado
+que compila un shell Orange Box y permite probar launcher, OpenGL y recursos; no ofrece
+campañas, infectados ni lógica de partida completa.
+
+```bash
+./scripts/build-macos-arm64.sh l4d
+L4D_DIR="$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead" \
+  ./scripts/deploy-macos-l4d.sh
+cd "$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead"
+HL2_SKIP_INTRO=1 ./hl2.sh -game left4dead -novid -windowed -w 1280 -h 720 +map c1m1_hotel
 ```
 
 Para una compilación optimizada:

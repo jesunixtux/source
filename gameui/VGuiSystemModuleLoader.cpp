@@ -170,6 +170,11 @@ bool CVGuiSystemModuleLoader::LoadPlatformModules(CreateInterfaceFn *factorylist
 			dllPath = it->GetString("dll");
 		}
 
+		// The legacy Steam server browser is an i386-only module on macOS.
+		// It is optional for the main menu; skip it so ARM64 builds can start.
+		if ( IsOSX() && !Q_stricmp( dllPath, "serverbrowser.dll" ) )
+			continue;
+
 
 		// load the module (LoadModule calls GetLocalCopy() under steam)
 		CSysModule *mod = g_pFullFileSystem->LoadModule(dllPath, "EXECUTABLE_PATH");

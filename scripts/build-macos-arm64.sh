@@ -4,7 +4,7 @@ set -eu
 
 usage() {
 	cat <<'EOF'
-Usage: ./scripts/build-macos-arm64.sh [portal|hl2] [waf configure options]
+Usage: ./scripts/build-macos-arm64.sh [portal|hl2|l4d] [waf configure options]
 
 Environment variables:
   SOURCE_GAME  Game to build when no positional game is supplied (default: portal)
@@ -13,6 +13,7 @@ Environment variables:
 Examples:
   ./scripts/build-macos-arm64.sh portal
   ./scripts/build-macos-arm64.sh hl2
+  ./scripts/build-macos-arm64.sh l4d       # experimental: Orange Box engine/game ABI
   BUILD_TYPE=release ./scripts/build-macos-arm64.sh portal
 EOF
 }
@@ -28,10 +29,12 @@ export PKG_CONFIG_PATH="/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/o
 # before switching games so an old module cannot be deployed by mistake.
 SOURCE_GAME="${SOURCE_GAME:-portal}"
 BUILD_TYPE="${BUILD_TYPE:-debug}"
+REQUESTED_GAME="$SOURCE_GAME"
 
 case "${1:-}" in
-	portal|hl2)
+	portal|hl2|l4d)
 		SOURCE_GAME="$1"
+		REQUESTED_GAME="$1"
 		shift
 		;;
 	-h|--help)
@@ -42,8 +45,12 @@ esac
 
 case "$SOURCE_GAME" in
 	portal|hl2) ;;
+	l4d)
+	# L4D has an isolated compatibility target. Its current VPC sources are an
+	# Orange Box shell until native L4D sources are integrated.
+		;;
 	*)
-		echo "ERROR: unsupported game '$SOURCE_GAME'. Tested values: portal, hl2." >&2
+		echo "ERROR: unsupported game '$SOURCE_GAME'. Tested values: portal, hl2, l4d (experimental)." >&2
 		usage >&2
 		exit 2
 		;;
@@ -57,6 +64,9 @@ case "$BUILD_TYPE" in
 		;;
 esac
 
-echo "==> Configuring macOS arm64 build for $SOURCE_GAME ($BUILD_TYPE)"
+if [ "$REQUESTED_GAME" = l4d ]; then
+	echo "WARN: Left 4 Dead sources are not present; building the HL2/Orange Box ABI for experimental L4D rendering."
+fi
+echo "==> Configuring macOS arm64 build for $REQUESTED_GAME (WAF target: $SOURCE_GAME, $BUILD_TYPE)"
 python3 ./waf configure -T "$BUILD_TYPE" --disable-warns --build-games="$SOURCE_GAME" "$@"
 python3 ./waf build

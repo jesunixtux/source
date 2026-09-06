@@ -85,9 +85,13 @@ InitReturnVal_t CSceneFileCache::Init()
 		{
 			SceneImageHeader_t *pHeader = (SceneImageHeader_t *)m_SceneImageFile.Base();
 			if ( pHeader->nId != SCENE_IMAGE_ID || 
-				pHeader->nVersion != SCENE_IMAGE_VERSION )
+				 pHeader->nVersion != SCENE_IMAGE_VERSION )
 			{
-				Error( "CSceneFileCache: Bad scene image file %s\n", pSceneImageName );
+				// Game branches can ship a newer scene-image format.  A mismatched
+				// cache only disables choreographed scene playback; treating it as a
+				// fatal error prevents the rest of the UI/menu from starting.
+				Warning( "CSceneFileCache: incompatible scene image %s; scene playback disabled.\n", pSceneImageName );
+				m_SceneImageFile.Purge();
 			}
 		}
 		else

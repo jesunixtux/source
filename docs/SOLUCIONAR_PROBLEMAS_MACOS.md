@@ -1,6 +1,7 @@
 # Solucionar problemas en macOS ARM64
 
-Esta guía se aplica a las compilaciones probadas de Half-Life 2 y Portal. Antes
+Esta guía se aplica a las compilaciones probadas de Half-Life 2 y Portal, y al
+modo experimental de Left 4 Dead. Antes
 de cambiar código, reproduce el fallo con `-condebug -conclearlog` y conserva el
 registro del juego.
 
@@ -30,6 +31,37 @@ rg -n -i "error|failed|couldn't load combo|pure virtual|wrong jpeg" \
 ```
 
 En Half-Life 2 cambia la última ruta por `hl2/console.log`.
+
+Left 4 Dead:
+
+```bash
+cd "$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead"
+file hl2_osx bin/*.dylib left4dead/bin/*.dylib
+rg -n -i "error|failed|couldn't load|assert|crash|not found" left4dead/console.log
+```
+
+Mensajes que mencionen `Half-Life 2` son normales: el módulo disponible se
+compiló con ese ABI. Errores de entidades, campañas o Director reflejan que las
+fuentes de juego específicas de L4D no están en este repositorio.
+
+## Left 4 Dead no pasa de la carga del mapa
+
+Comprueba que se usó el objetivo experimental correcto:
+
+```bash
+./scripts/build-macos-arm64.sh l4d
+L4D_DIR="$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead" \
+  ./scripts/deploy-macos-l4d.sh
+```
+
+El deploy rechaza una caché `portal` para evitar mezclar módulos. El modo actual
+valida launcher, OpenGL, shaders y lectura de recursos; jugar campañas exige
+integrar legalmente las fuentes específicas de L4D.
+
+Si aparece `Platform Error: bad module 'serverbrowser.dll'`, el port evita
+cargar el navegador de servidores i386 desde `VGuiSystemModuleLoader`. El menú
+puede abrirse sin esa función. Los materiales VGUI que falten se muestran
+magenta, pero no impiden comprobar que el proceso y la ventana arrancan.
 
 ## El deploy dice que se compiló el juego equivocado
 

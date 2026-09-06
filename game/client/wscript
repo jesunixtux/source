@@ -17,6 +17,9 @@ games = {
 	'hl1': ['client_base.vpc', 'client_hl1.vpc'],
 	'episodic': ['client_base.vpc', 'client_episodic.vpc'],
 	'portal': ['client_base.vpc', 'client_portal.vpc'],
+	# Compatibility shell for the ARM64 L4D target. Replace the HL2 VPC with
+	# legal L4D-specific sources when available; keep its output isolated.
+	'l4d': ['client_base.vpc', 'client_hl2.vpc'],
 	'hl1mp': ['client_base.vpc', 'client_hl1mp.vpc'],
 	'cstrike': ['client_base.vpc', 'client_cstrike.vpc'],
 	'dod': ['client_base.vpc', 'client_dod.vpc']
@@ -27,6 +30,8 @@ def configure(conf):
 	conf.env.GAMES = game
 
 	conf.env.append_unique('DEFINES', ['DISABLE_STEAM=1'])
+	if game == 'l4d':
+		conf.env.append_unique('DEFINES', ['GAME_L4D=1'])
 
 	if game not in games.keys():
 		conf.fatal("Couldn't find game: ", game)
@@ -91,4 +96,3 @@ def build(bld):
 		subsystem = bld.env.MSVC_SUBSYSTEM,
 		idx      = bld.get_taskgen_count()
 	)
-

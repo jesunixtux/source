@@ -19,15 +19,21 @@ BIN_DIR="$L4D_DIR/bin"
 GAME_BIN_DIR="$L4D_DIR/left4dead/bin"
 HOMEBREW="/opt/homebrew/opt"
 
-# The deployment just stages whatever was built; warn if it wasn't configured
-# for a single-game build, but don't block (we deploy engine + OB game code).
+# L4D has an isolated compatibility target. Never copy Portal or HL2 game
+# modules into it; the current l4d target is an Orange Box compatibility shell.
 CLIENT_CACHE="$BUILD_DIR/c4che/game/client_cache.py"
 SERVER_CACHE="$BUILD_DIR/c4che/game/server_cache.py"
 if [ -f "$CLIENT_CACHE" ] && grep -q "^GAMES = " "$CLIENT_CACHE"; then
   GAMES_BUILT="$(grep "^GAMES = " "$CLIENT_CACHE" | sed "s/^GAMES = '\(.*\)'$/\1/")"
-  echo "==> client/server built for game: $GAMES_BUILT (Orange Box code)"
+  if [ "$GAMES_BUILT" != "l4d" ]; then
+    echo "ERROR: L4D deployment requires a build configured for l4d (got '$GAMES_BUILT')." >&2
+    echo "       Run: ./scripts/build-macos-arm64.sh l4d" >&2
+    exit 2
+  fi
+  echo "==> client/server built for game: hl2 (Orange Box ABI; L4D gameplay remains experimental)"
 else
-  echo "WARN: client/server caches not found; deploying as-is."
+  echo "ERROR: client/server build cache not found; compile with ./scripts/build-macos-arm64.sh l4d" >&2
+  exit 2
 fi
 
 [ -d "$L4D_DIR/left4dead" ] || { echo "ERROR: Left 4 Dead not found at $L4D_DIR"; exit 1; }
@@ -164,6 +170,12 @@ done
 echo "==> Installing launcher as hl2_osx"
 cp -f "$BUILD_DIR/launcher_main/hl2_launcher" "$L4D_DIR/hl2_osx"
 chmod +x "$L4D_DIR/hl2_osx"
+codesign -f -s - "$L4D_DIR/hl2_osx" 2>/dev/null || {
+  echo "WARN: ad-hoc signing failed for $L4D_DIR/hl2_osx"
+}
+
+# The launcher uses the app id to select the correct Steam content root.
+printf '500\n' > "$L4D_DIR/steam_appid.txt"
 
 echo "==> Deploying SDL3 runtime (required by sdl2-compat shim)"
 SDL3_SRC="$HOMEBREW/sdl3/lib/libSDL3.0.dylib"
@@ -190,6 +202,14 @@ echo "==> Removing stale i386-only modules that have no arm64 equivalent"
 for stale in GameUI.dylib ServerBrowser.dylib datacache.dylib engine.dylib filesystem_stdio.dylib inputsystem.dylib launcher.dylib materialsystem.dylib scenefilecache.dylib shaderapidx9.dylib soundemittersystem.dylib stdshader_dx9.dylib studiorender.dylib vgui2.dylib vguimatsurface.dylib video_services.dylib vphysics.dylib vtex_dll.dylib bsppack.dylib shaderapiempty.dylib vaudio_miles.dylib vaudio_speex.dylib video_quicktime.dylib replay.dylib chromehtml.dylib bugreporter_filequeue.dylib bugreporter_public.dylib sourcevr.dylib; do
   rm -f "$BIN_DIR/$stale"
 done
+# Steam's macOS package may also contain legacy Windows DLLs with the same
+# module names.  Leaving them active makes the loader select an i386 binary
+# and show "Platform Error: bad module" before trying our ARM64 dylib.
+rm -f "$BIN_DIR/serverbrowser.dll" "$BIN_DIR/gameui.dll"
+# Some L4D UI resources request the legacy .dll spelling explicitly.  Point
+# those names at the signed ARM64 dylibs instead of leaving the old i386 files.
+ln -sfn libServerBrowser.dylib "$BIN_DIR/serverbrowser.dll"
+ln -sfn libGameUI.dylib "$BIN_DIR/gameui.dll"
 rm -rf "$BIN_DIR/osx32"
 
 echo "==> Done. Deploy summary:"

@@ -1,7 +1,7 @@
 # Compilar Source Engine para macOS ARM64
 
-Este tutorial cubre el flujo probado para Half-Life 2 y Portal en un Mac Apple
-Silicon. Los comandos se ejecutan desde la raíz del repositorio `source/`, salvo
+Este tutorial cubre el flujo probado para Half-Life 2 y Portal, además del modo
+experimental de Left 4 Dead, en un Mac Apple Silicon. Los comandos se ejecutan desde la raíz del repositorio `source/`, salvo
 cuando se indique otra carpeta.
 
 ## 1. Requisitos
@@ -10,7 +10,7 @@ cuando se indique otra carpeta.
 - Xcode o Xcode Command Line Tools.
 - Homebrew para ARM64 en `/opt/homebrew`.
 - Python 3.9 o posterior.
-- Una instalación legal de Half-Life 2 o Portal en Steam.
+- Una instalación legal de Half-Life 2, Portal o Left 4 Dead en Steam.
 
 Comprueba las herramientas:
 
@@ -189,7 +189,29 @@ HL2_SKIP_INTRO=1 ./hl2.sh -game hl2 -novid -windowed \
 
 El registro queda en `hl2/console.log`.
 
-## 8. Cambiar de juego correctamente
+## 8. Desplegar Left 4 Dead (experimental)
+
+No existe código de gameplay nativo de L4D en `game/client` ni `game/server`.
+El objetivo aislado `l4d` usa actualmente un shell basado en Orange Box y el deploy
+rechaza configuraciones `portal` o `hl2`. Esto permite validar el motor y el render,
+pero la lógica de campañas, infectados, armas y Director requiere las fuentes
+específicas de L4D.
+
+```bash
+./scripts/build-macos-arm64.sh l4d
+L4D_DIR="$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead" \
+  ./scripts/deploy-macos-l4d.sh
+```
+
+Prueba mínima:
+
+```bash
+cd "$HOME/Library/Application Support/Steam/steamapps/common/left 4 dead"
+HL2_SKIP_INTRO=1 ./hl2.sh -game left4dead -novid -windowed -w 1024 -h 640 \
+  -condebug -conclearlog +developer 0 +map c1m1_hotel
+```
+
+## 9. Cambiar de juego correctamente
 
 Después de compilar Portal, para probar Half-Life 2:
 
@@ -208,7 +230,7 @@ Para volver a Portal:
 
 El script de despliegue se detiene si detecta el juego equivocado.
 
-## 9. Restaurar los binarios oficiales
+## 10. Restaurar los binarios oficiales
 
 La opción más fiable es **Steam > Propiedades > Archivos instalados > Verificar
 integridad**. Los scripts también conservan la primera copia local en
