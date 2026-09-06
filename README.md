@@ -22,6 +22,16 @@ viceversa. Los scripts de despliegue comprueban esto antes de copiar archivos.
 
 ## Inicio rápido
 
+Clona el repositorio junto con todos sus submódulos:
+
+```bash
+git clone --recurse-submodules https://github.com/jesunixtux/source.git
+cd source
+```
+
+No uses `git clone` sin `--recurse-submodules`, porque `ivp`, `lib` y `thirdparty`
+son necesarios para compilar el motor.
+
 Instala primero Xcode Command Line Tools, Homebrew y las dependencias:
 
 ```bash
@@ -93,7 +103,7 @@ Los scripts admiten instalaciones no estándar mediante variables de entorno:
 PORTAL_DIR="/Volumes/Games/SteamLibrary/steamapps/common/Portal" \
   ./scripts/deploy-macos-portal.sh
 
-HL2_DIR="/Volumes/Games/SteamLibrary/steamapps/common/Half-Life 2" \
+HL2_DIR="/Volumes/Games/SteamLibrary/Application Support/Steam/steamapps/common/Half-Life 2" \
   ./scripts/deploy-macos-hl2.sh
 ```
 
