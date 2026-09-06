@@ -4,7 +4,7 @@ set -eu
 
 usage() {
 	cat <<'EOF'
-Usage: ./scripts/build-macos-arm64.sh [portal|hl2|l4d] [waf configure options]
+Usage: ./scripts/build-macos-arm64.sh [portal|hl2|l4d|stanley] [waf configure options]
 
 Environment variables:
   SOURCE_GAME  Game to build when no positional game is supplied (default: portal)
@@ -14,6 +14,7 @@ Examples:
   ./scripts/build-macos-arm64.sh portal
   ./scripts/build-macos-arm64.sh hl2
   ./scripts/build-macos-arm64.sh l4d       # experimental: Orange Box engine/game ABI
+  ./scripts/build-macos-arm64.sh stanley   # experimental: Portal ABI for Stanley content
   BUILD_TYPE=release ./scripts/build-macos-arm64.sh portal
 EOF
 }
@@ -32,7 +33,7 @@ BUILD_TYPE="${BUILD_TYPE:-debug}"
 REQUESTED_GAME="$SOURCE_GAME"
 
 case "${1:-}" in
-	portal|hl2|l4d)
+	portal|hl2|l4d|stanley)
 		SOURCE_GAME="$1"
 		REQUESTED_GAME="$1"
 		shift
@@ -45,12 +46,17 @@ esac
 
 case "$SOURCE_GAME" in
 	portal|hl2) ;;
+	stanley)
+		# Stanley's public game binaries are i386; use the closest available
+		# Portal ABI while keeping the target explicitly experimental.
+		SOURCE_GAME="portal"
+		;;
 	l4d)
 	# L4D has an isolated compatibility target. Its current VPC sources are an
 	# Orange Box shell until native L4D sources are integrated.
 		;;
 	*)
-		echo "ERROR: unsupported game '$SOURCE_GAME'. Tested values: portal, hl2, l4d (experimental)." >&2
+		echo "ERROR: unsupported game '$SOURCE_GAME'. Tested values: portal, hl2, l4d, stanley (experimental)." >&2
 		usage >&2
 		exit 2
 		;;
@@ -66,6 +72,9 @@ esac
 
 if [ "$REQUESTED_GAME" = l4d ]; then
 	echo "WARN: Left 4 Dead sources are not present; building the HL2/Orange Box ABI for experimental L4D rendering."
+fi
+if [ "$REQUESTED_GAME" = stanley ]; then
+	echo "WARN: Stanley game modules are i386; building the Portal-compatible ARM64 shell for resource testing."
 fi
 echo "==> Configuring macOS arm64 build for $REQUESTED_GAME (WAF target: $SOURCE_GAME, $BUILD_TYPE)"
 python3 ./waf configure -T "$BUILD_TYPE" --disable-warns --build-games="$SOURCE_GAME" "$@"

@@ -65,6 +65,7 @@ compilan:
 ```text
 ./scripts/build-macos-arm64.sh portal
 ./scripts/build-macos-arm64.sh hl2
+./scripts/build-macos-arm64.sh stanley   # experimental, usa ABI Portal
 ```
 
 Al cambiar de juego, ejecuta otra vez el script completo. WAF reconfigurará el
@@ -211,7 +212,40 @@ HL2_SKIP_INTRO=1 ./hl2.sh -game left4dead -novid -windowed -w 1024 -h 640 \
   -condebug -conclearlog +developer 0 +map c1m1_hotel
 ```
 
-## 9. Cambiar de juego correctamente
+## 9. Probar contenido de Source SDK Base 2007
+
+La instalación de Source SDK Base 2007 puede usarse como fuente de recursos
+(`sourcetest`, VPK, materiales y mapas), pero sus ejecutables son i386 y sus
+módulos `client.dll`/`server.dll` son Windows. No los sustituyas ni los mezcles
+con las bibliotecas ARM64.
+
+La prueba segura consiste en arrancar nuestro motor ARM64 indicando el directorio
+`sourcetest`:
+
+```bash
+SDK2007="$HOME/Library/Application Support/Steam/steamapps/common/Source SDK Base 2007"
+PORTAL="$HOME/Library/Application Support/Steam/steamapps/common/Portal"
+cd "$PORTAL"
+./hl2_osx -game "$SDK2007/sourcetest" -windowed -w 1280 -h 720 -novid -condebug
+```
+
+Esto valida la inicialización del motor y el render. Si aparecen errores de
+`client.dll`, `server.dll` o materiales ausentes, son incompatibilidades de los
+recursos originales, no un fallo de arquitectura del ejecutable ARM64.
+
+## 10. Probar The Stanley Parable (rama de terceros)
+
+La versión clásica de Steam usa App ID `221910` y una rama derivada de Portal 2.
+En Apple Silicon, sus binarios macOS son únicamente `i386`; `thestanleyparable/bin`
+contiene `client.dylib` y `server.dylib` i386. Por ello, el motor ARM64 no puede
+cargar el juego original directamente.
+
+Sí se puede usar el contenido como referencia para una adaptación ARM64. No
+reemplaces `bin/engine.dylib` ni los módulos del juego en la instalación de Steam.
+La prueba realizada con nuestro ejecutable confirma el bloqueo:
+`dlopen(.../The Stanley Parable/bin/engine.dylib): incompatible architecture`.
+
+## 11. Cambiar de juego correctamente
 
 Después de compilar Portal, para probar Half-Life 2:
 
