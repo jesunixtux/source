@@ -91,6 +91,13 @@ fi
 if [ "$REQUESTED_GAME" = portal2 ]; then
 	echo "WARN: Portal 2 support is experimental: imported gameplay entities are partial and some full-game modules remain unavailable."
 fi
+
+# Source's old SDL video menu logic compares GLM backing-pixel render modes with
+# SDL's logical Retina desktop size. Patch that macOS-only mismatch before WAF
+# scans the sources. The patcher is idempotent and exits with an error if the
+# expected upstream blocks changed, so it cannot silently patch the wrong code.
+python3 ./scripts/patch-macos-video-modes.py
+
 echo "==> Configuring macOS arm64 build for $REQUESTED_GAME (WAF target: $SOURCE_GAME, $BUILD_TYPE)"
 python3 ./waf configure -T "$BUILD_TYPE" --disable-warns --build-games="$SOURCE_GAME" "$@"
 python3 ./waf build
