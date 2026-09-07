@@ -12,11 +12,39 @@ suelo, muebles, texturas e iluminación en Apple Silicon. Se verificó la escena
 mediante captura de la ventana del juego, no solamente porque el proceso
 permaneciera abierto. Aún hay materiales y efectos exclusivos sin implementar.
 
+## Pistola y primera cámara: prueba jugable
+
+La prueba del 7 de septiembre también valida disparos azul/naranja, enlace y
+cruce real del jugador entre portales en `sp_a1_intro1`. Valida recoger el cubo
+con el manejador de uso, colocarlo sobre el botón y comprobar que la puerta se
+abre; al retirarlo, se cierra. Se utilizan las superficies, entidades y conexiones
+del BSP original, sin desactivar la validación de superficies ni reemplazar el
+mapa por una habitación de demostración.
+
+Para probarlo libremente, abre **`Jugar-Portal2-PortalGun.command`** en el staging.
+Tras cargar el mapa y esperar unos 15 segundos de simulación, el lanzador salta
+la cinemática del hotel y coloca al jugador en la primera cámara con la pistola
+dual. Esto es un **modo de pruebas**, no el comienzo original de la campaña:
+normalmente el jugador todavía no tiene la pistola en este mapa.
+
+- WASD: desplazarse; ratón: mirar; espacio: saltar.
+- Clic izquierdo/derecho: portal azul/naranja sobre paneles blancos válidos.
+- E: recoger o soltar el cubo; colocarlo sobre el botón activa la puerta.
+- F6: volver a equipar la pistola; F7: volver a la cámara de pruebas.
+- Escape/F10: menú de pausa experimental. En teclados que usan teclas multimedia
+  puede ser necesario pulsar Fn junto con F6/F7/F10.
+
+`Jugar-Portal2-Experimental.command` conserva el inicio normal del mapa y añade
+F6/F7 como opciones explícitas. No usa el controlador de pruebas automáticas.
+No están validados el recorrido completo desde el hotel hasta el ascensor, los
+guardados de campaña ni la continuación jugable de `sp_a1_intro2`.
+
 ## Compilar y preparar
 
 Requisitos: herramientas de desarrollo de Xcode, dependencias de compilación
 descritas en [la guía principal](COMPILAR_MACOS_ARM64.md), Python 3 con `vpk`,
-y las instalaciones locales de Portal 2 y Portal. Portal aporta los recursos
+y `ffmpeg` disponible en PATH, y las instalaciones locales de Portal 2 y Portal.
+Portal aporta los recursos
 base y el cache de shaders compatible con este renderer.
 
 Desde la raíz de `source`:
@@ -37,6 +65,18 @@ se reemplazan binarios de Steam. `cfg` y los guardados se escriben en el área
 aislada. Las bibliotecas del staging son enlaces al build: recompilar otro juego
 en ese mismo build puede cambiar esta prueba. Usa builds separados si necesitas
 conservar varios juegos simultáneamente.
+
+Después del cambio de capacidad de esqueletos (128 a 256 huesos), **recompila
+todos los módulos con `python3 ./waf build`**. No mezcles bibliotecas antiguas
+con nuevas: las estructuras compartidas de huesos y algunos campos de red
+cambian de tamaño. El formato antiguo de animación sigue usando su decodificador
+previo, pero no se ha repetido aquí una campaña completa de Portal o Half-Life 2.
+
+Los lanzadores usan `-nosoundcachewrite`: permiten leer recursos y caches de las
+instalaciones montadas, pero impiden guardar desde este motor caches de audio
+incompatibles sobre los del juego original. Las pruebas anteriores a esta opción
+podían escribir caches auxiliares en rutas de contenido montadas; esta opción no
+revierte los que ya existan. No se reemplazan los VPK originales.
 
 El lanzador abre `sp_a1_intro1`. Para seleccionar otro mapa:
 
@@ -84,6 +124,12 @@ clang++ -std=c++11 -fsanitize=undefined,address \
 /tmp/portal2-shadercombo-test
 
 python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" --screenshot
+
+python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
+  --gameplay --seconds 60 --screenshot
+
+python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
+  --intro-scenes --seconds 75 --screenshot
 ```
 
 La prueba abre el juego, espera 20 segundos y lo cierra. Guarda `engine.log`,
@@ -92,6 +138,27 @@ La prueba abre el juego, espera 20 segundos y lo cierra. Guarda `engine.log`,
 y que no aparezcan los errores de índices de shaders detectados. **Hay que
 inspeccionar la imagen**: no es una prueba automática de jugabilidad o calidad
 visual. La captura requiere autorización de grabación de pantalla de macOS.
+
+`GAMEPLAY PASS` exige además estas comprobaciones en el servidor:
+
+- Outputs antiguos separados por comas y modernos separados por ESC, conservando
+  comas dentro de parámetros de scripts.
+- Cancelación de eventos durante su propio callback sin liberar el evento activo.
+- Filtro de colisión seguro mientras un duplicado físico del portal se construye.
+- Ataques con la pistola real, portales recíprocamente enlazados y un cruce
+  observado dentro de `CProp_Portal::TeleportTouchingEntity`.
+- Recogida del cubo y apertura/cierre de la puerta por el botón y los relés del mapa.
+
+La prueba coloca automáticamente al jugador y al cubo en posiciones de ensayo;
+no es un recorrido manual completo. Durante ella se ignoran los controles del
+usuario para no alterar los resultados. El lanzador jugable no activa esa opción.
+`INTRO SCENES PASS` exige terminar las cuatro escenas encadenadas del inicio de
+la cámara de relajación y que no se registren fallos de carga de sus voces.
+Esto no comprueba subjetivamente la mezcla de audio ni todos los diálogos.
+
+Registro de referencia de pistola y puzle: `diagnostics/20260907-160713-450706`
+en el staging `portal2_arm64_render_20260907`.
+La cadena de escenas y carga de voces pasó en `diagnostics/20260907-160845-652007`.
 
 `test-macos-portal2.sh` prueba únicamente arranque y `+quit`; un timeout ahora
 se considera fallo, no éxito.
@@ -106,3 +173,40 @@ Persisten recursos/proxies exclusivos, cubemaps que no se leen correctamente y
 entidades sin lógica completa. Algunos objetos pueden aparecer blancos o con
 iluminación incorrecta. `--no-prop-lighting` es solo una opción diagnóstica para
 comparar la iluminación de objetos; no se aplica al lanzador predeterminado.
+
+## Adaptaciones de jugabilidad y sus límites
+
+`portal2_gameplay_compat` contiene modelos/materiales de la pistola y portales
+de Portal, correspondientes al código de arma compilado. Sus tres archivos de
+partículas usan DMX binario 2. `ORIGIN.txt` registra hashes de los recursos.
+La apariencia no es una implementación nueva de la pistola original de Portal 2.
+
+Los preparadores de la introducción hacen tres trabajos distintos:
+
+1. `prepare-portal2-intro-script.py` extrae 49 entradas de las tablas de escenas
+   locales y las convierte a KeyValues, sin ejecutar Squirrel.
+2. `prepare-portal2-scenes.py` adapta las cabeceras/resúmenes VSIF 3 a VSIF 2
+   conservando los VCD binarios versión 4, sus tiempos y eventos.
+3. `prepare-portal2-intro-audio.py` localiza las voces usadas por esas escenas y
+   por el BSP, y convierte MP3 con extensión `.wav` a PCM16/44100 mediante ffmpeg.
+   Se preparan 63 archivos; `INTRO_AUDIO_ORIGIN.txt` registra su procedencia.
+
+El servidor implementa un adaptador nativo **limitado a `sp_a1_intro1`**, no una
+máquina virtual VScript general. Ejecuta callbacks de sus escenas, cancelaciones,
+relés, cámaras, salto/agachado y el marco móvil del contenedor. Los nags de puerta
+se recorren en orden en lugar de sortearse; las colas de voces no reproducen toda
+la prioridad de Squirrel. Las llamadas desconocidas se registran como
+`PORTAL2_INTRO unsupported script`, no se consideran exitosas silenciosamente.
+
+Siguen pendientes las películas de introducción/ascensor, `env_instructor_hint`,
+proxies de materiales exclusivos, parte de la presentación de Wheatley y otras
+entidades. El ascensor tiene un adaptador de `ChangeLevel`, pero no preserva
+estado de campaña mediante landmarks y no demuestra que el mapa siguiente sea
+jugable. No presentar este experimento como «toda la programación de Portal 2».
+
+Si vuelve un cierre al animar el contenedor, comprueba que todo el build usa
+256 huesos y el decodificador `STUDIO_FRAMEANIM` de Studio 49. Si la pistola se
+equipa pero no coloca portales, prueba paneles blancos: el vidrio, los modelos
+y las caras `SURF_NOPORTAL` siguen rechazándose deliberadamente. Si una voz no
+carga, vuelve a ejecutar el preparador de audio sobre el overlay, sin renombrar
+ni sobrescribir archivos dentro de los VPK de Steam.

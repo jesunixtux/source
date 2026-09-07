@@ -1194,6 +1194,10 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			pOtherAsPlayer->pl.fixangle = FIXANGLE_ABSOLUTE;
 			pOtherAsPlayer->UpdateVPhysicsPosition( ptNewOrigin, vNewVelocity, 0.0f );
 			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vNewVelocity );
+#ifdef PORTAL2
+			extern void Portal2GameplayTestPlayerTeleported( CBaseEntity *, CProp_Portal * );
+			Portal2GameplayTestPlayerTeleported( pOtherAsPlayer, this );
+#endif
 			//pOtherAsPlayer->UnDuck();
 
 			//pOtherAsPlayer->m_angEyeAngles = qTransformedEyeAngles;
@@ -2310,6 +2314,5 @@ const CUtlVector<CProp_Portal *> *CProp_Portal::GetPortalLinkageGroup( unsigned 
 {
 	return &s_PortalLinkageGroups[iLinkageGroupID];
 }
-
 
 

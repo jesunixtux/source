@@ -128,11 +128,14 @@ CEventAction::CEventAction( const char *ActionData )
 		return;
 
 	char szToken[256];
+	// Newer Hammer versions separate output fields with ESC so parameters
+	// can contain commas (notably script calls). Keep legacy comma outputs.
+	const char delimiter = V_strrchr( ActionData, '\x1b' ) ? '\x1b' : ',';
 
 	//
 	// Parse the target name.
 	//
-	const char *psz = nexttoken(szToken, ActionData, ',');
+	const char *psz = nexttoken(szToken, ActionData, delimiter);
 	if (szToken[0] != '\0')
 	{
 		m_iTarget = AllocPooledString(szToken);
@@ -141,7 +144,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the input name.
 	//
-	psz = nexttoken(szToken, psz, ',');
+	psz = nexttoken(szToken, psz, delimiter);
 	if (szToken[0] != '\0')
 	{
 		m_iTargetInput = AllocPooledString(szToken);
@@ -154,7 +157,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the parameter override.
 	//
-	psz = nexttoken(szToken, psz, ',');
+	psz = nexttoken(szToken, psz, delimiter);
 	if (szToken[0] != '\0')
 	{
 		m_iParameter = AllocPooledString(szToken);
@@ -163,7 +166,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the delay.
 	//
-	psz = nexttoken(szToken, psz, ',');
+	psz = nexttoken(szToken, psz, delimiter);
 	if (szToken[0] != '\0')
 	{
 		m_flDelay = atof(szToken);
@@ -172,7 +175,7 @@ CEventAction::CEventAction( const char *ActionData )
 	//
 	// Parse the number of times to fire.
 	//
-	nexttoken(szToken, psz, ',');
+	nexttoken(szToken, psz, delimiter);
 	if (szToken[0] != '\0')
 	{
 		m_nTimesToFire = atoi(szToken);
@@ -914,6 +917,10 @@ void CEventQueue::ServiceEvents( void )
 #endif
 	{
 		MDLCACHE_CRITICAL_SECTION();
+		// Inputs may cancel their caller's pending events. The event being
+		// dispatched is no longer pending: unlink it before invoking user code
+		// so CancelEvents cannot free it while we still read its fields.
+		RemoveEvent( pe );
 
 		bool targetFound = false;
 
@@ -978,8 +985,7 @@ void CEventQueue::ServiceEvents( void )
 			ADD_DEBUG_HISTORY( HISTORY_ENTITY_IO, szBuffer );
 		}
 
-		// remove the event from the list (remembering that the queue may have been added to)
-		RemoveEvent( pe );
+		// Already unlinked before dispatch; newly queued events remain intact.
 		delete pe;
 
 		//
@@ -1868,4 +1874,3 @@ void CEntityList::DeleteEntity( CBaseEntity *pEnt )
 		e = e->pNext;
 	}
 }
-

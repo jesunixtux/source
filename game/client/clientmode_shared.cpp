@@ -77,6 +77,11 @@ class CHudVote;
 
 static vgui::HContext s_hVGuiContext = DEFAULT_VGUI_CONTEXT;
 
+#ifdef PORTAL2
+extern bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum );
+extern void Portal2PauseMenu_LevelInit();
+#endif
+
 ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
 ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
 ConVar hud_freezecamhide( "hud_freezecamhide", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Hide the HUD during freeze-cam" );
@@ -644,6 +649,11 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 {
 	if ( engine->Con_IsVisible() )
 		return 1;
+
+#ifdef PORTAL2
+	if ( Portal2PauseMenu_HandleKeyInput( down, keynum ) )
+		return 0;
+#endif
 	
 	// If we're voting...
 #ifdef VOTING_ENABLED
@@ -797,6 +807,10 @@ void ClientModeShared::StartMessageMode( int iMessageModeType )
 void ClientModeShared::LevelInit( const char *newmap )
 {
 	m_pViewport->GetAnimationController()->StartAnimationSequence("LevelInit");
+
+#ifdef PORTAL2
+	Portal2PauseMenu_LevelInit();
+#endif
 
 	// Tell the Chat Interface
 	if ( m_pChatElement )
@@ -1394,4 +1408,3 @@ void ClientModeShared::DeactivateInGameVGuiContext()
 {
 	vgui::ivgui()->ActivateContext( DEFAULT_VGUI_CONTEXT );
 }
-

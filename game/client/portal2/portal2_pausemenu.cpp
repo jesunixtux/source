@@ -1,0 +1,430 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose: Minimal in-client pause menu for the experimental Portal 2 ARM64
+// build. This is intentionally independent of Portal 2's original GameUI, so
+// it still works while the full menu stack is incomplete.
+//
+//=============================================================================//
+
+#include "cbase.h"
+#include "igamesystem.h"
+#include "tier0/icommandline.h"
+#include "vgui_int.h"
+#include "tier1/convar.h"
+#include <vgui/IInput.h>
+#include <vgui/IPanel.h>
+#include <vgui/IScheme.h>
+#include <vgui/ISurface.h>
+#include <vgui_controls/Panel.h>
+
+// memdbgon must be the last include file in a .cpp file!!!
+#include "tier0/memdbgon.h"
+
+using namespace vgui;
+
+class CPortal2FallbackPausePanel : public vgui::Panel
+{
+	DECLARE_CLASS_SIMPLE( CPortal2FallbackPausePanel, vgui::Panel );
+
+public:
+	CPortal2FallbackPausePanel( vgui::Panel *pParent );
+
+	void Toggle();
+	void ShowMenu( bool bShow );
+
+	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
+	virtual void OnKeyCodePressed( vgui::KeyCode code );
+	virtual void OnMousePressed( vgui::MouseCode code );
+	virtual void OnMouseReleased( vgui::MouseCode code );
+	virtual void Paint();
+	virtual void PerformLayout();
+
+private:
+	enum PauseAction_t
+	{
+		ACTION_RESUME = 0,
+		ACTION_RESTART,
+		ACTION_DISCONNECT,
+		ACTION_QUIT,
+		ACTION_COUNT
+	};
+
+	void RunAction( PauseAction_t action );
+	void EnsureFonts();
+	void DrawAsciiText( const char *pText, int x, int y, vgui::HFont font, Color color );
+	int GetActionAtPos( int x, int y ) const;
+
+	vgui::HFont m_hTitleFont;
+	vgui::HFont m_hTextFont;
+	int m_nMenuX;
+	int m_nMenuY;
+	int m_nMenuW;
+	int m_nMenuH;
+	int m_nButtonH;
+	int m_nHoverAction;
+};
+
+static CPortal2FallbackPausePanel *g_pPortal2PausePanel = NULL;
+static bool g_bOpenPauseMenuWhenReady = false;
+
+CPortal2FallbackPausePanel::CPortal2FallbackPausePanel( vgui::Panel *pParent )
+	: BaseClass( pParent, "Portal2FallbackPausePanel" )
+{
+	m_hTitleFont = vgui::INVALID_FONT;
+	m_hTextFont = vgui::INVALID_FONT;
+	m_nMenuX = 0;
+	m_nMenuY = 0;
+	m_nMenuW = 460;
+	m_nMenuH = 312;
+	m_nButtonH = 42;
+	m_nHoverAction = -1;
+
+	SetVisible( false );
+	SetPaintEnabled( true );
+	SetPaintBackgroundEnabled( false );
+	SetPaintBorderEnabled( false );
+	SetMouseInputEnabled( true );
+	SetKeyBoardInputEnabled( true );
+	SetProportional( false );
+}
+
+void CPortal2FallbackPausePanel::ApplySchemeSettings( vgui::IScheme *pScheme )
+{
+	BaseClass::ApplySchemeSettings( pScheme );
+	EnsureFonts();
+}
+
+void CPortal2FallbackPausePanel::EnsureFonts()
+{
+	if ( m_hTitleFont == vgui::INVALID_FONT )
+	{
+		m_hTitleFont = vgui::surface()->CreateFont();
+		if ( !vgui::surface()->SetFontGlyphSet( m_hTitleFont, "Helvetica", 30, 700, 0, 0,
+			vgui::ISurface::FONTFLAG_ANTIALIAS | vgui::ISurface::FONTFLAG_DROPSHADOW ) )
+		{
+			vgui::surface()->SetFontGlyphSet( m_hTitleFont, "Arial", 30, 700, 0, 0,
+				vgui::ISurface::FONTFLAG_ANTIALIAS | vgui::ISurface::FONTFLAG_DROPSHADOW );
+		}
+	}
+
+	if ( m_hTextFont == vgui::INVALID_FONT )
+	{
+		m_hTextFont = vgui::surface()->CreateFont();
+		if ( !vgui::surface()->SetFontGlyphSet( m_hTextFont, "Helvetica", 22, 500, 0, 0,
+			vgui::ISurface::FONTFLAG_ANTIALIAS | vgui::ISurface::FONTFLAG_DROPSHADOW ) )
+		{
+			vgui::surface()->SetFontGlyphSet( m_hTextFont, "Arial", 22, 500, 0, 0,
+				vgui::ISurface::FONTFLAG_ANTIALIAS | vgui::ISurface::FONTFLAG_DROPSHADOW );
+		}
+	}
+}
+
+void CPortal2FallbackPausePanel::Toggle()
+{
+	ShowMenu( !IsVisible() );
+}
+
+void CPortal2FallbackPausePanel::ShowMenu( bool bShow )
+{
+	SetVisible( bShow );
+
+	if ( bShow )
+	{
+		MoveToFront();
+		RequestFocus();
+		vgui::input()->SetMouseFocus( GetVPanel() );
+		vgui::surface()->SetCursorAlwaysVisible( true );
+		engine->ClientCmd_Unrestricted( "setpause\n" );
+	}
+	else
+	{
+		vgui::surface()->SetCursorAlwaysVisible( false );
+		engine->ClientCmd_Unrestricted( "unpause\n" );
+	}
+}
+
+void CPortal2FallbackPausePanel::RunAction( PauseAction_t action )
+{
+	switch ( action )
+	{
+	case ACTION_RESUME:
+		ShowMenu( false );
+		break;
+	case ACTION_RESTART:
+		engine->ClientCmd_Unrestricted( "restart\n" );
+		ShowMenu( false );
+		break;
+	case ACTION_DISCONNECT:
+		engine->ClientCmd_Unrestricted( "disconnect\n" );
+		ShowMenu( false );
+		break;
+	case ACTION_QUIT:
+		engine->ClientCmd_Unrestricted( "quit\n" );
+		break;
+	default:
+		break;
+	}
+}
+
+void CPortal2FallbackPausePanel::OnKeyCodePressed( vgui::KeyCode code )
+{
+	if ( code == KEY_ESCAPE || code == KEY_F10 )
+	{
+		ShowMenu( false );
+		return;
+	}
+
+	if ( code >= KEY_1 && code < KEY_1 + ACTION_COUNT )
+	{
+		RunAction( (PauseAction_t)( code - KEY_1 ) );
+		return;
+	}
+
+	BaseClass::OnKeyCodePressed( code );
+}
+
+void CPortal2FallbackPausePanel::OnMousePressed( vgui::MouseCode code )
+{
+	if ( code == MOUSE_LEFT )
+	{
+		RequestFocus();
+	}
+
+	BaseClass::OnMousePressed( code );
+}
+
+void CPortal2FallbackPausePanel::OnMouseReleased( vgui::MouseCode code )
+{
+	if ( code == MOUSE_LEFT )
+	{
+		int x, y;
+		vgui::input()->GetCursorPosition( x, y );
+		ScreenToLocal( x, y );
+
+		const int nAction = GetActionAtPos( x, y );
+		if ( nAction >= 0 )
+		{
+			RunAction( (PauseAction_t)nAction );
+			return;
+		}
+	}
+
+	BaseClass::OnMouseReleased( code );
+}
+
+void CPortal2FallbackPausePanel::PerformLayout()
+{
+	BaseClass::PerformLayout();
+
+	int wide, tall;
+	vgui::surface()->GetScreenSize( wide, tall );
+	SetBounds( 0, 0, wide, tall );
+
+	m_nMenuW = MIN( 460, wide - 80 );
+	m_nMenuH = 312;
+	m_nMenuX = ( wide - m_nMenuW ) / 2;
+	m_nMenuY = ( tall - m_nMenuH ) / 2;
+	m_nButtonH = 42;
+}
+
+void CPortal2FallbackPausePanel::DrawAsciiText( const char *pText, int x, int y, vgui::HFont font, Color color )
+{
+	if ( font == vgui::INVALID_FONT || !pText )
+		return;
+
+	wchar_t wideText[256];
+	int n = 0;
+	for ( ; pText[n] && n < ARRAYSIZE( wideText ) - 1; ++n )
+	{
+		wideText[n] = (unsigned char)pText[n];
+	}
+	wideText[n] = 0;
+
+	vgui::surface()->DrawSetTextFont( font );
+	vgui::surface()->DrawSetTextColor( color );
+	vgui::surface()->DrawSetTextPos( x, y );
+	vgui::surface()->DrawPrintText( wideText, n );
+}
+
+int CPortal2FallbackPausePanel::GetActionAtPos( int x, int y ) const
+{
+	const int nButtonX = m_nMenuX + 36;
+	const int nButtonW = m_nMenuW - 72;
+	const int nFirstButtonY = m_nMenuY + 104;
+	const int nGap = 12;
+
+	if ( x < nButtonX || x > nButtonX + nButtonW )
+		return -1;
+
+	for ( int i = 0; i < ACTION_COUNT; ++i )
+	{
+		const int nButtonY = nFirstButtonY + i * ( m_nButtonH + nGap );
+		if ( y >= nButtonY && y <= nButtonY + m_nButtonH )
+			return i;
+	}
+
+	return -1;
+}
+
+void CPortal2FallbackPausePanel::Paint()
+{
+	EnsureFonts();
+	PerformLayout();
+
+	int wide, tall;
+	GetSize( wide, tall );
+
+	vgui::surface()->DrawSetColor( 0, 0, 0, 180 );
+	vgui::surface()->DrawFilledRect( 0, 0, wide, tall );
+
+	vgui::surface()->DrawSetColor( 16, 22, 24, 238 );
+	vgui::surface()->DrawFilledRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + m_nMenuH );
+	vgui::surface()->DrawSetColor( 255, 255, 255, 32 );
+	vgui::surface()->DrawOutlinedRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + m_nMenuH );
+
+	DrawAsciiText( "PORTAL 2 ARM64", m_nMenuX + 34, m_nMenuY + 26, m_hTitleFont, Color( 235, 242, 245, 255 ) );
+	DrawAsciiText( "Menu experimental", m_nMenuX + 36, m_nMenuY + 68, m_hTextFont, Color( 150, 198, 216, 255 ) );
+
+	int cx, cy;
+	vgui::input()->GetCursorPosition( cx, cy );
+	ScreenToLocal( cx, cy );
+	m_nHoverAction = GetActionAtPos( cx, cy );
+
+	static const char *s_ppszActions[ACTION_COUNT] =
+	{
+		"1  Continuar",
+		"2  Reiniciar mapa",
+		"3  Desconectar",
+		"4  Salir"
+	};
+
+	const int nButtonX = m_nMenuX + 36;
+	const int nButtonW = m_nMenuW - 72;
+	const int nFirstButtonY = m_nMenuY + 104;
+	const int nGap = 12;
+	for ( int i = 0; i < ACTION_COUNT; ++i )
+	{
+		const int nButtonY = nFirstButtonY + i * ( m_nButtonH + nGap );
+		const bool bHover = ( i == m_nHoverAction );
+
+		vgui::surface()->DrawSetColor( bHover ? 62 : 35, bHover ? 86 : 46, bHover ? 92 : 50, 230 );
+		vgui::surface()->DrawFilledRect( nButtonX, nButtonY, nButtonX + nButtonW, nButtonY + m_nButtonH );
+		vgui::surface()->DrawSetColor( bHover ? 130 : 76, bHover ? 220 : 112, bHover ? 240 : 120, 180 );
+		vgui::surface()->DrawOutlinedRect( nButtonX, nButtonY, nButtonX + nButtonW, nButtonY + m_nButtonH );
+
+		DrawAsciiText( s_ppszActions[i], nButtonX + 18, nButtonY + 10, m_hTextFont, Color( 235, 242, 245, 255 ) );
+	}
+}
+
+static CPortal2FallbackPausePanel *Portal2PauseMenu_GetPanel()
+{
+	if ( g_pPortal2PausePanel )
+		return g_pPortal2PausePanel;
+
+	vgui::VPANEL parent = VGui_GetClientDLLRootPanel();
+	if ( !parent )
+	{
+		return NULL;
+	}
+
+	g_pPortal2PausePanel = new CPortal2FallbackPausePanel( NULL );
+	g_pPortal2PausePanel->SetParent( parent );
+	return g_pPortal2PausePanel;
+}
+
+CON_COMMAND_F( portal2_pausemenu, "Shows the experimental Portal 2 ARM64 pause menu.", FCVAR_CLIENTDLL )
+{
+	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+	if ( pPanel )
+	{
+		pPanel->Toggle();
+	}
+	else
+	{
+		g_bOpenPauseMenuWhenReady = true;
+	}
+}
+
+bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum )
+{
+	if ( !down )
+		return false;
+
+	if ( keynum == KEY_ESCAPE || keynum == KEY_F10 )
+	{
+		CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+		if ( pPanel )
+		{
+			pPanel->Toggle();
+		}
+		else
+		{
+			g_bOpenPauseMenuWhenReady = true;
+		}
+		return true;
+	}
+
+	if ( g_pPortal2PausePanel && g_pPortal2PausePanel->IsVisible() &&
+		keynum >= KEY_1 && keynum < KEY_1 + 4 )
+	{
+		g_pPortal2PausePanel->OnKeyCodePressed( keynum );
+		return true;
+	}
+
+	return false;
+}
+
+void Portal2PauseMenu_LevelInit()
+{
+	if ( CommandLine()->FindParm( "-portal2_pausemenu" ) )
+	{
+		g_bOpenPauseMenuWhenReady = true;
+	}
+
+	if ( !g_bOpenPauseMenuWhenReady )
+		return;
+
+	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+	if ( pPanel )
+	{
+		pPanel->ShowMenu( true );
+		g_bOpenPauseMenuWhenReady = false;
+	}
+}
+
+class CPortal2PauseMenuSystem : public CAutoGameSystem
+{
+public:
+	CPortal2PauseMenuSystem() : CAutoGameSystem( "Portal2PauseMenuSystem" )
+	{
+	}
+
+	virtual void LevelInitPostEntity()
+	{
+		if ( CommandLine()->FindParm( "-portal2_pausemenu" ) )
+		{
+			g_bOpenPauseMenuWhenReady = true;
+		}
+
+		if ( !g_bOpenPauseMenuWhenReady )
+			return;
+
+		CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+		if ( pPanel )
+		{
+			pPanel->ShowMenu( true );
+			g_bOpenPauseMenuWhenReady = false;
+		}
+	}
+
+	virtual void LevelShutdownPreEntity()
+	{
+		if ( g_pPortal2PausePanel )
+		{
+			g_pPortal2PausePanel->ShowMenu( false );
+		}
+		g_bOpenPauseMenuWhenReady = false;
+	}
+};
+
+static CPortal2PauseMenuSystem g_Portal2PauseMenuSystem;

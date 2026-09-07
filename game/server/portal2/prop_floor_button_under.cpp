@@ -51,7 +51,7 @@ void CPropFloorButtonUnder::OnPress(void)
 	BaseClass::OnPress();
 	PropSetAnim("press");
 	m_iszDefaultAnim = MAKE_STRING("press_idle");
-	EmitSound(UNPRESS_SOUND);
+	EmitSound(PRESS_SOUND);
 }
 
 void CPropFloorButtonUnder::OnUnpress(void)
@@ -59,7 +59,7 @@ void CPropFloorButtonUnder::OnUnpress(void)
 	BaseClass::OnUnpress();
 	PropSetAnim("release");
 	m_iszDefaultAnim = MAKE_STRING("release_idle");
-	EmitSound(PRESS_SOUND);
+	EmitSound(UNPRESS_SOUND);
 }
 
 void CPropFloorButtonUnder::Spawn(void)

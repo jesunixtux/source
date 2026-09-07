@@ -48,20 +48,14 @@ enum PaintPower
 	None,
 };
 
-class CPropWeightedCube : public CDynamicProp
+class CPropWeightedCube : public CPhysicsProp
 {
 public:
-	DECLARE_CLASS(CPropWeightedCube, CDynamicProp);
+	DECLARE_CLASS(CPropWeightedCube, CPhysicsProp);
 	DECLARE_DATADESC();
 
 	CPropWeightedCube()
 	{
-	}
-
-	bool CreateVPhysics()
-	{
-		VPhysicsInitNormal(SOLID_VPHYSICS, 0, false);
-		return true;
 	}
 
 	void Spawn(void);
@@ -134,6 +128,8 @@ END_DATADESC()
 
 void CPropWeightedCube::Precache(void)
 {
+	if (GetModelName() == NULL_STRING)
+		SetModelName(AllocPooledString(CUBE_MODEL));
 	PrecacheModel(CUBE_MODEL);
 	PrecacheModel(REFLECTION_MODEL);
 	PrecacheModel(SPHERE_MODEL);
@@ -168,7 +164,6 @@ void CPropWeightedCube::InputSilentDissolve(inputdata_t &data)
 void CPropWeightedCube::Spawn(void)
 {
 	Precache();
-	BaseClass::Spawn();
 	if (m_useNewSkins)
 	{
 		m_nSkin = 0;
@@ -254,10 +249,13 @@ void CPropWeightedCube::Spawn(void)
 			break;
 		}
 	}
+	// The base prop rejects (and removes) an entity with no model at spawn.
+	if (GetModelName() == NULL_STRING) SetModel(CUBE_MODEL);
+	BaseClass::Spawn();
 	SetSolid(SOLID_VPHYSICS);
 
 	// In order to pick it up, needs to be physics.
-	CreateVPhysics();
+	if (!VPhysicsGetObject()) CreateVPhysics();
 
 	SetUse(&CPropWeightedCube::Use);
 }

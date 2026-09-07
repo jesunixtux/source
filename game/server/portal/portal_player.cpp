@@ -1547,6 +1547,16 @@ void CPortal_Player::PlayerUse( void )
 
 void CPortal_Player::PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper)
 {
+#ifdef PORTAL2
+	const bool bWasDucking = ( GetFlags() & FL_DUCKING ) != 0;
+	extern bool Portal2GameplayTestOwnsInput();
+	if ( Portal2GameplayTestOwnsInput() )
+	{
+		ucmd->buttons = 0;
+		ucmd->forwardmove = ucmd->sidemove = ucmd->upmove = 0;
+		ucmd->viewangles = EyeAngles();
+	}
+#endif
 	if( m_bFixEyeAnglesFromPortalling )
 	{
 		//the idea here is to handle the notion that the player has portalled, but they sent us an angle update before receiving that message.
@@ -1566,6 +1576,14 @@ void CPortal_Player::PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper)
 	}
 
 	BaseClass::PlayerRunCommand( ucmd, moveHelper );
+#ifdef PORTAL2
+	const bool bDucking = ( GetFlags() & FL_DUCKING ) != 0;
+	if ( bDucking != bWasDucking )
+	{
+		variant_t empty;
+		FirePlayerProxyOutput( bDucking ? "OnDuck" : "OnUnDuck", empty, this, this );
+	}
+#endif
 }
 
 

@@ -1394,7 +1394,7 @@ BEGIN_DATADESC( CFuncVPhysicsClip )
 	// Keyfields
 	DEFINE_KEYFIELD( m_iFilterName,	FIELD_STRING,	"filtername" ),
 	DEFINE_FIELD( m_hFilter,	FIELD_EHANDLE ),
-	DEFINE_FIELD( m_bDisabled,	FIELD_BOOLEAN ),
+	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN, "StartDisabled" ),
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
@@ -1435,12 +1435,17 @@ void CFuncVPhysicsClip::Activate( void )
 
 bool CFuncVPhysicsClip::EntityPassesFilter( CBaseEntity *pOther )
 {
+	if ( !pOther )
+		return false;
 	CBaseFilter* pFilter = (CBaseFilter*)(m_hFilter.Get());
 
 	if ( pFilter )
 		return pFilter->PassesFilter( this, pOther );
 
-	if ( pOther->GetMoveType() == MOVETYPE_VPHYSICS && pOther->VPhysicsGetObject()->IsMoveable() )
+	// A portal shadow clone can be queried while its physics object is being
+	// unserialized, before VPhysicsSetObject has installed it on the entity.
+	IPhysicsObject *pPhysics = pOther->VPhysicsGetObject();
+	if ( pOther->GetMoveType() == MOVETYPE_VPHYSICS && pPhysics && pPhysics->IsMoveable() )
 		return true;
 	
 	return false;
@@ -1449,7 +1454,7 @@ bool CFuncVPhysicsClip::EntityPassesFilter( CBaseEntity *pOther )
 
 bool CFuncVPhysicsClip::ForceVPhysicsCollide( CBaseEntity *pEntity )
 {
-	return EntityPassesFilter(pEntity);
+	return !m_bDisabled && EntityPassesFilter(pEntity);
 }
 
 void CFuncVPhysicsClip::InputEnable( inputdata_t &inputdata )

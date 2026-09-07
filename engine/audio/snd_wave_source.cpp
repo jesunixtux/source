@@ -2489,6 +2489,10 @@ void CAudioSourceCache::CheckCacheBuild()
 //-----------------------------------------------------------------------------
 void CAudioSourceCache::CheckSaveDirtyCaches()
 {
+	// Isolated compatibility stages mount stock game directories read-only in
+	// intent. Their metadata format must not overwrite a newer game's cache.
+	if ( CommandLine()->FindParm( "-nosoundcachewrite" ) )
+		return;
 	FOR_EACH_VEC( m_vecCaches, idx )
 	{
 		SearchPathCache *pCache = m_vecCaches[idx];
@@ -2813,4 +2817,3 @@ CON_COMMAND( snd_buildcache, "<directory or VPK filename>  Rebulds sound cache f
 	extern void HostState_Shutdown();
 	HostState_Shutdown();
 }
-

@@ -77,6 +77,11 @@ PRECACHE_WEAPON_REGISTER(weapon_portalgun);
 extern ConVar sv_portal_placement_debug;
 extern ConVar sv_portal_placement_never_fail;
 
+#ifdef PORTAL2
+static ConVar portal2_portalgun_debug( "portal2_portalgun_debug", "0", FCVAR_CHEAT,
+	"Report actual portal-gun traces and placement results in the experimental port." );
+#endif
+
 
 void CWeaponPortalgun::Spawn( void )
 {
@@ -630,6 +635,15 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		pPortal->SetContextThink( &CProp_Portal::DelayedPlacementThink, gpGlobals->curtime + fDelay, s_pDelayedPlacementContext ); 
 		pPortal->m_vDelayedPosition = vFinalPosition;
 		pPortal->m_hPlacedBy = this;
+#ifdef PORTAL2
+		if ( portal2_portalgun_debug.GetBool() )
+		{
+			Msg( "PORTAL2_PORTALGUN shot=%s result=%.3f position=%.1f %.1f %.1f linkage=%u\n",
+				bPortal2 ? "orange" : "blue", fPlacementSuccess,
+				vFinalPosition.x, vFinalPosition.y, vFinalPosition.z,
+				(unsigned int)m_iPortalLinkageGroupID );
+		}
+#endif
 	}
 
 	return fPlacementSuccess;
@@ -704,6 +718,45 @@ static ConCommand upgrade_portal("upgrade_portalgun", CC_UpgradePortalGun, "Equi
 
 
 
+
+#ifdef PORTAL2
+// The opening hotel map deliberately starts without a weapon. Keep equipping
+// the dual gun explicit so normal map triggers can still control progression.
+static void CC_Portal2EquipPortalgun( const CCommand &args )
+{
+	CPortal_Player *pPlayer = ToPortalPlayer( UTIL_GetCommandClient() );
+	if ( !pPlayer && GameRules() && !GameRules()->IsMultiplayer() )
+		pPlayer = ToPortalPlayer( UTIL_GetLocalPlayer() );
+	if ( !pPlayer || !pPlayer->IsAlive() )
+	{
+		Warning( "PORTAL2_PORTALGUN: load a map and wait for the player before equipping.\n" );
+		return;
+	}
+
+	CWeaponPortalgun *pPortalGun = dynamic_cast<CWeaponPortalgun *>( pPlayer->Weapon_OwnsThisType( "weapon_portalgun" ) );
+	if ( !pPortalGun )
+		pPortalGun = dynamic_cast<CWeaponPortalgun *>( pPlayer->GiveNamedItem( "weapon_portalgun" ) );
+	// Explicit experimental equip also works during a map's pickup lock. Keep
+	// the map's normal pickup policy intact; equip only the item just requested.
+	if ( pPortalGun && !pPortalGun->GetOwner() && !pPortalGun->IsMarkedForDeletion() )
+		pPlayer->Weapon_Equip( pPortalGun );
+	if ( !pPortalGun || pPortalGun->GetOwner() != pPlayer )
+	{
+		Warning( "PORTAL2_PORTALGUN: could not give the portal gun to the player.\n" );
+		return;
+	}
+
+	pPortalGun->SetCanFirePortal1();
+	pPortalGun->SetCanFirePortal2();
+	const bool bEquipped = pPlayer->GetActiveWeapon() == pPortalGun || pPlayer->Weapon_Switch( pPortalGun );
+	Msg( "PORTAL2_PORTALGUN equipped=%d blue=%d orange=%d linkage=%u\n",
+		bEquipped ? 1 : 0, pPortalGun->CanFirePortal1() != 0, pPortalGun->CanFirePortal2() != 0,
+		(unsigned int)pPortalGun->m_iPortalLinkageGroupID );
+}
+
+static ConCommand portal2_equip_portalgun( "portal2_equip_portalgun", CC_Portal2EquipPortalgun,
+	"Equip the dual portal gun in an already loaded experimental Portal 2 map.", FCVAR_CHEAT );
+#endif
 
 static void change_portalgun_linkage_id_f( const CCommand &args )
 {

@@ -68,6 +68,7 @@ void CPropTestchamberDoor::CheckSequence(int id)
 
 void CPropTestchamberDoor::Precache(void)
 {
+	SetModelName(AllocPooledString(DOOR_MODEL));
 	PrecacheModel(DOOR_MODEL);
 
 	PrecacheScriptSound(OPEN_SOUND);
@@ -79,8 +80,8 @@ void CPropTestchamberDoor::Precache(void)
 void CPropTestchamberDoor::Spawn(void)
 {
 	Precache();
-	BaseClass::Spawn();
 	SetModel(DOOR_MODEL);
+	BaseClass::Spawn();
 
 	closeSequenceId = LookupSequence("close");
 	idleCloseSequenceId = LookupSequence("idleclose");

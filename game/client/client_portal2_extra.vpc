@@ -10,4 +10,8 @@ $Configuration
 }
 $Project "Portal 2 extensions"
 {
+    $Folder "Portal 2"
+    {
+        $File "portal2\portal2_pausemenu.cpp"
+    }
 }

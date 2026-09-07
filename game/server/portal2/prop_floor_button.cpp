@@ -38,6 +38,7 @@ END_DATADESC()
 
 void CPropFloorButton::Precache(void)
 {
+	SetModelName(AllocPooledString(BUTTON_MODEL));
 	PrecacheModel(BUTTON_MODEL);
 
 	PrecacheScriptSound(PRESS_SOUND);
@@ -49,26 +50,26 @@ void CPropFloorButton::Precache(void)
 void CPropFloorButton::OnPress(void)
 {
 	BaseClass::OnPress();
-	m_nSkin = 0;
+	m_nSkin = 1;
 	PropSetAnim("down");
 	m_iszDefaultAnim = MAKE_STRING("idledown");
-	EmitSound(UNPRESS_SOUND);
+	EmitSound(PRESS_SOUND);
 }
 
 void CPropFloorButton::OnUnpress(void)
 {
 	BaseClass::OnUnpress();
-	m_nSkin = 1;
+	m_nSkin = 0;
 	PropSetAnim("up");
 	m_iszDefaultAnim = MAKE_STRING("BindPose");
-	EmitSound(PRESS_SOUND);
+	EmitSound(UNPRESS_SOUND);
 }
 
 void CPropFloorButton::Spawn(void)
 {
 	Precache();
-	BaseClass::Spawn();
 	SetModel(BUTTON_MODEL);
+	BaseClass::Spawn();
 
 	SetSolid(SOLID_VPHYSICS);
 	CreateVPhysics();

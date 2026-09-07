@@ -170,6 +170,10 @@ bool CPortalGameMovement::CheckJumpButton()
 	if ( BaseClass::CheckJumpButton() && GetPortalPlayer() )
 	{
 		GetPortalPlayer()->DoAnimationEvent( PLAYERANIMEVENT_JUMP, 0 );
+#if defined( PORTAL2 ) && defined( GAME_DLL )
+		variant_t empty;
+		GetPortalPlayer()->FirePlayerProxyOutput( "OnJump", empty, GetPortalPlayer(), GetPortalPlayer() );
+#endif
 		return true;
 	}
 
@@ -749,4 +753,3 @@ static CPortalGameMovement g_GameMovement;
 IGameMovement *g_pGameMovement = ( IGameMovement * )&g_GameMovement;
 
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CGameMovement, IGameMovement,INTERFACENAME_GAMEMOVEMENT, g_GameMovement );
-

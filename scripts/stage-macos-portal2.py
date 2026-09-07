@@ -55,6 +55,7 @@ for cfg in (p2 / 'portal2/cfg').glob('*.cfg'):
     shutil.copy2(cfg, stage / 'portal2/cfg' / cfg.name)
 
 paths = [('Game', '|gameinfo_path|../renderer_compat'),
+         ('Game', '|gameinfo_path|../portal2_gameplay_compat'),
          ('Game', '|gameinfo_path|../portal2_material_compat'),
          ('Game', '|gameinfo_path|../portal2_override'),
          ('Game', '|gameinfo_path|.')]
@@ -93,13 +94,38 @@ subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-shaders.py
                 str(stage), str(misc)], check=True)
 subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-material-compat.py'),
                 str(stage), str(p2)], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-gameplay.py'),
+                str(stage), str(portal), str(p2)], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-intro-script.py'),
+                '--game-dir', str(p2 / 'portal2'), '--output',
+                str(stage / 'portal2_gameplay_compat/scripts/portal2_intro1_scenes.txt')], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-scenes.py'),
+                str(p2 / 'portal2/scenes/scenes.image'),
+                str(stage / 'portal2_gameplay_compat/scenes/scenes.image')], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-intro-audio.py'),
+                str(p2 / 'portal2'), str(stage / 'portal2_gameplay_compat')], check=True)
 (stage / 'Jugar-Portal2-Experimental.command').write_text('''#!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
-exec ./hl2_osx -game portal2 -novid -windowed -w 1024 -h 768 -console \\
+exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -windowed -w 1024 -h 768 -console \\
   +sv_cheats 1 +mat_fullbright 0 +mat_disable_bloom 1 +mat_colorcorrection 0 \\
+  +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
   +map "${1:-sp_a1_intro1}"
 ''')
 (stage / 'Jugar-Portal2-Experimental.command').chmod(0o755)
+(stage / 'Jugar-Portal2-PortalGun.command').write_text('''#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")"
+exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -portal2_intro_playground \\
+  -windowed -w 1024 -h 768 +sv_cheats 1 +mat_fullbright 0 \\
+  +mat_disable_bloom 1 +mat_colorcorrection 0 \\
+  +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
+  +bind MOUSE1 +attack +bind MOUSE2 +attack2 +bind e +use \\
+  +bind w +forward +bind s +back +bind a +moveleft +bind d +moveright \\
+  +bind SPACE +jump +map sp_a1_intro1
+''')
+(stage / 'Jugar-Portal2-PortalGun.command').chmod(0o755)
 print(f'Staged isolated map experiment: {stage}')
 print('Run Jugar-Portal2-Experimental.command; this is not the full Portal 2 game.')

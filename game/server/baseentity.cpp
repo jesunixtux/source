@@ -3869,6 +3869,13 @@ ConVar ent_messages_draw( "ent_messages_draw", "0", FCVAR_CHEAT, "Visualizes all
 //-----------------------------------------------------------------------------
 bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID )
 {
+#ifdef PORTAL2
+	if ( !Q_stricmp( szInputName, "RunScriptCode" ) || !Q_stricmp( szInputName, "CallScriptFunction" ) )
+	{
+		extern bool Portal2RunIntroScript( CBaseEntity *, const char * );
+		return Portal2RunIntroScript( this, Value.String() );
+	}
+#endif
 	if ( ent_messages_draw.GetBool() )
 	{
 		if ( pCaller != NULL )

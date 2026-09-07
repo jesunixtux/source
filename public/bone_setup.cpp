@@ -892,6 +892,8 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 //-----------------------------------------------------------------------------
 // Purpose: Find and decode a sub-frame of animation, remapping the skeleton bone indexes
 //-----------------------------------------------------------------------------
+#include "bone_frame_decode.h"
+
 static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pStudioHdr, Vector *pos, Quaternion *q, 
 	mstudioseqdesc_t &seqdesc, int sequence, int animation,
 	float cycle, int boneMask )
@@ -931,6 +933,11 @@ static void CalcVirtualAnimation( virtualmodel_t *pVModel, const CStudioHdr *pSt
 	int iLocalFrame = iFrame;
 	float flStall;
 	panim = animdesc.pAnim( &iLocalFrame, flStall );
+	if ( pAnimStudioHdr->version >= 49 && (animdesc.flags & 0x0040) )
+	{
+		CalcFrameAnimation(pStudioHdr,pAnimStudioHdr,pAnimGroup,animdesc,iFrame,s,pos,q,boneMask);
+		return;
+	}
 
 	float *pweight = seqdesc.pBoneweight( 0 );
 	pbone = pStudioHdr->pBone( 0 );
@@ -1072,6 +1079,11 @@ static void CalcAnimation( const CStudioHdr *pStudioHdr,	Vector *pos, Quaternion
 	int iLocalFrame = iFrame;
 	float flStall;
 	mstudioanim_t *panim = animdesc.pAnim( &iLocalFrame, flStall );
+	if ( pStudioHdr->GetRenderHdr()->version >= 49 && (animdesc.flags & 0x0040) )
+	{
+		CalcFrameAnimation(pStudioHdr,pStudioHdr->GetRenderHdr(),NULL,animdesc,iFrame,s,pos,q,boneMask);
+		return;
+	}
 
 	float *pweight = seqdesc.pBoneweight( 0 );
 
@@ -2638,14 +2650,14 @@ public:
          X[i] = P[i];
       normalize(X);
 
-// Its y axis is perpendicular to P, so Y = unit( E - X(E·X) ).
+// Its y axis is perpendicular to P, so Y = unit( E - X(EÂ·X) ).
 
       float dDOTx = dot(D,X);
       for (i = 0 ; i < 3 ; i++)
          Y[i] = D[i] - dDOTx * X[i];
       normalize(Y);
 
-// Its z axis is perpendicular to both X and Y, so Z = X×Y.
+// Its z axis is perpendicular to both X and Y, so Z = XÃ—Y.
 
       cross(X,Y,Z);
 

@@ -42,11 +42,11 @@ void CPropFloorButtonBase::TouchThink(void)
 
 	if (touchAmount == 0 && wasTouching)
 	{
-		OnPress();
+		OnUnpress();
 	}
 	else if (touchAmount > 0 && !wasTouching)
 	{
-		OnUnpress();
+		OnPress();
 	}
 
 	SetThink(&CPropFloorButtonBase::TouchThink);
@@ -55,14 +55,14 @@ void CPropFloorButtonBase::TouchThink(void)
 
 void CPropFloorButtonBase::OnPress(void)
 {
-	wasTouching = false;
-	m_OnUnPressed.FireOutput(this, this);
+	wasTouching = true;
+	m_OnPressed.FireOutput(this, this);
 }
 
 void CPropFloorButtonBase::OnUnpress(void)
 {
-	wasTouching = true;
-	m_OnPressed.FireOutput(this, this);
+	wasTouching = false;
+	m_OnUnPressed.FireOutput(this, this);
 }
 
 void CPropFloorButtonBase::Spawn(void)

@@ -2791,6 +2791,9 @@ public:
 	// Input handlers
 	void InputEnable( inputdata_t &inputdata );
 	void InputDisable( inputdata_t &inputdata );
+#ifdef PORTAL2
+	void InputTeleportToView( inputdata_t &inputdata );
+#endif
 
 private:
 	EHANDLE m_hPlayer;
@@ -2869,6 +2872,9 @@ BEGIN_DATADESC( CTriggerCamera )
 	// Inputs
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
+#ifdef PORTAL2
+	DEFINE_INPUTFUNC( FIELD_VOID, "TeleportToView", InputTeleportToView ),
+#endif
 
 	// Function Pointers
 	DEFINE_FUNCTION( FollowTarget ),
@@ -2959,6 +2965,20 @@ void CTriggerCamera::InputDisable( inputdata_t &inputdata )
 { 
 	Disable();
 }
+
+#ifdef PORTAL2
+void CTriggerCamera::InputTeleportToView( inputdata_t &inputdata )
+{
+	CBasePlayer *pPlayer = ToBasePlayer( m_hPlayer.Get() );
+	if ( !pPlayer ) pPlayer = UTIL_GetLocalPlayer();
+	if ( !pPlayer ) return;
+	const Vector origin = GetAbsOrigin() - pPlayer->GetViewOffset();
+	const QAngle angles = GetAbsAngles();
+	pPlayer->Teleport( &origin, &angles, &vec3_origin );
+	if ( m_state != USE_OFF ) Disable();
+	Msg( "PORTAL2_INTRO camera released player at %.1f %.1f %.1f\n", origin.x, origin.y, origin.z );
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 

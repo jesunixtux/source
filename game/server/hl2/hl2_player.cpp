@@ -197,6 +197,9 @@ public:
 	COutputEvent m_PlayerHasNoAmmo;
 	COutputEvent m_PlayerDied;
 	COutputEvent m_PlayerMissedAR2AltFire; // Player fired a combine ball which did not dissolve any enemies. 
+#ifdef PORTAL2
+	COutputEvent m_OnJump, m_OnDuck, m_OnUnDuck;
+#endif
 
 	COutputInt m_RequestedPlayerHealth;
 
@@ -3767,6 +3770,11 @@ void CHL2_Player::FirePlayerProxyOutput( const char *pszOutputName, variant_t va
 LINK_ENTITY_TO_CLASS( logic_playerproxy, CLogicPlayerProxy);
 
 BEGIN_DATADESC( CLogicPlayerProxy )
+#ifdef PORTAL2
+	DEFINE_OUTPUT( m_OnJump, "OnJump" ),
+	DEFINE_OUTPUT( m_OnDuck, "OnDuck" ),
+	DEFINE_OUTPUT( m_OnUnDuck, "OnUnDuck" ),
+#endif
 	DEFINE_OUTPUT( m_OnFlashlightOn, "OnFlashlightOn" ),
 	DEFINE_OUTPUT( m_OnFlashlightOff, "OnFlashlightOff" ),
 	DEFINE_OUTPUT( m_RequestedPlayerHealth, "PlayerHealth" ),
