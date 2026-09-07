@@ -30,7 +30,6 @@ def configure(conf):
 	game = conf.options.GAMES
 	conf.env.GAMES = game
 
-	conf.env.append_unique('DEFINES', ['DISABLE_STEAM=1'])
 	if game == 'l4d':
 		conf.env.append_unique('DEFINES', ['GAME_L4D=1'])
 	if game == 'portal2':
