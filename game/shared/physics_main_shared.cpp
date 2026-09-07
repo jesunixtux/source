@@ -36,7 +36,15 @@ struct watcher_t
 	IWatcherCallback	*pWatcherCallback;
 };
 
-static CUtlMultiList<watcher_t, unsigned short>	g_WatcherList;
+// Construct lazily inside the module. Some macOS dylib load paths can enter
+// entity precaching before zero-initialized global containers have completed
+// their C++ initialization; a function-local static keeps the watcher list
+// valid for both client and server modules.
+static CUtlMultiList<watcher_t, unsigned short> &GetWatcherList()
+{
+	static CUtlMultiList<watcher_t, unsigned short> watcherList;
+	return watcherList;
+}
 class CWatcherList
 {
 public:
@@ -270,22 +278,22 @@ void CBaseEntity::DestroyDataObject( int type )
 
 void CWatcherList::Init()
 {
-	m_list = g_WatcherList.CreateList();
+	m_list = GetWatcherList().CreateList();
 }
 
 CWatcherList::~CWatcherList()
 {
-	g_WatcherList.DestroyList( m_list );
+	GetWatcherList().DestroyList( m_list );
 }
 
 int CWatcherList::GetCallbackObjects( IWatcherCallback **pList, int listMax )
 {
 	int index = 0;
-	unsigned short next = g_WatcherList.InvalidIndex();
-	for ( unsigned short node = g_WatcherList.Head( m_list ); node != g_WatcherList.InvalidIndex(); node = next )
+	unsigned short next = GetWatcherList().InvalidIndex();
+	for ( unsigned short node = GetWatcherList().Head( m_list ); node != GetWatcherList().InvalidIndex(); node = next )
 	{
-		next = g_WatcherList.Next( node );
-		watcher_t *pNode = &g_WatcherList.Element(node);
+		next = GetWatcherList().Next( node );
+		watcher_t *pNode = &GetWatcherList().Element(node);
 		if ( pNode->hWatcher.Get() )
 		{
 			pList[index] = pNode->pWatcherCallback;
@@ -298,7 +306,7 @@ int CWatcherList::GetCallbackObjects( IWatcherCallback **pList, int listMax )
 		}
 		else
 		{
-			g_WatcherList.Remove( m_list, node );
+			GetWatcherList().Remove( m_list, node );
 		}
 	}
 	return index;
@@ -334,25 +342,25 @@ void CWatcherList::NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEn
 
 unsigned short CWatcherList::Find( CBaseEntity *pEntity )
 {
-	unsigned short next = g_WatcherList.InvalidIndex();
-	for ( unsigned short node = g_WatcherList.Head( m_list ); node != g_WatcherList.InvalidIndex(); node = next )
+	unsigned short next = GetWatcherList().InvalidIndex();
+	for ( unsigned short node = GetWatcherList().Head( m_list ); node != GetWatcherList().InvalidIndex(); node = next )
 	{
-		next = g_WatcherList.Next( node );
-		watcher_t *pNode = &g_WatcherList.Element(node);
+		next = GetWatcherList().Next( node );
+		watcher_t *pNode = &GetWatcherList().Element(node);
 		if ( pNode->hWatcher.Get() == pEntity )
 		{
 			return node;
 		}
 	}
-	return g_WatcherList.InvalidIndex();
+	return GetWatcherList().InvalidIndex();
 }
 
 void CWatcherList::RemoveWatcher( CBaseEntity *pEntity )
 {
 	unsigned short node = Find( pEntity );
-	if ( node != g_WatcherList.InvalidIndex() )
+	if ( node != GetWatcherList().InvalidIndex() )
 	{
-		g_WatcherList.Remove( m_list, node );
+		GetWatcherList().Remove( m_list, node );
 	}
 }
 
@@ -360,7 +368,7 @@ void CWatcherList::RemoveWatcher( CBaseEntity *pEntity )
 void CWatcherList::AddToList( CBaseEntity *pWatcher )
 {
 	unsigned short node = Find( pWatcher );
-	if ( node == g_WatcherList.InvalidIndex() )
+	if ( node == GetWatcherList().InvalidIndex() )
 	{
 		watcher_t watcher;
 		watcher.hWatcher = pWatcher;
@@ -369,7 +377,7 @@ void CWatcherList::AddToList( CBaseEntity *pWatcher )
 
 		if ( watcher.pWatcherCallback )
 		{
-			g_WatcherList.AddToTail( m_list, watcher );
+			GetWatcherList().AddToTail( m_list, watcher );
 		}
 	}
 }
@@ -380,6 +388,11 @@ static void AddWatcherToEntity( CBaseEntity *pWatcher, CBaseEntity *pEntity, int
 	if ( !pList )
 	{
 		pList = ( CWatcherList * )pEntity->CreateDataObject( watcherType );
+		// Data-object allocation can fail while a legacy map is precaching on
+		// ARM64. Position watching is optional, so skip it instead of calling
+		// through a null pointer and terminating the process.
+		if ( !pList )
+			return;
 		pList->Init();
 	}
 
@@ -799,6 +812,8 @@ groundlink_t *CBaseEntity::AddEntityToGroundList( CBaseEntity *other )
 	else
 	{
 		root = ( groundlink_t * )CreateDataObject( GROUNDLINK );
+		if ( !root )
+			return NULL;
 		root->prevLink = root->nextLink = root;
 	}
 
@@ -1024,6 +1039,8 @@ touchlink_t *CBaseEntity::PhysicsMarkEntityAsTouched( CBaseEntity *other )
 	{
 		// Allocate the root object
 		root = ( touchlink_t * )CreateDataObject( TOUCHLINK );
+		if ( !root )
+			return NULL;
 		root->nextLink = root->prevLink = root;
 	}
 

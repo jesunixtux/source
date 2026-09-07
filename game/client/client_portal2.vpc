@@ -1,0 +1,18 @@
+// Portal 2 extension sources imported from SteamDB2/Portal-2.
+$Macro SRCDIR "..\.."
+$Include "$SRCDIR\game\client\client_portal.vpc"
+$Configuration
+{
+    $Compiler
+    {
+        $AdditionalIncludeDirectories ".\portal2;$SRCDIR\game\shared\portal2"
+        $PreprocessorDefinitions "$BASE;PORTAL2;PORTAL2_DLL"
+    }
+}
+$Project "Portal 2 extensions"
+{
+    $Folder "Portal 2"
+    {
+        $File "portal2\portal2_input.cpp"
+    }
+}

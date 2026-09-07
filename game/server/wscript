@@ -13,6 +13,7 @@ games = {
 	'episodic':['server_base.vpc', 'server_episodic.vpc'],
 	'hl2mp': ['server_base.vpc', 'server_hl2mp.vpc'],
 	'portal': ['server_base.vpc', 'server_portal.vpc'],
+	'portal2': ['server_base.vpc', 'server_portal.vpc', 'server_portal2_extra.vpc'],
 	# Compatibility shell for the ARM64 L4D target; output is installed under
 	# l4d/bin and can later be replaced by native L4D game sources.
 	'l4d': ['server_base.vpc', 'server_hl2.vpc'],
@@ -39,6 +40,8 @@ def configure(conf):
 	conf.env.append_unique('DEFINES', ['DISABLE_STEAM=1'])
 	if game == 'l4d':
 		conf.env.append_unique('DEFINES', ['GAME_L4D=1'])
+	if game == 'portal2':
+		conf.env.append_unique('DEFINES', ['PORTAL2=1', 'PORTAL2_DLL=1'])
 
 	if game not in games.keys():
 		conf.fatal("Couldn't find game: ", game)

@@ -1,0 +1,30 @@
+// Portal 2 extension sources imported from SteamDB2/Portal-2.
+$Macro SRCDIR "..\.."
+$Include "$SRCDIR\game\server\server_portal.vpc"
+$Configuration
+{
+    $Compiler
+    {
+        $AdditionalIncludeDirectories ".\portal2;$SRCDIR\game\shared\portal2"
+        $PreprocessorDefinitions "$BASE;PORTAL2;PORTAL2_DLL"
+    }
+}
+$Project "Portal 2 extensions"
+{
+    $Folder "Portal 2"
+    {
+        $File "portal2\npc_personality_core.cpp"
+        $File "portal2\npc_wheatley_boss.cpp"
+        $File "portal2\player_pickup_controller.cpp"
+        $File "portal2\portal2_eventlog.cpp"
+        $File "portal2\portal2_gamemove.cpp"
+        $File "portal2\prop_button.cpp"
+        $File "portal2\prop_button_base.cpp"
+        $File "portal2\prop_floor_button.cpp"
+        $File "portal2\prop_floor_button_base.cpp"
+        $File "portal2\prop_floor_button_under.cpp"
+        $File "portal2\prop_testchamber_door.cpp"
+        $File "portal2\prop_under_button.cpp"
+        $File "portal2\prop_weighted_cube.cpp"
+    }
+}

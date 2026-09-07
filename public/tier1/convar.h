@@ -449,6 +449,11 @@ private:
 //-----------------------------------------------------------------------------
 FORCEINLINE_CVAR float ConVar::GetFloat( void ) const
 {
+	// Some legacy game DLLs query optional cvars before they are registered.
+	// Treat an absent variable as its neutral value instead of dereferencing a
+	// null ConVar during early map activation (notably on the ARM64 port).
+	if ( !this || !m_pParent )
+		return 0.0f;
 	return m_pParent->m_fValue;
 }
 
@@ -458,6 +463,8 @@ FORCEINLINE_CVAR float ConVar::GetFloat( void ) const
 //-----------------------------------------------------------------------------
 FORCEINLINE_CVAR int ConVar::GetInt( void ) const 
 {
+	if ( !this || !m_pParent )
+		return 0;
 	return m_pParent->m_nValue;
 }
 
@@ -468,6 +475,8 @@ FORCEINLINE_CVAR int ConVar::GetInt( void ) const
 //-----------------------------------------------------------------------------
 FORCEINLINE_CVAR const char *ConVar::GetString( void ) const 
 {
+	if ( !this || !m_pParent )
+		return "";
 	if ( m_nFlags & FCVAR_NEVER_AS_STRING )
 		return "FCVAR_NEVER_AS_STRING";
 

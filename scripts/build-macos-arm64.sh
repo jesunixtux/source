@@ -4,7 +4,7 @@ set -eu
 
 usage() {
 	cat <<'EOF'
-Usage: ./scripts/build-macos-arm64.sh [portal|hl2|l4d|stanley] [waf configure options]
+Usage: ./scripts/build-macos-arm64.sh [portal|portal2|hl2|l4d|l4d_lite|stanley] [waf configure options]
 
 Environment variables:
   SOURCE_GAME  Game to build when no positional game is supplied (default: portal)
@@ -12,8 +12,10 @@ Environment variables:
 
 Examples:
   ./scripts/build-macos-arm64.sh portal
+  ./scripts/build-macos-arm64.sh portal2   # experimental: Portal ABI + Portal 2 resources
   ./scripts/build-macos-arm64.sh hl2
   ./scripts/build-macos-arm64.sh l4d       # experimental: Orange Box engine/game ABI
+  ./scripts/build-macos-arm64.sh l4d_lite  # playable HL2-based L4D resource test
   ./scripts/build-macos-arm64.sh stanley   # experimental: Portal ABI for Stanley content
   BUILD_TYPE=release ./scripts/build-macos-arm64.sh portal
 EOF
@@ -33,7 +35,7 @@ BUILD_TYPE="${BUILD_TYPE:-debug}"
 REQUESTED_GAME="$SOURCE_GAME"
 
 case "${1:-}" in
-	portal|hl2|l4d|stanley)
+	portal|portal2|hl2|l4d|l4d_lite|stanley)
 		SOURCE_GAME="$1"
 		REQUESTED_GAME="$1"
 		shift
@@ -46,10 +48,17 @@ esac
 
 case "$SOURCE_GAME" in
 	portal|hl2) ;;
+	portal2)
+		# Portal 2 extension sources are imported from SteamDB2/Portal-2.
+		;;
 	stanley)
 		# Stanley's public game binaries are i386; use the closest available
 		# Portal ABI while keeping the target explicitly experimental.
 		SOURCE_GAME="portal"
+		;;
+	l4d_lite)
+		# Lite mode intentionally uses the HL2 gameplay implementation.
+		SOURCE_GAME="hl2"
 		;;
 	l4d)
 	# L4D has an isolated compatibility target. Its current VPC sources are an
@@ -75,6 +84,12 @@ if [ "$REQUESTED_GAME" = l4d ]; then
 fi
 if [ "$REQUESTED_GAME" = stanley ]; then
 	echo "WARN: Stanley game modules are i386; building the Portal-compatible ARM64 shell for resource testing."
+fi
+if [ "$REQUESTED_GAME" = l4d_lite ]; then
+	echo "WARN: L4D Lite uses HL2 gameplay entities with L4D maps and resources."
+fi
+if [ "$REQUESTED_GAME" = portal2 ]; then
+	echo "WARN: Portal 2 support is experimental: imported gameplay entities are partial and some full-game modules remain unavailable."
 fi
 echo "==> Configuring macOS arm64 build for $REQUESTED_GAME (WAF target: $SOURCE_GAME, $BUILD_TYPE)"
 python3 ./waf configure -T "$BUILD_TYPE" --disable-warns --build-games="$SOURCE_GAME" "$@"

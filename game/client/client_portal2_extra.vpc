@@ -1,0 +1,13 @@
+// Additional Portal 2 sources. The base Portal project is included by WAF.
+$Macro SRCDIR "..\.."
+$Configuration
+{
+    $Compiler
+    {
+        $AdditionalIncludeDirectories ".\portal2;$SRCDIR\game\shared\portal2"
+        $PreprocessorDefinitions "PORTAL2;PORTAL2_DLL"
+    }
+}
+$Project "Portal 2 extensions"
+{
+}

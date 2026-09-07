@@ -368,6 +368,11 @@ void CGameClient::Connect( const char * szName, int nUserID, INetChannel *pNetCh
 				
 	// fire global game event - server only
 	IGameEvent *event = g_GameEventManager.CreateEvent( "player_connect" );
+	// Portal 2's event manifest is not complete in the experimental staging
+	// tree.  Connecting the local client must remain possible when this
+	// optional notification cannot be created.
+	if ( !event )
+		return;
 	{
 		event->SetInt( "userid", m_UserID );
 		event->SetInt( "index", m_nClientSlot );

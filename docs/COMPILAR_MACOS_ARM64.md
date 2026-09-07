@@ -57,6 +57,10 @@ git submodule update --init --recursive
 No hace falta instalar Rosetta ni pasar `--arch=arm64`. En Apple Silicon, Clang
 produce ARM64 por defecto. Esta versión de WAF no reconoce la opción `--arch`.
 
+Para Portal 2 se usa un staging separado basado en el mismo principio que
+`PortalNXSideLoader`: los recursos originales se montan mediante rutas externas,
+sin modificar `game.zip` ni la instalación de Steam.
+
 ## 3. Elegir el juego
 
 El argumento del script decide qué implementaciones de `client` y `server` se
@@ -66,6 +70,7 @@ compilan:
 ./scripts/build-macos-arm64.sh portal
 ./scripts/build-macos-arm64.sh hl2
 ./scripts/build-macos-arm64.sh stanley   # experimental, usa ABI Portal
+./scripts/build-macos-arm64.sh portal2   # experimental, usa recursos Portal 2
 ```
 
 Al cambiar de juego, ejecuta otra vez el script completo. WAF reconfigurará el
@@ -124,7 +129,7 @@ rg '^GAMES' build/c4che/game/client_cache.py build/c4che/game/server_cache.py
 ```
 
 Todos los binarios deben indicar `arm64`. Los dos valores `GAMES` deben ser
-`'portal'` o `'hl2'`, según la compilación elegida.
+`'portal'`, `'portal2'` o `'hl2'`, según la compilación elegida.
 
 ## 6. Desplegar Portal
 
@@ -212,7 +217,43 @@ HL2_SKIP_INTRO=1 ./hl2.sh -game left4dead -novid -windowed -w 1024 -h 640 \
   -condebug -conclearlog +developer 0 +map c1m1_hotel
 ```
 
-## 9. Probar contenido de Source SDK Base 2007
+## 9. Probar Portal 2 (experimental)
+
+El repositorio `SteamDB2/Portal-2` aporta una parte del código de cliente y
+entidades de servidor. Se compila contra nuestra ABI Portal/Orange Box; no es
+todavía una reconstrucción completa del juego y algunos sistemas exclusivos de
+Portal 2 siguen fuera del árbol.
+
+Compila y crea un staging aislado junto a la instalación de Steam:
+
+```bash
+./scripts/build-macos-arm64.sh portal2
+./scripts/stage-macos-portal2.sh
+P2="$HOME/Library/Application Support/Steam/steamapps/common/Portal 2/portal2_arm64_test"
+cd "$P2"
+./hl2_osx -game portal2 -windowed -w 1280 -h 720 -novid -condebug
+```
+
+El staging conserva los binarios originales y monta el contenido mediante
+`portal2_content`. El script extrae automáticamente los materiales VGUI que no
+están disponibles en la disposición macOS y los coloca en `portal2_override`,
+por lo que no se modifica la instalación de Steam. Para una prueba de mapa:
+
+```bash
+./scripts/prepare-portal2-map.sh sp_a1_intro1
+./hl2_osx -game portal2 -windowed -w 1280 -h 720 -novid -condebug +map sp_a1_intro1
+```
+
+`prepare-portal2-map.sh` analiza el BSP y extrae sus modelos, gibs y materiales
+dinámicos desde los VPK de Portal 2 y HL2 al overlay. Puedes cambiar
+`sp_a1_intro1` por otro BSP de `portal2/maps/`.
+
+Si el menú permanece abierto pero un mapa termina con `Model ... not found`, el
+motor ARM64 ya está funcionando; ese mensaje indica que faltan dependencias de
+contenido del mapa o módulos específicos de Portal 2, no un cierre por
+arquitectura. El registro se guarda en `portal2/console.log`.
+
+## 10. Probar contenido de Source SDK Base 2007
 
 La instalación de Source SDK Base 2007 puede usarse como fuente de recursos
 (`sourcetest`, VPK, materiales y mapas), pero sus ejecutables son i386 y sus
@@ -233,7 +274,7 @@ Esto valida la inicialización del motor y el render. Si aparecen errores de
 `client.dll`, `server.dll` o materiales ausentes, son incompatibilidades de los
 recursos originales, no un fallo de arquitectura del ejecutable ARM64.
 
-## 10. Probar The Stanley Parable (rama de terceros)
+## 11. Probar The Stanley Parable (rama de terceros)
 
 La versión clásica de Steam usa App ID `221910` y una rama derivada de Portal 2.
 En Apple Silicon, sus binarios macOS son únicamente `i386`; `thestanleyparable/bin`
@@ -245,7 +286,7 @@ reemplaces `bin/engine.dylib` ni los módulos del juego en la instalación de St
 La prueba realizada con nuestro ejecutable confirma el bloqueo:
 `dlopen(.../The Stanley Parable/bin/engine.dylib): incompatible architecture`.
 
-## 11. Cambiar de juego correctamente
+## 12. Cambiar de juego correctamente
 
 Después de compilar Portal, para probar Half-Life 2:
 
@@ -264,7 +305,7 @@ Para volver a Portal:
 
 El script de despliegue se detiene si detecta el juego equivocado.
 
-## 10. Restaurar los binarios oficiales
+## 13. Restaurar los binarios oficiales
 
 La opción más fiable es **Steam > Propiedades > Archivos instalados > Verificar
 integridad**. Los scripts también conservan la primera copia local en
@@ -272,3 +313,61 @@ integridad**. Los scripts también conservan la primera copia local en
 
 Consulta [Solucionar problemas en macOS](SOLUCIONAR_PROBLEMAS_MACOS.md) si el
 build termina pero el juego no inicia o presenta errores gráficos.
+
+## 14. Experimento con `source-sdk-portal2-private`
+
+El snapshot privado de Portal 2 se mantiene fuera de este repositorio, por
+ejemplo en `~/Downloads/source-sdk-portal2-private-arm64`. Contiene código de
+cliente/servidor y VPC, pero no es un SDK autónomo: necesita la base completa de
+Source, varias dependencias que no están incluidas y el archivo `gameui.rar` está
+protegido. Por motivos legales y de mantenimiento no se copia al árbol público
+ni se reemplazan los binarios de Steam.
+
+Después de configurar una compilación ARM64, se puede comprobar qué módulos del
+snapshot son compatibles con nuestros headers actuales:
+
+```bash
+./scripts/probe-portal2-private-arm64.sh
+```
+
+El script solo compila objetos temporales (no enlaza ni instala nada). Se ha
+verificado que `prop_button.cpp` y `prop_testchamber_door.cpp` pasan esta fase
+con los *shims* locales del snapshot. Los módulos que usan el simulador de
+portales completo o pintura pueden quedar marcados como `FAIL` por cabeceras
+ausentes como `paint_database.h`; eso indica una dependencia faltante, no un
+fallo de ARM64. Para probar otra copia local:
+
+```bash
+PORTAL2_PRIVATE_SDK="/ruta/al/snapshot" \
+  ./scripts/probe-portal2-private-arm64.sh
+```
+
+El objetivo de esta etapa es medir compilabilidad y aislar las adaptaciones de
+macOS moderna. La integración funcional y cualquier ingeniería inversa deben
+hacerse después, con una base cuya licencia permita redistribución.
+
+Para repetir solo la prueba de arranque del staging:
+
+```bash
+PORTAL2_STAGE_DIR="$HOME/Library/Application Support/Steam/steamapps/common/Portal 2/portal2_arm64_test_20260906" \
+  ./scripts/test-macos-portal2.sh
+```
+
+Esta prueba confirma que el launcher y las bibliotecas ARM64 cargan; no valida
+que un mapa de Portal 2 sea jugable. Los mapas actuales todavía pueden detenerse
+por entidades, shaders o recursos exclusivos que no están en la base Orange Box.
+
+En la prueba de `sp_a1_intro1` se añadieron tres guardas de compatibilidad: los
+eventos opcionales `player_connect`, y las reservas nulas de listas de física
+(`GROUNDLINK`/`TOUCHLINK`). Con ellas el servidor alcanza `SV_ActivateServer`
+sin `SIGSEGV`; si el proceso se mantiene abierto, se puede inspeccionar la
+escena 3D y cerrar con Ctrl-C mientras seguimos completando entidades y assets.
+
+### Actualización de renderizado: 7 de septiembre de 2026
+
+Ya se ha observado `sp_a1_intro1` en 3D con texturas e iluminación. El bloqueo
+visual no era únicamente la falta de un SDK: había VPK sin montar, shaders de
+otra rama e índices VCS tratados incorrectamente como enteros con signo.
+La preparación anterior queda sustituida por el staging aislado documentado en
+[Portal 2 ARM64: experimento y pruebas](PORTAL2_ARM64_EXPERIMENTO.md).
+Esto todavía no demuestra que la campaña de Portal 2 sea jugable.

@@ -24,6 +24,7 @@ typedef int SOCKET;
 
 #include "togl/rendermechanism.h"
 #include "vertexshaderdx8.h"
+#include "shadercomboindex.h"
 #include "tier1/utlsymbol.h"
 #include "tier1/utlvector.h"
 #include "tier1/utldict.h"
@@ -2336,6 +2337,12 @@ bool CShaderManager::CreateDynamicCombos_Ver5( void *pContext, uint8 *pComboBuff
 		uint8 *pReadPtr = pUnpackBuffer;
 		while ( pReadPtr < pUnpackBuffer+nBlockSize )
 		{
+			if ( pUnpackBuffer + nBlockSize - pReadPtr < 2 * sizeof( uint32 ) )
+			{
+				Warning( "Truncated VCS combo header\n" );
+				bOK = false;
+				break;
+			}
 			uint32 nCombo_ID = NextULONG( pReadPtr );
 			uint32 nShaderSize = NextULONG( pReadPtr );
 			
@@ -2344,9 +2351,20 @@ bool CShaderManager::CreateDynamicCombos_Ver5( void *pContext, uint8 *pComboBuff
 #endif
 			HardwareShader_t hardwareShader = INVALID_HARDWARE_SHADER;
 
-			int iIndex = nCombo_ID;
-			if ( iIndex >= pLookup->m_nStaticIndex )
-				iIndex -= pLookup->m_nStaticIndex;			// ver5 stores combos as full combo, ver6 as dynamic combo # only
+			// VCS 6 stores a dynamic ID; VCS 5 stores the full unsigned ID.
+			// Anniversary static indices can exceed INT_MAX. A signed compare
+			// against such an index used to subtract it from a VCS 6 dynamic ID
+			// and write far outside the hardware-shader table.
+			uint32 iIndex;
+			if ( !DecodeShaderDynamicIndex( pFileCache->IsVersion6(), nCombo_ID,
+				pLookup->m_nStaticIndex, pLookup->m_ShaderStaticCombos.m_nCount, iIndex ) ||
+				nShaderSize > static_cast<uint32>( pUnpackBuffer + nBlockSize - pReadPtr ) )
+			{
+				Warning( "Invalid VCS dynamic combo %u or bytecode length %u in %s\n",
+					iIndex, nShaderSize, m_ShaderSymbolTable.String( pLookup->m_Name ) );
+				bOK = false;
+				break;
+			}
 			if ( IsPC() && m_bCreateShadersOnDemand )
 			{
 				// cache the code off for later
@@ -2616,6 +2634,13 @@ bool CShaderManager::LoadAndCreateShaders( ShaderLookup_t &lookup, bool bVertexS
 	}
 
 	// FIXME: should make lookup and ShaderStaticCombos_t are pool allocated.
+	if ( pHeader->m_nDynamicCombos <= 0 )
+	{
+		g_pFullFileSystem->Close( hFile );
+		lookup.m_Flags |= SHADER_FAILED_LOAD;
+		Warning( "Invalid VCS dynamic combo count for %s\n", pName );
+		return false;
+	}
 	int i;
 	lookup.m_ShaderStaticCombos.m_nCount = pHeader->m_nDynamicCombos;
 	lookup.m_ShaderStaticCombos.m_pHardwareShaders = new HardwareShader_t[pHeader->m_nDynamicCombos];
@@ -2668,7 +2693,9 @@ bool CShaderManager::LoadAndCreateShaders( ShaderLookup_t &lookup, bool bVertexS
 	}
 	else
 	{
-		int nStaticComboIdx = pFileCache->FindCombo( lookup.m_nStaticIndex / pFileCache->m_Header.m_nDynamicCombos );
+		// Shader combo IDs are unsigned on disk, including those above INT_MAX.
+		int nStaticComboIdx = pFileCache->FindCombo( ShaderStaticRecordIndex( lookup.m_nStaticIndex,
+			static_cast<uint32>( pFileCache->m_Header.m_nDynamicCombos ) ) );
 		if ( nStaticComboIdx == -1 )
 		{
 			g_pFullFileSystem->Close( hFile );
@@ -3348,6 +3375,15 @@ void CShaderManager::SetVertexShader( VertexShader_t shader )
 	Q_strncpy( vshDebugName[vshDebugIndex], m_ShaderSymbolTable.String( vshLookup.m_Name ), sizeof( vshDebugName[0] ) );
 #endif
 	Assert( vshIndex < vshLookup.m_ShaderStaticCombos.m_nCount );
+	// Reject invalid tables/indices instead of selecting an unrelated shader.
+	if ( vshIndex < 0 || vshIndex >= vshLookup.m_ShaderStaticCombos.m_nCount ||
+		!vshLookup.m_ShaderStaticCombos.m_pHardwareShaders )
+	{
+		Warning( "Invalid dynamic shader index %d for %s\n", vshIndex,
+			m_ShaderSymbolTable.String( vshLookup.m_Name ) );
+		SetVertexShaderState( 0 );
+		return;
+	}
 	HardwareShader_t dxshader = vshLookup.m_ShaderStaticCombos.m_pHardwareShaders[vshIndex];
 #endif
 
@@ -3450,6 +3486,15 @@ void CShaderManager::SetPixelShader( PixelShader_t shader )
 	pshDebugIndex = (pshDebugIndex + 1) % MAX_SHADER_HISTORY;
 	Q_strncpy( pshDebugName[pshDebugIndex], m_ShaderSymbolTable.String( pshLookup.m_Name ), sizeof( pshDebugName[0] ) );
 #endif
+	// Reject invalid tables/indices instead of selecting an unrelated shader.
+	if ( pshIndex < 0 || pshIndex >= pshLookup.m_ShaderStaticCombos.m_nCount ||
+		!pshLookup.m_ShaderStaticCombos.m_pHardwareShaders )
+	{
+		Warning( "Invalid dynamic shader index %d for %s\n", pshIndex,
+			m_ShaderSymbolTable.String( pshLookup.m_Name ) );
+		SetPixelShaderState( 0 );
+		return;
+	}
 	HardwareShader_t dxshader = pshLookup.m_ShaderStaticCombos.m_pHardwareShaders[pshIndex];
 #endif
 
