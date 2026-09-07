@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 import sys
 
 SOURCE = Path(__file__).resolve().parents[1] / "gameui" / "OptionsSubVideo.cpp"
 
-OLD_FILTER = '''#if !defined( USE_SDL )
-		// don't show modes bigger than the desktop for windowed mode
-		if ( bWindowed )
-#endif
-		{
-			if ( plist->width > desktopWidth || plist->height > desktopHeight )
-			{
-				// Filter out sizes larger than our desktop.
-				continue;
-			}
-		}
-'''
+FILTER_MARKER = "Only windowed modes need to fit inside the logical desktop bounds."
+FALLBACK_MARKER = "A fullscreen render target may legitimately be larger than SDL's logical"
 
 NEW_FILTER = '''		// Only windowed modes need to fit inside the logical desktop bounds.
 		// On macOS/Retina SDL reports logical desktop dimensions, while GLM can
@@ -32,47 +23,62 @@ NEW_FILTER = '''		// Only windowed modes need to fit inside the logical desktop 
 		}
 '''
 
-OLD_FALLBACK = '''#if defined( USE_SDL )
-		// If we are switching to a new display, or the size is greater than the desktop, then
-		//\tdisplay the desktop width and height.
-		if ( bNewFullscreenDisplay || ( Width > desktopWidth ) || ( Height > desktopHeight ) )
-		{
-			Width = desktopWidth;
-			Height = desktopHeight;
-		}
-#endif
-'''
+FILTER_RE = re.compile(
+    r'#if !defined\( USE_SDL \)\)\s*'
+    r'// don\'t show modes bigger than the desktop for windowed mode\s*'
+    r'if \( bWindowed \)\s*'
+    r'#endif\s*'
+    r'\{\s*'
+    r'if \( plist->width > desktopWidth \|\| plist->height > desktopHeight \)\s*'
+    r'\{\s*'
+    r'// Filter out sizes larger than our desktop\.\s*'
+    r'continue;\s*'
+    r'\}\s*'
+    r'\}\s*',
+    re.MULTILINE,
+)
 
-NEW_FALLBACK = '''#if defined( USE_SDL )
-		// A fullscreen render target may legitimately be larger than SDL's logical
-		// Retina desktop size. Clamp only windowed modes; fullscreen-desktop will
-		// scale the chosen render target during presentation.
-		if ( bNewFullscreenDisplay || ( bWindowed && ( ( Width > desktopWidth ) || ( Height > desktopHeight ) ) ) )
-		{
-			Width = desktopWidth;
-			Height = desktopHeight;
-		}
-#endif
-'''
-
-
-def replace_once(text: str, old: str, new: str, name: str) -> tuple[str, bool]:
-    if new in text:
-        print(f"[video-fix] {name}: already applied")
-        return text, False
-    if old not in text:
-        raise RuntimeError(f"cannot find expected block for {name}; source may have changed")
-    return text.replace(old, new, 1), True
+OLD_FALLBACK_CONDITION = (
+    "if ( bNewFullscreenDisplay || ( Width > desktopWidth ) || ( Height > desktopHeight ) )"
+)
+NEW_FALLBACK_CONDITION = (
+    "if ( bNewFullscreenDisplay || ( bWindowed && ( ( Width > desktopWidth ) || ( Height > desktopHeight ) ) ) )"
+)
 
 
 def main() -> int:
     text = SOURCE.read_text(encoding="utf-8")
     changed = False
 
-    text, did_change = replace_once(text, OLD_FILTER, NEW_FILTER, "fullscreen Retina resolution filter")
-    changed |= did_change
-    text, did_change = replace_once(text, OLD_FALLBACK, NEW_FALLBACK, "SDL resolution fallback")
-    changed |= did_change
+    if FILTER_MARKER in text:
+        print("[video-fix] fullscreen Retina resolution filter: already applied")
+    else:
+        text, count = FILTER_RE.subn(NEW_FILTER, text, count=1)
+        if count != 1:
+            raise RuntimeError("cannot find expected fullscreen resolution filter block")
+        changed = True
+
+    if FALLBACK_MARKER in text:
+        print("[video-fix] SDL resolution fallback: already applied")
+    elif NEW_FALLBACK_CONDITION in text:
+        print("[video-fix] SDL resolution fallback: condition already fixed")
+    elif OLD_FALLBACK_CONDITION in text:
+        text = text.replace(
+            OLD_FALLBACK_CONDITION,
+            NEW_FALLBACK_CONDITION,
+            1,
+        )
+        text = text.replace(
+            "// If we are switching to a new display, or the size is greater than the desktop, then\n"
+            "\t\t//\tdisplay the desktop width and height.",
+            "// A fullscreen render target may legitimately be larger than SDL's logical\n"
+            "\t\t// Retina desktop size. Clamp only windowed modes; fullscreen-desktop will\n"
+            "\t\t// scale the chosen render target during presentation.",
+            1,
+        )
+        changed = True
+    else:
+        raise RuntimeError("cannot find expected SDL resolution fallback condition")
 
     if changed:
         SOURCE.write_text(text, encoding="utf-8")
