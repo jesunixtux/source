@@ -538,7 +538,7 @@ public:
 		{
 			ConVarRef mat_hdr_level("mat_hdr_level");
 			Assert( mat_hdr_level.IsValid() );
-			m_pHDR->ActivateItem( clamp( mat_hdr_level.GetInt(), 0, 2 ) );
+			m_pHDR->ActivateItem( clamp( mat_hdr_level.GetInt(), 0, m_pHDR->GetItemCount() - 1 ) );
 		}
 	}
 
@@ -657,7 +657,7 @@ public:
 
 		SetComboItemAsRecommended( m_pMulticore, nMulticore != 0 );
 
-		SetComboItemAsRecommended( m_pHDR, nDXLevel >= 90 ? 2 : 0 );
+		SetComboItemAsRecommended( m_pHDR, clamp( nDXLevel >= 90 ? 2 : 0, 0, m_pHDR->GetItemCount() - 1 ) );
 
 		SetComboItemAsRecommended( m_pColorCorrection, nColorCorrection );
 
@@ -827,7 +827,7 @@ public:
 		}
 
 		m_pShaderDetail->ActivateItem( mat_reducefillrate.GetBool() ? 0 : 1 );
-		m_pHDR->ActivateItem(clamp(mat_hdr_level.GetInt(), 0, 2));
+		m_pHDR->ActivateItem(clamp(mat_hdr_level.GetInt(), 0, m_pHDR->GetItemCount() - 1));
 
 		switch (mat_forceaniso.GetInt())
 		{
@@ -1547,7 +1547,6 @@ void COptionsSubVideo::OnApplyChanges()
 #if defined( USE_SDL )
 	if ( !windowed )
 	{
-		SDL_Rect rect;
 		int displayIndexTarget = m_pWindowed->GetActiveItem();
 		int displayIndexCurrent = getSDLDisplayIndexFullscreen();
 
@@ -1564,16 +1563,11 @@ void COptionsSubVideo::OnApplyChanges()
 			}
 		}
 
-		if ( !SDL_GetDisplayBounds( displayIndexTarget, &rect ) )
-		{
-			// If we are going non-native fullscreen, tweak the resolution to have the same aspect ratio as the display.
-			if ( ( width != rect.w ) || ( height != rect.h ) )
-			{
-				// TODO: We may want a convar to allow folks to mess with their aspect ratio?
-				height = ( width * rect.h ) / rect.w;
-				bConfigChanged = true;
-			}
-		}
+		// In this port fullscreen is always SDL_WINDOW_FULLSCREEN_DESKTOP, so the
+		// display mode never actually switches. The upstream code tweaks the height
+		// to match the display's native aspect ratio here, which prevented the
+		// chosen aspect ratio (e.g. 16:9) from ever being applied. The present
+		// step does an aspect-preserving blit instead, so honor the selection.
 	}
 #endif // USE_SDL
 

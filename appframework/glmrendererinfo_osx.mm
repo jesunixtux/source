@@ -1563,12 +1563,92 @@ void	GLMDisplayInfo::PopulateModes( void )
 			}
 		}
 	}
-	
+
+	// Add a big pile of standard window resolutions so the video options menu always
+	// offers the common aspect ratios (4:3, 16:9, 16:10), even on displays whose
+	// CGDisplayAvailableModes list only exposes the native aspect ratio.
+	static const struct
+	{
+		uint w;
+		uint h;
+	} s_Resolutions[] =
+	{
+		{ 640, 480 },   // 4x3
+		{ 800, 600 },
+		{ 1024, 768 },
+		{ 1152, 864 },
+		{ 1280, 960 },
+		{ 1600, 1200 },
+		{ 1920, 1440 },
+		{ 2048, 1536 },
+
+		{ 1280, 720 },  // 16x9
+		{ 1366, 768 },
+		{ 1536, 864 },
+		{ 1600, 900 },
+		{ 1920, 1080 },
+		{ 2048, 1152 },
+		{ 2560, 1440 },
+		{ 2880, 1620 },
+		{ 3840, 2160 },
+		{ 5120, 2880 },
+		{ 7680, 4320 },
+
+		{ 720, 480 },   // 16x10
+		{ 1280, 800 },
+		{ 1680, 1050 },
+		{ 1920, 1200 },
+		{ 2560, 1600 },
+	};
+
+	for ( int i = 0; i < ARRAYSIZE( s_Resolutions ); i++ )
+	{
+		uint w = s_Resolutions[ i ].w;
+		uint h = s_Resolutions[ i ].h;
+
+		if ( ( w <= m_info.m_displayPixelWidth ) && ( h <= m_info.m_displayPixelHeight ) )
+		{
+			m_modes->AddToTail( new GLMDisplayMode( w, h, 0 ) );
+
+			if ( ( w * 2 <= m_info.m_displayPixelWidth ) && ( h * 2 <= m_info.m_displayPixelHeight ) )
+			{
+				// Add double of everything also - Retina proofing hopefully.
+				m_modes->AddToTail( new GLMDisplayMode( w * 2, h * 2, 0 ) );
+			}
+		}
+	}
+
+	// Make sure the display native resolution always ends up in the list, along
+	// with a native-sized-half option for low-end machines.
+	m_modes->AddToTail( new GLMDisplayMode( m_info.m_displayPixelWidth, m_info.m_displayPixelHeight, 0 ) );
+	m_modes->AddToTail( new GLMDisplayMode( m_info.m_displayPixelWidth / 2, m_info.m_displayPixelHeight / 2, 0 ) );
+
 	// now sort the modes
 	// primary key is refresh rate
 	// secondary key is area
 
 	m_modes->Sort( DisplayModeSortFunction );
+
+	// remove dupes.
+	int nummodes = m_modes->Count();
+	int i = 1;  // not zero!
+	while (i < nummodes)
+	{
+		GLMDisplayModeInfoFields& info0 = m_modes->Element( i - 1 )->m_info;
+		GLMDisplayModeInfoFields& info1 = m_modes->Element( i )->m_info;
+
+		if ( ( info0.m_modePixelWidth == info1.m_modePixelWidth ) &&
+		     ( info0.m_modePixelHeight == info1.m_modePixelHeight ) &&
+		     ( info0.m_modeRefreshHz == info1.m_modeRefreshHz ) )
+		{
+			m_modes->Remove(i);
+			nummodes--;
+		}
+		else
+		{
+			i++;
+		}
+	}
 }
 
 

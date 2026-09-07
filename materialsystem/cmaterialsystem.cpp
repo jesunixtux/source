@@ -5515,6 +5515,39 @@ CON_COMMAND( mat_hdr_enabled, "Report if HDR is enabled for debugging" )
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Dumps every piece of state that controls whether HDR actually
+// renders, so it's easy to tell why HDR is on/off on a given machine.
+//-----------------------------------------------------------------------------
+CON_COMMAND( mat_hdr_report, "Report all HDR-related state for debugging" )
+{
+	static ConVarRef mat_dxlevel( "mat_dxlevel" );
+	static ConVarRef mat_hdr_level( "mat_hdr_level" );
+
+	if ( !HardwareConfig() )
+	{
+		Warning( "HDR report: no hardware config available\n" );
+		return;
+	}
+
+	Warning( "HDR report:\n" );
+	if ( mat_dxlevel.IsValid() )
+	{
+		Warning( "  mat_dxlevel        %d\n", mat_dxlevel.GetInt() );
+	}
+	Warning( "  GetDXSupportLevel   %d\n", HardwareConfig()->GetDXSupportLevel() );
+	if ( mat_hdr_level.IsValid() )
+	{
+		Warning( "  mat_hdr_level       %d\n", mat_hdr_level.GetInt() );
+	}
+	Warning( "  GetHDREnabled       %s\n", HardwareConfig()->GetHDREnabled() ? "yes" : "no" );
+	Warning( "  GetHardwareHDRType  %d\n", HardwareConfig()->GetHardwareHDRType() );
+	Warning( "  GetHDRType          %d\n", HardwareConfig()->GetHDRType() );
+	Warning( "  SupportsHDRMode(INTEGER) %s\n", HardwareConfig()->SupportsHDRMode( HDR_TYPE_INTEGER ) ? "yes" : "no" );
+	Warning( "  SupportsHDRMode(FLOAT)   %s\n", HardwareConfig()->SupportsHDRMode( HDR_TYPE_FLOAT ) ? "yes" : "no" );
+	Warning( "  0=none 1=integer 2=float (HDR types)\n" );
+}
+
 
 static int ReadListFromFile(CUtlVector<char*>* outReplacementMaterials, const char *pszPathName)
 {

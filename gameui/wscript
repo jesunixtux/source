@@ -91,6 +91,7 @@ def build(bld):
 		'OptionsSubTouch.cpp',
 		'OptionsSubMultiplayer.cpp',
 		'OptionsSubPortal.cpp',
+		'OptionsSubOthers.cpp',
 		'OptionsSubVideo.cpp',
 		'OptionsSubVoice.cpp',
 		'../public/tier0/memoverride.cpp',

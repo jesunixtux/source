@@ -101,6 +101,9 @@ using namespace vgui;
 
 ConVar vgui_message_dialog_modal( "vgui_message_dialog_modal", "1", FCVAR_ARCHIVE );
 
+// Controls whether the "Console" button is shown in the main menu (see Options dialog -> Others).
+ConVar ui_console_button( "ui_console_button", "0", FCVAR_ARCHIVE, "Show the Console button in the main menu." );
+
 extern vgui::DHANDLE<CLoadingDialog> g_hLoadingDialog;
 static CBasePanel	*g_pBasePanel = NULL;
 static float		g_flAnimationPadding = 0.01f;
@@ -1581,6 +1584,20 @@ void CBasePanel::UpdateGameMenus()
 
 	// iterate all the menu items
 	m_pGameMenu->UpdateMenuItemState( isInGame, isMulti, isInReplay, isVREnabled, isVRActive );
+
+	// Show/hide the console button based on the Options dialog -> Others setting
+	if ( m_pGameMenu )
+	{
+		for ( int i = 0; i < m_pGameMenu->GetItemCount(); ++i )
+		{
+			vgui::MenuItem *pItem = m_pGameMenu->GetMenuItem( i );
+			if ( pItem && !Q_strcmp( pItem->GetName(), "Console" ) )
+			{
+				pItem->SetVisible( ui_console_button.GetBool() );
+				break;
+			}
+		}
+	}
 
 	if ( m_hMainMenuOverridePanel )
 	{

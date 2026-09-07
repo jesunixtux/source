@@ -2368,10 +2368,54 @@ void GLMContext::Present( CGLMTex *tex )
 				dstRect.ymin	=	0;
 				dstRect.xmax	=	dstWidth;
 				dstRect.ymax	=	dstHeight;
-			
+
+				// When fullscreen is a fake FULLSCREEN_DESKTOP mode the window (and
+				// thus GL_BACK) is always the display's native size, so selecting a
+				// non-native aspect ratio (e.g. 16:9 on a 16:10 display) would get
+				// stretched. Preserve the source aspect by letterboxing/pillarboxing
+				// the blit rect, which is what makes the video options "aspect ratio"
+				// setting actually visible.
+				bool blitScales	=	(showparams.m_width != static_cast<int>(dstWidth)) || (showparams.m_height != static_cast<int>(dstHeight));
+
+				if ( m_displayParams.m_fsEnable && blitScales &&
+					 ( showparams.m_width > 0 ) && ( showparams.m_height > 0 ) &&
+					 ( dstWidth > 0 ) && ( dstHeight > 0 ) )
+				{
+					const float srcAspect	= (float)showparams.m_width  / (float)showparams.m_height;
+					const float dstAspect	= (float)dstWidth			/ (float)dstHeight;
+
+					if ( fabsf( srcAspect - dstAspect ) > 0.001f )
+					{
+						if ( srcAspect > dstAspect )
+						{
+							// source is wider: fit to full width, letterbox top/bottom
+							const int blitH = (int)( ( (float)dstWidth * (float)showparams.m_height ) / (float)showparams.m_width );
+							if ( blitH <= (int)dstHeight )
+							{
+								dstRect.ymin	=	(dstHeight - (uint)blitH) / 2;
+								dstRect.ymax	=	dstRect.ymin + (uint)blitH;
+							}
+						}
+						else
+						{
+							// source is taller: fit to full height, pillarbox left/right
+							const int blitW = (int)( ( (float)dstHeight * (float)showparams.m_width ) / (float)showparams.m_height );
+							if ( blitW <= (int)dstWidth )
+							{
+								dstRect.xmin	=	(dstWidth - (uint)blitW) / 2;
+								dstRect.xmax	=	dstRect.xmin + (uint)blitW;
+							}
+						}
+
+						// clear GL_BACK so the letterbox/pillarbox bars are black
+						BindFBOToCtx( NULL, GL_DRAW_FRAMEBUFFER_EXT );
+						gGL->glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+						gGL->glClear( GL_COLOR_BUFFER_BIT );
+					}
+				}
+
 				// do not ask for LINEAR if blit is unscaled
 				// NULL means targeting GL_BACK.  Blit2 will break it down into two steps if needed, and will handle resolve, scale, flip.
-				bool blitScales	=	(showparams.m_width != static_cast<int>(dstWidth)) || (showparams.m_height != static_cast<int>(dstHeight));
 				Blit2(	tex, &srcRect, 0,0,
 								NULL, &dstRect, 0,0,
 								blitScales ? GL_LINEAR : GL_NEAREST );
