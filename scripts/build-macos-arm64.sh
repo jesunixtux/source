@@ -26,7 +26,7 @@ export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 export HOMEBREW_PREFIX="/opt/homebrew"
 
 # pkg-config search path: include keg-only libraries (jpeg, openal-soft)
-export PKG_CONFIG_PATH="/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/openal-soft/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/openal-soft/lib/pkgconfig:/opt/homebrew/opt/ffmpeg/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
 # Portal and Half-Life 2 have different client/server modules. Reconfigure
 # before switching games so an old module cannot be deployed by mistake.

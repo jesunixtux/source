@@ -379,6 +379,15 @@ def check_deps(conf):
 		conf.env.FRAMEWORK_COREAUDIO = "CoreAudio"
 		conf.env.FRAMEWORK_AUDIOTOOLBOX = "AudioToolbox"
 		conf.env.FRAMEWORK_SYSTEMCONFIGURATION = "SystemConfiguration"
+		# Homebrew's FFmpeg is a native ARM64 decoder for the Bink 1 streams that
+		# ship with Portal 2.  Do not use the game's i386 RAD dylib here.
+		if not conf.options.DEDICATED:
+			conf.check_cfg(package='libavcodec', uselib_store='AVCODEC', args=['--cflags', '--libs'])
+			conf.check_cfg(package='libavformat', uselib_store='AVFORMAT', args=['--cflags', '--libs'])
+			conf.check_cfg(package='libavutil', uselib_store='AVUTIL', args=['--cflags', '--libs'])
+			# This FFmpeg implementation is an ARM64 macOS module.  Keep other
+			# platforms and dedicated builds on their existing video backends.
+			projects['game'].append('video/video_bink')
 
 	if conf.options.TESTS:
 		return

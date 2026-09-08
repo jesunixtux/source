@@ -6,6 +6,9 @@
 //===========================================================================//
 
 #include "cbase.h"
+#ifdef PORTAL2
+#include "beam_shared.h"
+#endif
 #include "prop_portal.h"
 #include "portal_player.h"
 #include "portal/weapon_physcannon.h"
@@ -77,6 +80,9 @@ BEGIN_DATADESC( CProp_Portal )
 	
 	DEFINE_FIELD( m_bSharedEnvironmentConfiguration, FIELD_BOOLEAN ),
 	DEFINE_ARRAY( m_vPortalCorners, FIELD_POSITION_VECTOR, 4 ),
+#ifdef PORTAL2
+	DEFINE_AUTO_ARRAY( m_hCompatibilityOutline, FIELD_EHANDLE ),
+#endif
 
 	// Function Pointers
 	DEFINE_THINKFUNC( DelayedPlacementThink ),
@@ -108,6 +114,10 @@ CProp_Portal::CProp_Portal( void )
 {
 	m_vPrevForward = Vector( 0.0f, 0.0f, 0.0f );
 	m_PortalSimulator.SetPortalSimulatorCallbacks( this );
+	#ifdef PORTAL2
+	for ( int i = 0; i < ARRAYSIZE( m_hCompatibilityOutline ); ++i )
+		m_hCompatibilityOutline[i] = NULL;
+	#endif
 
 	// Init to something safe
 	for ( int i = 0; i < 4; ++i )
@@ -159,6 +169,9 @@ CProp_Portal::CProp_Portal( void )
 
 CProp_Portal::~CProp_Portal( void )
 {
+	#ifdef PORTAL2
+	RemoveCompatibilityOutline();
+	#endif
 	CProp_Portal_Shared::AllPortals.FindAndRemove( this );
 	s_PortalLinkageGroups[m_iLinkageGroupID].FindAndRemove( this );
 }
@@ -166,6 +179,9 @@ CProp_Portal::~CProp_Portal( void )
 
 void CProp_Portal::UpdateOnRemove( void )
 {
+	#ifdef PORTAL2
+	RemoveCompatibilityOutline();
+	#endif
 	m_PortalSimulator.ClearEverything();
 
 	RemovePortalMicAndSpeaker();
@@ -192,6 +208,9 @@ void CProp_Portal::UpdateOnRemove( void )
 
 void CProp_Portal::Precache( void )
 {
+	#ifdef PORTAL2
+	PrecacheModel( "sprites/laserbeam.vmt" );
+	#endif
 	PrecacheScriptSound( "Portal.ambient_loop" );
 
 	PrecacheScriptSound( "Portal.open_blue" );
@@ -290,6 +309,10 @@ void CProp_Portal::OnRestore()
 	m_pAttachedCloningArea = CPhysicsCloneArea::CreatePhysicsCloneArea( this );
 
 	BaseClass::OnRestore();
+
+#ifdef PORTAL2
+	UpdateCompatibilityOutline();
+#endif
 
 	if ( m_bActivated )
 	{
@@ -631,6 +654,9 @@ void CProp_Portal::FizzleThink( void )
 	}
 
 	StopParticleEffects( this );
+	#ifdef PORTAL2
+	RemoveCompatibilityOutline();
+	#endif
 
 	m_bActivated = false;
 	m_hLinkedPortal = NULL;
@@ -754,6 +780,10 @@ void CProp_Portal::Activate( void )
 	CreateSounds();
 
 	AddEffects( EF_NOSHADOW | EF_NORECEIVESHADOW );
+
+#ifdef PORTAL2
+	UpdateCompatibilityOutline();
+#endif
 
 	if( m_bActivated && (m_hLinkedPortal.Get() != NULL) )
 	{
@@ -2116,6 +2146,9 @@ void CProp_Portal::NewLocation( const Vector &vOrigin, const QAngle &qAngles )
 
 	// Update the four corners of this portal for faster reference
 	UpdateCorners();
+	#ifdef PORTAL2
+	UpdateCompatibilityOutline();
+	#endif
 
 	WakeNearbyEntities();
 
@@ -2201,6 +2234,10 @@ void CProp_Portal::InputSetActivatedState( inputdata_t &inputdata )
 		}
 
 		StopParticleEffects( this );
+
+#ifdef PORTAL2
+		RemoveCompatibilityOutline();
+#endif
 	}
 
 	UpdatePortalTeleportMatrix();
@@ -2262,6 +2299,62 @@ void CProp_Portal::UpdateCorners()
 	}
 }
 
+#ifdef PORTAL2
+void CProp_Portal::RemoveCompatibilityOutline( void )
+{
+	for ( int i = 0; i < ARRAYSIZE( m_hCompatibilityOutline ); ++i )
+	{
+		if ( m_hCompatibilityOutline[i] )
+			UTIL_Remove( m_hCompatibilityOutline[i] );
+		m_hCompatibilityOutline[i] = NULL;
+	}
+}
+
+void CProp_Portal::UpdateCompatibilityOutline( void )
+{
+	if ( !m_bActivated )
+	{
+		RemoveCompatibilityOutline();
+		return;
+	}
+
+	// Keep a visible rim while the compatibility target lacks the authored
+	// portal particles. The interior stays clear for the recursive view.
+	Vector forward, right, up;
+	GetVectors( &forward, &right, &up );
+	const Vector center = GetAbsOrigin() + forward * 1.0f;
+	const int red = m_bIsPortal2 ? 255 : 35;
+	const int green = m_bIsPortal2 ? 125 : 155;
+	const int blue = m_bIsPortal2 ? 20 : 255;
+	const int segmentCount = ARRAYSIZE( m_hCompatibilityOutline );
+	for ( int i = 0; i < segmentCount; ++i )
+	{
+		CBeam *pBeam = m_hCompatibilityOutline[i];
+		if ( !pBeam )
+		{
+			pBeam = CBeam::BeamCreate( "sprites/laserbeam.vmt", 3.0f );
+			m_hCompatibilityOutline[i] = pBeam;
+		}
+		if ( !pBeam )
+			continue;
+
+		const float startAngle = ( 2.0f * M_PI * i ) / segmentCount;
+		const float endAngle = ( 2.0f * M_PI * ( i + 1 ) ) / segmentCount;
+		const Vector start = center + right * ( cosf( startAngle ) * PORTAL_HALF_WIDTH )
+			+ up * ( sinf( startAngle ) * PORTAL_HALF_HEIGHT );
+		const Vector end = center + right * ( cosf( endAngle ) * PORTAL_HALF_WIDTH )
+			+ up * ( sinf( endAngle ) * PORTAL_HALF_HEIGHT );
+		pBeam->PointsInit( start, end );
+		pBeam->SetOwnerEntity( this );
+		pBeam->SetBrightness( 255 );
+		pBeam->SetColor( red, green, blue );
+		// The portal owns the lifetime, including across save/restore. A timer
+		// would silently make a stationary portal invisible after it expires.
+		pBeam->SetThink( NULL );
+	}
+}
+#endif
+
 
 
 
@@ -2314,5 +2407,3 @@ const CUtlVector<CProp_Portal *> *CProp_Portal::GetPortalLinkageGroup( unsigned 
 {
 	return &s_PortalLinkageGroups[iLinkageGroupID];
 }
-
-

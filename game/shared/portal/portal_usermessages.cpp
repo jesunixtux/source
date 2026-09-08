@@ -49,7 +49,9 @@ void RegisterUserMessages()
 
 
 	//new stuff for portal
-	usermessages->Register( "EntityPortalled", sizeof( long ) + sizeof( long ) + sizeof( Vector ) + sizeof( QAngle ) ); //something got teleported through a portal
+	// WRITE_EHANDLE writes 32 bits, even on LP64 platforms where long is 64
+	// bits. Match the wire payload: two handles and six float components.
+	usermessages->Register( "EntityPortalled", 2 * sizeof( int32 ) + 6 * sizeof( float ) );
 	usermessages->Register( "KillCam", -1 );
 
 	// Voting

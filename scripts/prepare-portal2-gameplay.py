@@ -33,6 +33,7 @@ prefixes = ('models/weapons/v_portalgun.', 'models/weapons/w_portalgun.', 'model
             'materials/effects/portal_', 'materials/sprites/portalgun_effects',
             'materials/sprites/hud/portal_crosshairs')
 pcfs = ['particles/portalgun.pcf', 'particles/portal_projectile.pcf', 'particles/portals.pcf']
+legacy_fallbacks = set(pcfs + ['scripts/weapon_portalgun.txt'])
 pending = [name for name in entries if name.startswith(prefixes)]
 pending += pcfs + ['scripts/weapon_portalgun.txt']
 # Particle material references are null-terminated strings in DMX binary 2.
@@ -49,7 +50,10 @@ while pending:
     name = pending.pop().lower()
     if name in written or name not in entries:
         continue
-    archive, original = entries[name]
+    # These files must come from the same legacy archive whose DMX header was
+    # validated above. The merged index otherwise prefers Portal 2's binary-5
+    # PCFs, which the binary-2 decoder cannot load.
+    archive, original = (legacy_entries if name in legacy_fallbacks else entries)[name]
     data = archive[original].read()
     target = out / name
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -57,10 +61,19 @@ while pending:
     written[name] = hashlib.sha256(data).hexdigest()
     if name.endswith('.vmt'):
         text = data.decode('utf8', errors='replace')
+        # Portal 2's gun materials use client proxies that do not exist in
+        # this renderer.  Keep the textures/self-illum and make the material
+        # static instead of producing an error every frame.
+        if re.search(r'\b(?:FizzlerVortex|LightedFloorButton|LightedMouth)\b', text, re.I):
+            text = re.sub(r'(?is)\bProxies\s*\{(?:[^{}]|\{[^{}]*\})*\}', '', text)
+            data = text.encode('utf8')
+            target.write_bytes(data)
+            written[name] = hashlib.sha256(data).hexdigest()
         for ref in re.findall(r'"?\$(?:basetexture|bumpmap|detail|envmapmask|normalmap|dudvmap)"?\s+"?([^"\s{}]+)', text, re.I):
             pending.append('materials/' + ref.replace('\\', '/').lower().removesuffix('.vtf') + '.vtf')
         for ref in re.findall(r'"?include"?\s+"([^"\n]+)"', text, re.I):
             pending.append(ref.lower())
+
 manifest = a.portal2 / 'portal2/particles/particles_manifest.txt'
 if manifest.is_file():
     text = manifest.read_text(errors='replace')

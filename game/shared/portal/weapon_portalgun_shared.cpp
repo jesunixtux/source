@@ -379,14 +379,21 @@ void CWeaponPortalgun::WeaponIdle( void )
 	}
 	else
 	{
+		Activity idleActivity = ACT_VM_IDLE;
+#ifdef PORTAL2
+		// The Portal 2 model has a separate looping open-prong pose after
+		// ACT_VM_PICKUP. Retain normal idle for legacy model overrides.
+		if ( m_bOpenProngs && SelectWeightedSequence( ACT_VM_PICKUP_IDLE ) >= 0 )
+			idleActivity = ACT_VM_PICKUP_IDLE;
+#endif
 		// See if we need to raise immediately
 		if ( m_flRaiseTime < gpGlobals->curtime && GetActivity() == ACT_VM_IDLE_LOWERED ) 
 		{
-			SendWeaponAnim( ACT_VM_IDLE );
+			SendWeaponAnim( idleActivity );
 		}
 		else if ( HasWeaponIdleTimeElapsed() ) 
 		{
-			SendWeaponAnim( ACT_VM_IDLE );
+			SendWeaponAnim( idleActivity );
 		}
 	}
 }

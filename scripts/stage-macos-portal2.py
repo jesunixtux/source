@@ -18,6 +18,7 @@ stage = Path(os.environ.get('PORTAL2_STAGE_DIR', p2 / 'portal2_arm64_test')).res
 misc = portal / 'hl2/hl2_misc_dir.vpk'
 required = [p2 / 'portal2/pak01_dir.vpk', misc,
             portal / 'hl2/hl2_textures_dir.vpk', portal / 'portal/portal_pak_dir.vpk',
+			portal / 'portal/resource/gamemenu.res', portal / 'hl2/resource/clientscheme.res',
             build / 'launcher_main/hl2_launcher']
 for path in required:
     if not path.is_file():
@@ -106,6 +107,33 @@ subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-intro-audi
                 str(p2 / 'portal2'), str(stage / 'portal2_gameplay_compat')], check=True)
 subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-ui-localization.py'),
                 str(stage / 'portal2_gameplay_compat')], check=True)
+# Portal 2's GameUI resources target a different UI stack.  Use Portal 1's
+# known-good menu definition and VGUI scheme in the isolated override.  The
+# original game files remain read-only and older build targets are untouched.
+p1_resource = portal / 'portal/resource'
+p1_scheme = portal / 'hl2/resource/clientscheme.res'
+menu_resource = stage / 'portal2_override/resource'
+menu_resource.mkdir(parents=True, exist_ok=True)
+shutil.copy2(p1_resource / 'gamemenu.res', menu_resource / 'gamemenu.res')
+shutil.copy2(p1_scheme, menu_resource / 'clientscheme.res')
+shutil.copy2(p1_scheme, menu_resource / 'clientscheme_override.res')
+# The P1-derived client's touch-screen HUD looks up vgui/touch/* and the menu
+# background, but Portal 2 ships neither asset set. Provide minimal VGUI
+# materials in the override so FindMaterial stops failing (cosmetic noise).
+touch_materials = ('use', 'jump', 'shoot', 'shoot_alt', 'crouch', 'tduck',
+                   'zoom', 'speed', 'load', 'save', 'reload',
+                   'flash_light_filled', 'next_weap', 'prev_weap', 'settings',
+                   'menu', 'back')
+vgui_touch = stage / 'portal2_override/materials/vgui/touch'
+vgui_touch.mkdir(parents=True, exist_ok=True)
+for name in touch_materials:
+    (vgui_touch / f'{name}.vmt').write_text(
+        '"UnlitGeneric"\n{\n\t"$basetexture" "vgui/white"\n}\n')
+console_mat = stage / 'portal2_override/materials/console'
+console_mat.mkdir(parents=True, exist_ok=True)
+(console_mat / 'background_menu.vmt').write_text(
+    '"UnlitGeneric"\n{\n\t"$basetexture" "console/startup_loading"\n}\n')
+
 (stage / 'portal2/cfg/portal2_arm64.cfg').write_text('''// Isolated compatibility aliases; they do not touch Steam's Portal 2 cfg.
 alias +zoom_in +zoom
 alias -zoom_in -zoom
@@ -118,7 +146,7 @@ cd "$(dirname "$0")"
 exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -windowed -w 1024 -h 768 -console \\
   +exec portal2_arm64 \\
   +sv_cheats 1 +mat_fullbright 0 +mat_disable_bloom 1 +mat_colorcorrection 0 \\
-  +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind F10 gameui_activate +bind ESCAPE gameui_activate \\
   +bind z +zoom +bind KP_INS +zoom_in \\
   +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
   +map "${1:-sp_a1_intro1}"
@@ -131,7 +159,7 @@ exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -portal2_intro_playground
   +exec portal2_arm64 \\
   -windowed -w 1024 -h 768 +sv_cheats 1 +mat_fullbright 0 \\
   +mat_disable_bloom 1 +mat_colorcorrection 0 \\
-  +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind F10 gameui_activate +bind ESCAPE gameui_activate \\
   +bind z +zoom +bind KP_INS +zoom_in \\
   +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
   +bind MOUSE1 +attack +bind MOUSE2 +attack2 +bind e +use \\

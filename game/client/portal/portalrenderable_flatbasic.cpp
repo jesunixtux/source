@@ -1169,6 +1169,14 @@ void CPortalRenderable_FlatBasic::DrawPortal( void )
 	if( (view->GetDrawFlags() & DF_RENDER_REFLECTION) != 0 )
 		return;
 
+	// Bias both colors away from their host surface in the compatibility
+	// target. m_bIsPortal2 identifies the orange portal, not the game target.
+#ifdef PORTAL2
+	const float compatOverlayOffset = 0.5f;
+#else
+	const float compatOverlayOffset = 0.25f; // DrawSimplePortalMesh's original default.
+#endif
+
 	if ( g_pPortalRender->ShouldUseStencilsToRenderPortals() )
 	{
 		//stencil-based rendering
@@ -1182,7 +1190,7 @@ void CPortalRenderable_FlatBasic::DrawPortal( void )
 				}
 			}
 
-			DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))] );
+			DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))], compatOverlayOffset );
 			DrawRenderFixMesh( g_pPortalRender->m_MaterialsAccess.m_WriteZ_Model );
 		}
 		else if( g_pPortalRender->GetCurrentViewExitPortal() != this )
@@ -1203,7 +1211,7 @@ void CPortalRenderable_FlatBasic::DrawPortal( void )
 			}
 			else
 			{
-				DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))] );
+				DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))], compatOverlayOffset );
 			}
 		}
 	}
@@ -1228,7 +1236,7 @@ void CPortalRenderable_FlatBasic::DrawPortal( void )
 			{
 				DrawSimplePortalMesh( m_Materials.m_Portal_Refract[ ( ( m_bIsPortal2 ) ? ( 1 ) : ( 0 ) ) ] );
 			}
-			DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))] ); //FIXME: find out why the projection mesh screws up at the second level of rendering in -nouserclip situations
+			DrawSimplePortalMesh( m_Materials.m_PortalStaticOverlay[((m_bIsPortal2)?(1):(0))], compatOverlayOffset ); //FIXME: find out why the projection mesh screws up at the second level of rendering in -nouserclip situations
 		}
 
 		EndPortalPixelVisibilityQuery();

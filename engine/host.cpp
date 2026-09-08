@@ -4714,6 +4714,7 @@ bool Host_NewGame( char *mapName, bool loadGame, bool bBackgroundLevel, const ch
 	}
 
 	sv.m_bIsLevelMainMenuBackground = bBackgroundLevel;
+	Msg( "[diag] Host_NewGame map=%s background=%d\n", szMapName, bBackgroundLevel );
 
 	VPROF_SCOPE_END();
 

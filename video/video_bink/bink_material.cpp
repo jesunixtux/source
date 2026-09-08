@@ -398,13 +398,9 @@ VideoResult_t CBinkMaterial::SoundDeviceCommand( VideoSoundDeviceOperation_t ope
 		}
 		case VideoSoundDeviceOperation::SET_SOUND_MANAGER_DEVICE:
 		{
-#if defined ( OSX )
-			SAFE_RELEASE_AUDIOCONTEXT( m_AudioContext );
-			return ( CreateMovieAudioContext( m_bHasAudio, m_QTMovie, &m_AudioContext ) ? SetResult( VideoResult::SUCCESS ) : SetResult( VideoResult::AUDIO_ERROR_OCCURED ) );
-#else
-			// On any other OS, we don't support this operation
+			// The FFmpeg backend decodes video frames only.  Audio is deliberately
+			// left to Source's normal sound paths until a mixer is wired in.
 			return SetResult( VideoResult::OPERATION_NOT_SUPPORTED );
-#endif
 		}
 		case VideoSoundDeviceOperation::SET_LIB_AUDIO_DEVICE:
 		case VideoSoundDeviceOperation::HOOK_X_AUDIO:
@@ -648,7 +644,7 @@ bool CBinkMaterial::Update( void )
 			// write the frame data to output file
 			if (m_AVVideoDecCtx->codec->type == AVMEDIA_TYPE_VIDEO)
 			{
-				av_image_copy(m_AVVideoData, m_AVVideoLinesize, (const uint8_t **)(m_AVFrame->data), m_AVFrame->linesize, m_AVPixFormat, m_VideoFrameWidth, m_VideoFrameHeight);
+				av_image_copy(m_AVVideoData, m_AVVideoLinesize, (const uint8_t * const *)(m_AVFrame->data), m_AVFrame->linesize, (AVPixelFormat)m_AVPixFormat, m_VideoFrameWidth, m_VideoFrameHeight);
 			}
 
 			av_frame_unref(m_AVFrame);
@@ -931,10 +927,10 @@ void CBinkMaterial::OpenMovie( const char *theMovieFileName )
 		m_VideoFrameWidth = m_AVVideoDecCtx->width;
 		m_VideoFrameHeight = m_AVVideoDecCtx->height;
 		m_AVPixFormat = m_AVVideoDecCtx->pix_fmt;
-		size_t size = av_image_alloc(m_AVVideoData, m_AVVideoLinesize,
-							m_VideoFrameWidth, m_VideoFrameHeight, m_AVPixFormat, 1);
+		int size = av_image_alloc(m_AVVideoData, m_AVVideoLinesize,
+							m_VideoFrameWidth, m_VideoFrameHeight, (AVPixelFormat)m_AVPixFormat, 1);
 
-		m_RGBData = calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
+		m_RGBData = (uint8_t *)calloc( m_VideoFrameWidth*m_VideoFrameHeight*3, 1 );
 
 		printf("m_AVVideoData size = %zu\nm_VideoFrameWidth=%d\nm_VideoFrameHeight=%d\n", size, m_VideoFrameWidth, m_VideoFrameHeight);
 
@@ -955,8 +951,13 @@ void CBinkMaterial::OpenMovie( const char *theMovieFileName )
 	}
 
 	m_MovieFrameDuration = 1.0/((double)m_AVVideoStream->r_frame_rate.num/(double)m_AVVideoStream->r_frame_rate.den);
+	m_QTMovieDurationinSec = ( m_AVFmtCtx->duration == AV_NOPTS_VALUE ) ? 0.0f :
+		(float)m_AVFmtCtx->duration / (float)AV_TIME_BASE;
+	m_QTMovieFrameCount = (int)( m_QTMovieDurationinSec / m_MovieFrameDuration + 0.5f );
 	m_TextureRegen.SetSourceImage( m_RGBData, m_VideoFrameWidth, m_VideoFrameHeight );
-	printf("Video FPS: %lf\n", (double)m_AVVideoStream->r_frame_rate.num/(double)m_AVVideoStream->r_frame_rate.den);
+	Msg( "PORTAL2_BINK opened %s (%dx%d, %.2f fps)\n", theMovieFileName,
+		m_VideoFrameWidth, m_VideoFrameHeight,
+		(double)m_AVVideoStream->r_frame_rate.num/(double)m_AVVideoStream->r_frame_rate.den );
 
 #if 0
 	Handle	MovieFileDataRef = nullptr;
@@ -1069,11 +1070,20 @@ void CBinkMaterial::OpenMovie( const char *theMovieFileName )
 void CBinkMaterial::CloseFile()
 {
 	av_freep( &m_AVVideoData[0] );
-	avformat_close_input( &m_AVFmtCtx );
+	if ( m_AVVideoDecCtx )
+	{
+		avcodec_free_context( &m_AVVideoDecCtx );
+	}
+	if ( m_AVFmtCtx )
+	{
+		avformat_close_input( &m_AVFmtCtx );
+	}
 	m_AVFmtCtx = nullptr;
-	free(m_RGBData);
+	if ( m_RGBData )
+	{
+		free( m_RGBData );
+		m_RGBData = nullptr;
+	}
 
 	SetFileName( nullptr );
 }
-
-

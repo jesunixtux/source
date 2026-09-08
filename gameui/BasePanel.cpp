@@ -6,6 +6,7 @@
 //===========================================================================//
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "threadtools.h"
 
@@ -142,11 +143,22 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 	BaseClass::ApplySchemeSettings(pScheme);
 
 	// make fully transparent
-	SetFgColor(GetSchemeColor("MainMenu.TextColor", pScheme));
+	Color normalColor( 0, 0, 0, 0 );
+	Color armedColor( 0, 0, 0, 0 );
+	Color pressedColor( 0, 0, 0, 0 );
+#ifdef PORTAL2
+	// Portal 1's ClientScheme predates these GameUI colour keys.  Supply the
+	// original menu's readable light text only for the Portal 2 compatibility
+	// target; other games continue to use their authored scheme values.
+	normalColor = Color( 235, 235, 235, 255 );
+	armedColor = Color( 255, 190, 80, 255 );
+	pressedColor = Color( 180, 220, 255, 255 );
+#endif
+	SetFgColor(GetSchemeColor("MainMenu.TextColor", normalColor, pScheme));
 	SetBgColor(Color(0, 0, 0, 0));
-	SetDefaultColor(GetSchemeColor("MainMenu.TextColor", pScheme), Color(0, 0, 0, 0));
-	SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", pScheme), Color(0, 0, 0, 0));
-	SetDepressedColor(GetSchemeColor("MainMenu.DepressedTextColor", pScheme), Color(0, 0, 0, 0));
+	SetDefaultColor(GetSchemeColor("MainMenu.TextColor", normalColor, pScheme), Color(0, 0, 0, 0));
+	SetArmedColor(GetSchemeColor("MainMenu.ArmedTextColor", armedColor, pScheme), Color(0, 0, 0, 0));
+	SetDepressedColor(GetSchemeColor("MainMenu.DepressedTextColor", pressedColor, pScheme), Color(0, 0, 0, 0));
 	SetContentAlignment(Label::a_west);
 	SetBorder(NULL);
 	SetDefaultBorder(NULL);
@@ -155,13 +167,28 @@ void CGameMenuItem::ApplySchemeSettings(IScheme *pScheme)
 
 	vgui::HFont hMainMenuFont = pScheme->GetFont( "MainMenuFont", IsProportional() );
 
-	if ( hMainMenuFont )
+	if ( !hMainMenuFont )
+		hMainMenuFont = pScheme->GetFont( "MenuLarge", IsProportional() );
+	if ( !hMainMenuFont )
 	{
-		SetFont( hMainMenuFont );
+		const char *cand[] = { "DebugFixed", "Default", "GameUIButtons", "ClientTitleFont", NULL };
+		for ( int i = 0; cand[i]; i++ )
+		{
+			hMainMenuFont = pScheme->GetFont( cand[i], IsProportional() );
+			if ( hMainMenuFont )
+				break;
+		}
 	}
-	else
+
+	SetFont( hMainMenuFont );
+
 	{
-		SetFont( pScheme->GetFont( "MenuLarge", IsProportional() ) );
+		FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+		if ( dbg )
+		{
+			fprintf( dbg, "[diag] item '%s' font=%d\n", GetName(), (int)hMainMenuFont );
+			fclose( dbg );
+		}
 	}
 	SetTextInset(0, 0);
 	SetArmedSound("UI/buttonrollover.wav");
@@ -773,6 +800,8 @@ bool g_bIsCreatingNewGameMenuForPreFetching = false;
 //-----------------------------------------------------------------------------
 CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 {
+	FILE *dbg = fopen( "/tmp/gui_diag.log", "w" );
+	if ( dbg ) { fprintf( dbg, "[diag] CBasePanel ctor pid=%d\n", getpid() ); fclose( dbg ); }
 	if( NeedProportional() )
 		SetProportional( true );
 
@@ -838,6 +867,16 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 
 	m_pGameMenuButtons.AddToTail( CreateMenuButton( this, "GameMenuButton", ModInfo().GetGameTitle() ) );
 	m_pGameMenuButtons.AddToTail( CreateMenuButton( this, "GameMenuButton2", ModInfo().GetGameTitle2() ) );
+
+	{
+		FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+		if ( dbg )
+		{
+			fprintf( dbg, "[diag] titles '%ls' '%ls'\n",
+				ModInfo().GetGameTitle(), ModInfo().GetGameTitle2() );
+			fclose( dbg );
+		}
+	}
 #ifdef CS_BETA
 	if ( !ModInfo().NoCrosshair() ) // hack to not show the BETA for HL2 or HL1Port
 	{
@@ -861,6 +900,25 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 		SteamClient()->BReleaseSteamPipe( steamPipe );
 	}
 
+	vgui::HScheme hs = vgui::scheme()->GetScheme( "ClientScheme" );
+	FILE *dbg2 = fopen( "/tmp/gui_diag.log", "a" );
+#ifdef PORTAL2
+	vgui::scheme()->LoadSchemeFromFile( "Resource/ClientScheme_override.res", "ClientScheme" );
+	hs = vgui::scheme()->GetScheme( "ClientScheme" );
+#endif
+	if ( dbg2 )
+	{
+		vgui::IScheme *sp2 = vgui::scheme()->GetIScheme( hs );
+		fprintf( dbg2, "[diag] ctor ClientScheme=%08x fonts MainMenuFont=%d MenuLarge=%d DebugFixed=%d\n",
+			(unsigned)hs,
+			(int)sp2->GetFont( "MainMenuFont" ), (int)sp2->GetFont( "MenuLarge" ),
+			(int)sp2->GetFont( "DebugFixed" ) );
+		char szPath[512];
+		if ( g_pFullFileSystem->GetLocalPath( "Resource/ClientScheme_override.res", szPath, sizeof(szPath) ) )
+			fprintf( dbg2, "[diag]   localpath='%s'\n", szPath );
+		fclose( dbg2 );
+	}
+	SetScheme( "ClientScheme" );
 	CreateGameMenu();
 	CreateGameLogo();
 
@@ -1257,6 +1315,11 @@ void CBasePanel::SetBackgroundRenderState(EBackgroundState state)
 		return;
 	}
 
+	FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+	if ( dbg ) { fprintf( dbg, "[diag] SetBackgroundRenderState %d -> %d  inlevel=%d inbg=%d lvlLoading=%d everActivated=%d platformInit=%d\n",
+		(int)m_eBackgroundState, (int)state, GameUI().IsInLevel(), GameUI().IsInBackgroundLevel(),
+		m_bLevelLoading, m_bEverActivated, m_bPlatformMenuInitialized ); fclose( dbg ); }
+
 	// apply state change transition
 	float frametime = engine->Time();
 
@@ -1363,6 +1426,10 @@ void CBasePanel::OnSizeChanged( int newWide, int newTall )
 //-----------------------------------------------------------------------------
 void CBasePanel::OnLevelLoadingStarted()
 {
+	FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+	if ( dbg ) { fprintf( dbg, "[diag] OnLevelLoadingStarted m_bLevelLoading=%d inlevel=%d inbg=%d everActivated=%d platformInit=%d state=%d\n",
+		m_bLevelLoading, GameUI().IsInLevel(), GameUI().IsInBackgroundLevel(),
+		m_bEverActivated, m_bPlatformMenuInitialized, m_eBackgroundState ); fclose( dbg ); }
 	m_bLevelLoading = true;
 
 	m_pGameMenu->ShowFooter( false );
@@ -1385,6 +1452,8 @@ void CBasePanel::OnLevelLoadingStarted()
 //-----------------------------------------------------------------------------
 void CBasePanel::OnLevelLoadingFinished()
 {
+	FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+	if ( dbg ) { fprintf( dbg, "[diag] OnLevelLoadingFinished  state=%d inlevel=%d inbg=%d\n", m_eBackgroundState, GameUI().IsInLevel(), GameUI().IsInBackgroundLevel() ); fclose( dbg ); }
 	m_bLevelLoading = false;
 
 	if ( m_hMatchmakingBasePanel.Get() )
@@ -1494,8 +1563,30 @@ void CBasePanel::DrawBackgroundImage()
 			// goes from [0..255]
 			alpha = (frametime - m_flFadeMenuStartTime) / (m_flFadeMenuEndTime - m_flFadeMenuStartTime) * 255;
 			alpha = clamp( alpha, 0, 255 );
-			m_pGameMenu->SetAlpha( alpha );
-			if ( alpha == 255 )
+			{
+				static int s_last = -1;
+				int given = (int)alpha & ~63;
+				if ( given != s_last )
+				{
+					s_last = given;
+					int vx, vy, vw, vh;
+					m_pGameMenu->GetBounds( vx, vy, vw, vh );
+					FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+if ( dbg ) { fprintf( dbg, "[diag] fade alpha=%d menualpha=%d visible=%d bounds=(%d,%d %dx%d) titlealpha=%d\n",
+					(int)alpha, m_pGameMenu->GetAlpha(), m_pGameMenu->IsVisible() ? 1 : 0, vx, vy, vw, vh,
+					m_pGameMenuButtons.Count() ? m_pGameMenuButtons[0]->GetAlpha() : -1 ); fclose( dbg ); }
+				}
+			}
+m_pGameMenu->SetAlpha( alpha );
+		if ( m_pGameLogo )
+		{
+			m_pGameLogo->SetAlpha( alpha );
+		}
+		for ( int i=0; i<m_pGameMenuButtons.Count(); ++i )
+		{
+			m_pGameMenuButtons[i]->SetAlpha( alpha );
+		}
+		if ( alpha == 255 )
 			{
 				m_bFadingInMenus = false;
 			}
@@ -1525,6 +1616,8 @@ void CBasePanel::CreateGameMenu()
 		// start invisible
 		SETUP_PANEL( m_pGameMenu );
 		m_pGameMenu->SetAlpha( 0 );
+		FILE *dbg = fopen( "/tmp/gui_diag.log", "a" );
+		if ( dbg ) { fprintf( dbg, "[diag] CreateGameMenu OK panel=%p\n", (void*)m_pGameMenu ); fclose( dbg ); }
 	}
 
 	datafile->deleteThis();

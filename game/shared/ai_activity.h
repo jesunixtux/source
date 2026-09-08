@@ -2107,10 +2107,14 @@ typedef enum
 	ACT_SPELL_VM_ARM, 
 	ACT_SPELL_VM_FIRE,
 
+#ifdef PORTAL2
+	// Append target-specific activities so existing activity numbers stay stable.
+	ACT_VM_PICKUP_IDLE,
+#endif
+
 	// this is the end of the global activities, private per-monster activities start here.
 	LAST_SHARED_ACTIVITY,
 } Activity;
 
 
 #endif // AI_ACTIVITY_H
-

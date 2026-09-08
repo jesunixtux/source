@@ -588,6 +588,9 @@ void CPortal_Player::ClearExpression( void )
 
 void CPortal_Player::PreThink( void )
 {
+	extern void Portal2GameplayTestPlayerFrame();
+	Portal2GameplayTestPlayerFrame();
+
 	QAngle vOldAngles = GetLocalAngles();
 	QAngle vTempAngles = GetLocalAngles();
 

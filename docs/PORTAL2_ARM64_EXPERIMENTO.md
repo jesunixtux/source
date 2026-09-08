@@ -203,10 +203,50 @@ El lanzador aislado enlaza `Z` a `+zoom` y acepta los nombres heredados
 `portal2_gameplay_compat` contiene los modelos y materiales Studio 49 de la
 pistola y los marcos de portal de Portal 2 instalados localmente. El código de
 colocación y teletransporte sigue siendo la implementación compatible de Portal,
-porque no se ha reconstruido el DLL propietario de Portal 2. Sus tres archivos
-de partículas permanecen como respaldo de Portal en DMX binario 2, que es el
-formato que este renderer puede cargar. `ORIGIN.txt` registra hashes y procedencia
-de los recursos.
+porque no se ha reconstruido el DLL propietario de Portal 2. Los materiales de
+la pistola eliminan localmente el proxy `LightedMouth`, que este renderer no
+registra: conserva sus texturas y autoiluminación sin el aviso por cuadro.
+`ORIGIN.txt` registra hashes y procedencia de los recursos.
+
+En ARM64 la pasada `PortalRefract` de etapa 2 puede quedar negra aunque el
+portal exista y teletransporte correctamente. La preparación adapta sólo
+`portalstaticoverlay_1/2` a `PortalStaticOverlay`, conservando la máscara y el
+color azul/naranja. Es una superficie estática de compatibilidad: prioriza que
+el portal se vea y pueda usarse sobre la refracción animada original.
+
+Las partículas PCF de Portal y Portal 2 todavía no se deserializan con el
+lector de partículas presente en esta rama; por ello el disparo, la creación y
+el cruce de portales funcionan, pero faltan estelas/chispas y se registran como
+partículas desconocidas. No se debe presentar el DMX heredado como solución:
+la verificación de arranque lo detecta explícitamente como incompatible.
+
+## Bink en ARM64
+
+El objetivo de macOS ahora compila `bin/libvideo_bink.dylib` para ARM64 con el
+decodificador nativo de FFmpeg. `video_services` lo carga al solicitar Bink y
+FFmpeg reconoce los `.bik` instalados de Portal 2; no se copia ni se intenta
+cargar `portal2/bin/osx32/libbinkmachox86.dylib`, que es i386. La prueba deja
+en el log `LoadLibrary: pModule: video_bink`.
+
+La librería depende del paquete local Homebrew `ffmpeg`; el script de compilación
+añade automáticamente su `pkgconfig`. Este módulo implementa vídeo en material,
+no todavía el panel cliente `vgui_movie_display` ni audio Bink. Mientras ese
+panel no se implemente, `logic_playmovie` conserva el flujo de I/O del mapa y
+termina su salida de forma controlada. El SDK Bink oficial ofrece bibliotecas
+ARM, pero su SDK se entrega a clientes licenciados; esta rama no incorpora
+binarios propietarios de terceros.
+
+Se comprueba con una etapa aislada mediante:
+
+```sh
+python3 scripts/test-portal2-render.py \
+  "/Users/jesus/Library/Application Support/Steam/steamapps/common/Portal 2/portal2_arm64_bink_verify_20260908" \
+  --bink --seconds 15
+```
+
+El resultado correcto es `BINK PASS` y una línea `PORTAL2_BINK opened` en el
+registro de diagnóstico. Es una prueba de apertura y decodificación de vídeo,
+no una afirmación de que todas las pantallas de vídeo del juego ya se muestren.
 
 Los preparadores de la introducción hacen tres trabajos distintos:
 
@@ -224,6 +264,13 @@ relés, cámaras, salto/agachado y el marco móvil del contenedor. Los nags de p
 se recorren en orden en lugar de sortearse; las colas de voces no reproducen toda
 la prioridad de Squirrel. Las llamadas desconocidas se registran como
 `PORTAL2_INTRO unsupported script`, no se consideran exitosas silenciosamente.
+
+En la rama dedicada `codex/portal2-compat`, `logic_playmovie` conserva su salida
+`OnPlaybackFinished` cuando Bink no está disponible, para no bloquear el mapa;
+`env_instructor_hint` expone sus avisos como texto y se registran los anclajes
+`vgui_movie_display`, `info_game_event_proxy` e `info_landmark_exit`. Esto permite
+que el I/O del prólogo continúe, pero todavía no reproduce vídeos Bink ni el HUD
+visual original de las pistas.
 
 Siguen pendientes las películas de introducción/ascensor, `env_instructor_hint`,
 parte de la presentación de Wheatley y otras entidades. La introducción ya no

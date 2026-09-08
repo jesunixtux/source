@@ -427,17 +427,9 @@ static CPortal2FallbackPausePanel *Portal2PauseMenu_GetPanel()
 	return g_pPortal2PausePanel;
 }
 
-CON_COMMAND_F( portal2_pausemenu, "Shows the experimental Portal 2 ARM64 pause menu.", FCVAR_CLIENTDLL )
+CON_COMMAND_F( portal2_pausemenu, "Shows the Portal 1-compatible game menu in the Portal 2 ARM64 target.", FCVAR_CLIENTDLL )
 {
-	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
-	if ( pPanel )
-	{
-		pPanel->Toggle();
-	}
-	else
-	{
-		g_bOpenPauseMenuWhenReady = true;
-	}
+	engine->ClientCmd_Unrestricted( "gameui_activate\n" );
 }
 
 bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum )
@@ -445,27 +437,8 @@ bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum )
 	if ( !down )
 		return false;
 
-	if ( keynum == KEY_ESCAPE || keynum == KEY_F10 )
-	{
-		CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
-		if ( pPanel )
-		{
-			pPanel->Toggle();
-		}
-		else
-		{
-			g_bOpenPauseMenuWhenReady = true;
-		}
-		return true;
-	}
-
-	if ( g_pPortal2PausePanel && g_pPortal2PausePanel->IsVisible() &&
-		keynum >= KEY_1 && keynum < KEY_1 + 5 )
-	{
-		g_pPortal2PausePanel->OnKeyCodePressed( keynum );
-		return true;
-	}
-
+	// Let the engine process Escape/F10 through the standard GameUI route.
+	// The launchers bind both keys to gameui_activate.
 	return false;
 }
 
@@ -479,18 +452,13 @@ void Portal2PauseMenu_LevelInit()
 	if ( !g_bOpenPauseMenuWhenReady )
 		return;
 
-	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
-	if ( pPanel )
-	{
-		pPanel->ShowMenu( true );
-		g_bOpenPauseMenuWhenReady = false;
-	}
+	// CPortal2PauseMenuSystem::Update activates GameUI once level loading ends.
 }
 
-class CPortal2PauseMenuSystem : public CAutoGameSystem
+class CPortal2PauseMenuSystem : public CAutoGameSystemPerFrame
 {
 public:
-	CPortal2PauseMenuSystem() : CAutoGameSystem( "Portal2PauseMenuSystem" )
+	CPortal2PauseMenuSystem() : CAutoGameSystemPerFrame( "Portal2PauseMenuSystem" )
 	{
 	}
 
@@ -504,12 +472,7 @@ public:
 		if ( !g_bOpenPauseMenuWhenReady )
 			return;
 
-		CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
-		if ( pPanel )
-		{
-			pPanel->ShowMenu( true );
-			g_bOpenPauseMenuWhenReady = false;
-		}
+		// CPortal2PauseMenuSystem::Update activates GameUI once level loading ends.
 	}
 
 	virtual void LevelShutdownPreEntity()
@@ -519,6 +482,18 @@ public:
 			g_pPortal2PausePanel->ShowMenu( false );
 		}
 		g_bOpenPauseMenuWhenReady = false;
+	}
+
+	virtual void Update( float /*frametime*/ )
+	{
+		// A command-line request arrives during level load; defer the standard
+		// GameUI activation until the map is actually running, otherwise the
+		// loading transition immediately hides it again.
+		if ( g_bOpenPauseMenuWhenReady && engine->IsInGame() )
+		{
+			engine->ClientCmd_Unrestricted( "gameui_activate\n" );
+			g_bOpenPauseMenuWhenReady = false;
+		}
 	}
 };
 

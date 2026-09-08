@@ -9,6 +9,7 @@
 #include "eventqueue.h"
 #include "player_pickup.h"
 #include "weapon_physcannon.h"
+#include "baseviewmodel.h"
 #include "tier0/memdbgon.h"
 
 static bool CheckOutputFormats()
@@ -166,18 +167,30 @@ public:
             if(!cube || !door)
             { Warning("PORTAL2_GAMEPLAY_TEST cube_puzzle=FAIL missing cube/door\n"); m_step=9; return; }
             m_cube=cube; m_door=door; m_closedDoor=door->GetAbsOrigin();
-            const Vector playerOrigin(-688,4304,2680), nearby(-644,4330,2710), onButton(-624,4432,2710);
+            const Vector playerOrigin(-688,4304,2680), nearby(-644,4330,2710);
             const QAngle aim(30,30,0);
             p->Teleport(&playerOrigin,&aim,&vec3_origin);
             cube->Teleport(&nearby,&vec3_angle,&vec3_origin);
             cube->Use(p,p,USE_TOGGLE,0);
             Msg("PORTAL2_GAMEPLAY_TEST cube_pickup=%s\n",GetPlayerHeldEntity(p)==cube?"PASS":"FAIL");
-            p->ForceDropOfCarriedPhysObjects(cube);
-            cube->Teleport(&onButton,&vec3_angle,&vec3_origin);
-            if(cube->VPhysicsGetObject()) cube->VPhysicsGetObject()->Wake();
+            m_step=6;
+        }
+        if(m_step==6 && elapsed>32)
+        {
+            CBaseViewModel *vm=p->GetViewModel();
+            const int carrying=vm?vm->LookupSequence("idle_carrying"):-1;
+            Msg("PORTAL2_GAMEPLAY_TEST carrying_idle=%s sequence=%d expected=%d\n",
+                vm && carrying>=0 && vm->GetSequence()==carrying?"PASS":"FAIL",vm?vm->GetSequence():-1,carrying);
+            const Vector onButton(-624,4432,2710);
+            p->ForceDropOfCarriedPhysObjects(m_cube);
+            if(m_cube)
+            {
+                m_cube->Teleport(&onButton,&vec3_angle,&vec3_origin);
+                if(m_cube->VPhysicsGetObject()) m_cube->VPhysicsGetObject()->Wake();
+            }
             m_step=7;
         }
-        if(m_step==7 && elapsed>34)
+        if(m_step==7 && elapsed>36)
         {
             const bool opened=m_door && m_door->GetAbsOrigin().DistTo(m_closedDoor)>10;
             Msg("PORTAL2_GAMEPLAY_TEST cube_button_opens_door=%s\n",opened?"PASS":"FAIL");
@@ -190,11 +203,22 @@ public:
             }
             m_step=8;
         }
-        if(m_step==8 && elapsed>39)
+        if(m_step==8 && elapsed>41)
         {
             const bool closed=m_door && m_door->GetAbsOrigin().DistTo(m_closedDoor)<1;
             Msg("PORTAL2_GAMEPLAY_TEST cube_button_closes_door=%s\n",closed?"PASS":"FAIL");
-            p->SnapEyeAngles(QAngle(0,90,0)); m_step=9;
+            // Finish with the placed blue portal centred in the view.  This is
+            // test-only and makes the screenshot a real portal-render check,
+            // rather than a picture of the cube puzzle after traversal.
+            if(blue)
+            {
+                Vector normal; blue->GetVectors(&normal,NULL,NULL);
+                const Vector origin=blue->GetAbsOrigin()+normal*160-p->GetViewOffset();
+                QAngle aim; VectorAngles(-normal,aim);
+                p->Teleport(&origin,&aim,&vec3_origin);
+                Msg("PORTAL2_GAMEPLAY_TEST portal_visual_camera=blue\n");
+            }
+            m_step=9;
         }
     }
     void PlayerTeleported(CBaseEntity *player,CProp_Portal *entry)
@@ -211,3 +235,38 @@ static CPortal2GameplayTest g_Portal2GameplayTest;
 
 void Portal2GameplayTestPlayerTeleported(CBaseEntity *player,CProp_Portal *entry)
 { g_Portal2GameplayTest.PlayerTeleported(player,entry); }
+
+// Dev helper: physically drop the portal gun out of the player's weapon slots.
+// The drop is deferred per-frame until the local player exists with a portal gun,
+// so `+portal2_drop_portalgun` can be queued on the command line before a map spawns.
+static int g_DropResidual = 0;
+static bool g_DropDone = false;
+
+void Portal2GameplayTestPlayerFrame()
+{
+    if ( g_DropResidual <= 0 || g_DropDone )
+        return;
+    --g_DropResidual;
+    CBasePlayer *player = UTIL_GetLocalPlayer();
+    if ( !player )
+        return;
+    CBaseCombatWeapon *pWeapon = player->Weapon_OwnsThisType( "weapon_portalgun" );
+    if ( !pWeapon )
+        return;
+    g_DropDone = true;
+    player->Weapon_Drop( pWeapon, NULL, NULL );
+    FILE *dbg = fopen( "/tmp/drop_diag.log", "a" );
+    if ( dbg ) { fprintf( dbg, "PORTALGUN_DROPPED residual=%d\n", g_DropResidual ); fclose( dbg ); }
+    Msg( "portal2_drop_portalgun: portal gun dropped\n" );
+}
+
+CON_COMMAND_F( portal2_drop_portalgun, "Drop the portal gun (Portal 2 dev).", FCVAR_CHEAT )
+{
+    CBasePlayer *player = UTIL_GetLocalPlayer();
+    if ( !player ) { Warning( "portal2_drop_portalgun: no local player yet, deferring\n" ); g_DropResidual = 1800; return; }
+    CBaseCombatWeapon *pWeapon = player->Weapon_OwnsThisType( "weapon_portalgun" );
+    if ( !pWeapon ) { Msg( "portal2_drop_portalgun: no portal gun yet, deferring\n" ); g_DropResidual = 1800; return; }
+    g_DropDone = true;
+    player->Weapon_Drop( pWeapon, NULL, NULL );
+    Msg( "portal2_drop_portalgun: portal gun dropped\n" );
+}

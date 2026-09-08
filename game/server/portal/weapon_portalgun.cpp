@@ -213,13 +213,26 @@ void CWeaponPortalgun::Think( void )
 	int iSlot1State = ( ( m_bCanFirePortal1 ) ? ( 0 ) : ( 1 ) ); // FIXME: Portal gun might have only red but not blue;
 	int iSlot2State = ( ( m_bCanFirePortal2 ) ? ( 0 ) : ( 1 ) );
 
-	SetBodygroup( 1, iSlot1State );
-	SetBodygroup( 2, iSlot2State );
+#ifdef PORTAL2
+	// Studio 49's group 1 is PotatOS, not a portal-color chip; group 2
+	// does not exist. Leave those bodygroups under the map's control.
+	if ( GetModelPtr() && GetModelPtr()->GetRenderHdr()->version < 49 )
+#endif
+	{
+		SetBodygroup( 1, iSlot1State );
+		SetBodygroup( 2, iSlot2State );
+	}
 
 	if ( pPlayer->GetViewModel() )
 	{
-		pPlayer->GetViewModel()->SetBodygroup( 1, iSlot1State );
-		pPlayer->GetViewModel()->SetBodygroup( 2, iSlot2State );
+#ifdef PORTAL2
+		CStudioHdr *pViewHdr = pPlayer->GetViewModel()->GetModelPtr();
+		if ( pViewHdr && pViewHdr->GetRenderHdr()->version < 49 )
+#endif
+		{
+			pPlayer->GetViewModel()->SetBodygroup( 1, iSlot1State );
+			pPlayer->GetViewModel()->SetBodygroup( 2, iSlot2State );
+		}
 	}
 
 	// HACK HACK! Used to make the gun visually change when going through a cleanser!

@@ -2275,6 +2275,10 @@ void ActivityList_RegisterSharedActivities( void )
 	REGISTER_SHARED_ACTIVITY( ACT_SPELL_VM_ARM );
 	REGISTER_SHARED_ACTIVITY( ACT_SPELL_VM_FIRE );
 
+#ifdef PORTAL2
+	REGISTER_SHARED_ACTIVITY( ACT_VM_PICKUP_IDLE );
+#endif
+
 	AssertMsg( g_HighestActivity == LAST_SHARED_ACTIVITY - 1, "Not all activities from ai_activity.h registered in activitylist.cpp" ); 
 } 
 

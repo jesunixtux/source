@@ -52,7 +52,7 @@ END_RECV_TABLE()
 
 void __MsgFunc_EntityPortalled(bf_read &msg)
 {
-	long iEncodedEHandle;
+	int32 iEncodedEHandle;
 	int iEntity, iSerialNum;
 
 

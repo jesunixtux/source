@@ -22,6 +22,9 @@ static const char *s_pTestRestingSurfaceContext = "TestRestingSurfaceContext";
 static const char *s_pFizzleThink = "FizzleThink";
 
 class CPhysicsCloneArea;
+#ifdef PORTAL2
+class CBeam;
+#endif
 
 class CProp_Portal : public CBaseAnimating, public CPortalSimulatorEventCallbacks
 {
@@ -133,6 +136,11 @@ private:
 	CPhysCollide			*m_pCollisionShape;
 	void					RemovePortalMicAndSpeaker();	// Cleans up the portal's internal audio members
 	void					UpdateCorners( void );			// Updates the four corners of this portal on spawn and placement
+	#ifdef PORTAL2
+	void					UpdateCompatibilityOutline( void );
+	void					RemoveCompatibilityOutline( void );
+	CHandle<CBeam>			m_hCompatibilityOutline[24];
+	#endif
 
 public:
 	inline unsigned char	GetLinkageGroup( void ) const { return m_iLinkageGroupID; };
