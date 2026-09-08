@@ -36,8 +36,9 @@ normalmente el jugador todavía no tiene la pistola en este mapa.
 
 `Jugar-Portal2-Experimental.command` conserva el inicio normal del mapa y añade
 F6/F7 como opciones explícitas. No usa el controlador de pruebas automáticas.
-No están validados el recorrido completo desde el hotel hasta el ascensor, los
-guardados de campaña ni la continuación jugable de `sp_a1_intro2`.
+La transición técnica del primer ascensor a `sp_a1_intro2` está comprobada; no
+están validados aún el recorrido manual completo desde el hotel, los guardados
+de campaña ni la continuación jugable de `sp_a1_intro2`.
 
 ## Compilar y preparar
 
@@ -130,6 +131,9 @@ python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
 
 python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
   --intro-scenes --seconds 75 --screenshot
+
+python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
+  --elevator-transition --seconds 30
 ```
 
 La prueba abre el juego, espera 20 segundos y lo cierra. Guarda `engine.log`,
@@ -169,17 +173,40 @@ de `Portal 2/platform` al renderer de esta rama. No ejecutes los antiguos
 parches de extracción sobre una carpeta reparada: `prepare-portal2-map.sh`
 detecta ahora el staging nuevo y evita ese paso.
 
-Persisten recursos/proxies exclusivos, cubemaps que no se leen correctamente y
-entidades sin lógica completa. Algunos objetos pueden aparecer blancos o con
-iluminación incorrecta. `--no-prop-lighting` es solo una opción diagnóstica para
-comparar la iluminación de objetos; no se aplica al lanzador predeterminado.
+El overlay ahora sustituye de forma aislada `SolidEnergy` y `Black`, y elimina
+los proxies exclusivos `FizzlerVortex`, `LightedFloorButton` y `LightedMouth`.
+Son aproximaciones estáticas: reducen los avisos y conservan textura/transparencia,
+pero no recrean la animación de flujo ni la iluminación dinámica original. Siguen
+sin ser legibles los cubemaps HDR de Portal 2; no se fuerzan como una textura
+ordinaria porque hacerlo ocultaría un fallo de formato y puede causar cierres.
+
+Algunos objetos pueden aparecer blancos o con iluminación incorrecta.
+`--no-prop-lighting` es solo una opción diagnóstica para comparar la iluminación
+de objetos; no se aplica al lanzador predeterminado.
+
+## Menú, idioma y zoom del escenario
+
+`F10` o `Escape` abren el menú de pausa del cliente Portal 2. Sus textos se
+obtienen de catálogos UTF-16 dentro de `portal2_gameplay_compat/resource`, no de
+los archivos de Steam. Con `portal2_ui_language auto` toma `cl_language`; también
+se puede elegir explícitamente, por ejemplo `portal2_language spanish`. El botón
+o la tecla `5` rota entre inglés, español, portugués brasileño, francés, alemán,
+italiano, ruso y polaco. Esto localiza el menú de compatibilidad, no traduce los
+diálogos, subtítulos ni todos los menús originales de Portal 2.
+
+El lanzador aislado enlaza `Z` a `+zoom` y acepta los nombres heredados
+`+zoom_in` y `+zoom_out`. El FOV sólo se modifica cuando el módulo se compila con
+`PORTAL2`; Portal y los demás objetivos conservan sus controles sin cambios.
 
 ## Adaptaciones de jugabilidad y sus límites
 
-`portal2_gameplay_compat` contiene modelos/materiales de la pistola y portales
-de Portal, correspondientes al código de arma compilado. Sus tres archivos de
-partículas usan DMX binario 2. `ORIGIN.txt` registra hashes de los recursos.
-La apariencia no es una implementación nueva de la pistola original de Portal 2.
+`portal2_gameplay_compat` contiene los modelos y materiales Studio 49 de la
+pistola y los marcos de portal de Portal 2 instalados localmente. El código de
+colocación y teletransporte sigue siendo la implementación compatible de Portal,
+porque no se ha reconstruido el DLL propietario de Portal 2. Sus tres archivos
+de partículas permanecen como respaldo de Portal en DMX binario 2, que es el
+formato que este renderer puede cargar. `ORIGIN.txt` registra hashes y procedencia
+de los recursos.
 
 Los preparadores de la introducción hacen tres trabajos distintos:
 
@@ -199,10 +226,15 @@ la prioridad de Squirrel. Las llamadas desconocidas se registran como
 `PORTAL2_INTRO unsupported script`, no se consideran exitosas silenciosamente.
 
 Siguen pendientes las películas de introducción/ascensor, `env_instructor_hint`,
-proxies de materiales exclusivos, parte de la presentación de Wheatley y otras
-entidades. El ascensor tiene un adaptador de `ChangeLevel`, pero no preserva
-estado de campaña mediante landmarks y no demuestra que el mapa siguiente sea
-jugable. No presentar este experimento como «toda la programación de Portal 2».
+parte de la presentación de Wheatley y otras entidades. La introducción ya no
+salta a `sp_a1_intro2` al abrir la primera puerta: espera los relés reales de
+`ReadyForTransition`/`TransitionFromMap` del elevador. Si la cadena final de
+teletransporte falta, el adaptador conserva el movimiento real del
+`func_tracktrain` y, tras activar los mismos relés de salida, completa el cambio
+a `sp_a1_intro2`. La prueba `--elevator-transition` verifica ese recorrido de
+I/O y la segunda activación del servidor. No preserva estado de campaña mediante
+landmarks ni demuestra aún un recorrido manual completo de principio a fin. No
+presentar este experimento como «toda la programación de Portal 2».
 
 Si vuelve un cierre al animar el contenedor, comprueba que todo el build usa
 256 huesos y el decodificador `STUDIO_FRAMEANIM` de Studio 49. Si la pistola se

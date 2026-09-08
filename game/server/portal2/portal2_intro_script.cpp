@@ -24,13 +24,18 @@ public:
     DECLARE_DATADESC();
     CPortal2IntroRuntime() : m_data( NULL ), m_doorOpened( false ), m_vaultStarted( false ),
         m_gauntletSaid( false ), m_fizzlerSaid( false ), m_fizzlerTriggered( false ),
-        m_fizzlerPassed( false ), m_transitionReady( false ) {}
+        m_fizzlerPassed( false ), m_transitionReady( false ),
+        m_elevatorTransitionStarted( false ), m_levelChangeQueued( false ) {}
     ~CPortal2IntroRuntime() { if ( m_data ) m_data->deleteThis(); }
     void Spawn()
     {
         BaseClass::Spawn();
         SetName( AllocPooledString( "@portal2_intro_runtime" ) );
         LoadData();
+        // This is an opt-in integration fixture. It drives the exact map I/O
+        // used by the departure elevator; ordinary launches never enter here.
+        if ( CommandLine()->FindParm( "-portal2_elevator_transition_test" ) )
+            Fire( GetEntityName().ToCStr(), "TestElevatorTransition", "", 3.0f, this );
     }
     void OnRestore() { BaseClass::OnRestore(); LoadData(); }
     void LoadData()
@@ -141,6 +146,51 @@ public:
             g_EventQueue.AddEvent(data.pCaller,"Kill",1.0f,this,this);
         }
     }
+    void BeginElevatorTransition( CBaseEntity *caller, const char *reason )
+    {
+        if ( m_elevatorTransitionStarted )
+            return;
+        m_elevatorTransitionStarted = true;
+        Msg( "PORTAL2_INTRO elevator transition started (%s)\n", reason );
+        Fire( "@transition_from_map", "Trigger", "", 0, caller );
+        Fire( "@transition_with_survey", "Trigger", "", 0, caller );
+
+        // In the complete engine, @exit_teleport carries the player through
+        // transition_trigger, which calls TransitionFromMap.  A few stripped
+        // compatibility maps lack that final relay.  Keep the authored route
+        // first, then guarantee the same destination if it did not fire.
+        Fire( GetEntityName().ToCStr(), "CompleteElevatorTransition", "", 2.0f, caller );
+    }
+    void QueueIntro2ChangeLevel( CBaseEntity *caller, const char *reason )
+    {
+        if ( m_levelChangeQueued )
+            return;
+        m_levelChangeQueued = true;
+        Msg( "PORTAL2_INTRO elevator changing level (%s): sp_a1_intro1 -> sp_a1_intro2\n", reason );
+        Fire( "@changelevel", "ChangeLevel", "sp_a1_intro2", 0, caller );
+    }
+    void InputElevatorFailSafe( inputdata_t &data )
+    {
+        BeginElevatorTransition( data.pCaller ? data.pCaller : this, "failsafe" );
+    }
+    void InputCompleteElevatorTransition( inputdata_t &data )
+    {
+        QueueIntro2ChangeLevel( data.pCaller ? data.pCaller : this, "fallback" );
+    }
+    void InputTestElevatorTransition( inputdata_t &data )
+    {
+        m_transitionReady = true;
+        CBaseEntity *elevator = gEntList.FindEntityByName( NULL, "departure_elevator-elevator_1" );
+        if ( !elevator )
+        {
+            Warning( "PORTAL2_ELEVATOR_TEST FAIL: departure elevator missing\n" );
+            return;
+        }
+        variant_t code;
+        code.SetString( AllocPooledString( "StartMoving()" ) );
+        elevator->AcceptInput( "RunScriptCode", this, this, code, 0 );
+        Msg( "PORTAL2_ELEVATOR_TEST started authored elevator I/O\n" );
+    }
     bool Run( CBaseEntity *host, const char *code )
     {
         char name[128]; int n = 0;
@@ -168,10 +218,20 @@ public:
         if ( FStrEq(name,"StartContainerAnimations") )
         { Fire("@container_stacks_1","SetAnimation","anim1",0,host); Fire("@container_stacks_2","SetAnimation","anim1",0,host); Fire("@container_stacks_2","DisableDraw","",0,host); return true; }
         if ( FStrEq(name,"ShowHiddenContainers") ) { Fire("@container_stacks_2","EnableDraw","",0,host); return true; }
-        if ( FStrEq(name,"StartMoving") ) { Fire(host->GetEntityName().ToCStr(),"SetSpeedReal","200",0,host); return true; }
+        if ( FStrEq(name,"StartMoving") )
+        {
+            Fire(host->GetEntityName().ToCStr(),"SetSpeedReal","200",0,host);
+            // The first authored path callback arrives about five seconds
+            // into this ride.  If it is lost because a VScript callback is
+            // unavailable, let the car move for its authored segment and
+            // then use the same transition relays rather than trapping the
+            // player in an endless shaft.
+            Fire(GetEntityName().ToCStr(),"ElevatorFailSafe","",12.0f,host);
+            return true;
+        }
         if ( FStrEq(name,"ReadyForTransition") || FStrEq(name,"FailSafeTransition") )
-        { if(m_transitionReady || FStrEq(name,"FailSafeTransition")) { Fire("@transition_from_map","Trigger","",0,host); Fire("@transition_with_survey","Trigger","",0,host); } return true; }
-        if ( FStrEq(name,"TransitionFromMap") ) { Fire("@changelevel","ChangeLevel","sp_a1_intro2",0,host); return true; }
+        { if(m_transitionReady || FStrEq(name,"FailSafeTransition")) BeginElevatorTransition(host,name); return true; }
+        if ( FStrEq(name,"TransitionFromMap") ) { QueueIntro2ChangeLevel(host,"authored trigger"); return true; }
         if ( FStrEq(name,"GladosRelaxationVaultPowerUp") ) { Fire("open_portal_relay","Trigger","",0,host); return true; }
         if ( FStrEq(name,"TransitionReady") ) { m_transitionReady=true; return true; }
         if ( FStrEq(name,"sp_a1_intro1_fizzler_test") )
@@ -188,6 +248,7 @@ private:
     CUtlVector<EHANDLE> m_scenes;
     bool m_doorOpened, m_vaultStarted, m_gauntletSaid, m_fizzlerSaid;
     bool m_fizzlerTriggered, m_fizzlerPassed, m_transitionReady;
+    bool m_elevatorTransitionStarted, m_levelChangeQueued;
 };
 LINK_ENTITY_TO_CLASS( portal2_intro_runtime, CPortal2IntroRuntime );
 BEGIN_DATADESC( CPortal2IntroRuntime )
@@ -201,6 +262,11 @@ BEGIN_DATADESC( CPortal2IntroRuntime )
     DEFINE_FIELD( m_fizzlerTriggered, FIELD_BOOLEAN ),
     DEFINE_FIELD( m_fizzlerPassed, FIELD_BOOLEAN ),
     DEFINE_FIELD( m_transitionReady, FIELD_BOOLEAN ),
+    DEFINE_FIELD( m_elevatorTransitionStarted, FIELD_BOOLEAN ),
+    DEFINE_FIELD( m_levelChangeQueued, FIELD_BOOLEAN ),
+    DEFINE_INPUTFUNC( FIELD_VOID, "ElevatorFailSafe", InputElevatorFailSafe ),
+    DEFINE_INPUTFUNC( FIELD_VOID, "CompleteElevatorTransition", InputCompleteElevatorTransition ),
+    DEFINE_INPUTFUNC( FIELD_VOID, "TestElevatorTransition", InputTestElevatorTransition ),
 END_DATADESC()
 
 // logic_script dispatches to the same map-scoped handler as scripted actors.

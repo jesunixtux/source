@@ -24,7 +24,7 @@ NEW_FILTER = '''		// Only windowed modes need to fit inside the logical desktop 
 '''
 
 FILTER_RE = re.compile(
-    r'#if !defined\( USE_SDL \)\)\s*'
+    r'#if !defined\( USE_SDL \)\s*'
     r'// don\'t show modes bigger than the desktop for windowed mode\s*'
     r'if \( bWindowed \)\s*'
     r'#endif\s*'

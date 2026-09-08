@@ -602,6 +602,23 @@ void CPortal_Player::PreThink( void )
 
 	BaseClass::PreThink();
 
+#ifdef PORTAL2
+	// Portal 2's original client bindings use IN_ZOOM, but the Portal player
+	// class has no suit-zoom handler.  Keep this in the Portal 2 target only so
+	// Portal and the older Source games retain their original input behaviour.
+	if ( m_afButtonPressed & IN_ZOOM )
+	{
+		if ( !GetFOVOwner() )
+		{
+			SetFOV( this, 35, 0.15f );
+		}
+	}
+	else if ( ( m_afButtonReleased & IN_ZOOM ) && GetFOVOwner() == this )
+	{
+		SetFOV( this, 0, 0.15f );
+	}
+#endif
+
 	if( (m_afButtonPressed & IN_JUMP) )
 	{
 		Jump();	
@@ -1582,6 +1599,26 @@ void CPortal_Player::PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper)
 	{
 		variant_t empty;
 		FirePlayerProxyOutput( bDucking ? "OnDuck" : "OnUnDuck", empty, this, this );
+
+		// sp_a1_intro1's compiled instance refers to xopening_* relays which
+		// are absent from the shipped BSP entity lump in this compatibility
+		// build.  Without their branch writes the warm-up stops after the
+		// crouch/look prompts and the painting/bed sequence can never unlock.
+		// Recreate only those two missing relay actions here; all real map VCDs,
+		// AI look conditions and the bed button continue to drive progression.
+		if ( FStrEq( STRING( gpGlobals->mapname ), "sp_a1_intro1" ) )
+		{
+			variant_t value;
+			value.SetInt( bDucking ? 1 : 0 );
+			CBaseEntity *pBranch = gEntList.FindEntityByName( NULL, "player_duck_state" );
+			if ( pBranch ) pBranch->AcceptInput( "SetValue", this, this, value, 0 );
+
+			pBranch = gEntList.FindEntityByName( NULL,
+				bDucking ? "player_should_be_ducking" : "player_should_not_be_ducking" );
+			if ( pBranch ) pBranch->AcceptInput( "SetValue", this, this, value, 0 );
+
+			Msg( "PORTAL2_INTRO warmup duck=%d branches=%d\n", bDucking ? 1 : 0, pBranch ? 1 : 0 );
+		}
 	}
 #endif
 }

@@ -43,6 +43,25 @@ for key, original in materials.items():
                              r'\g<1>0', updated)
         if n:
             reasons.append('preserve selfillum, disable conflicting alpha tint')
+    if re.match(r'\s*SolidEnergy\s*\{', clean, re.I):
+        # The Anniversary cache has no SolidEnergy shader.  Fizzlers remain
+        # translucent and additive, but without the unsupported flow shader.
+        updated, n = re.subn(r'(?i)^\s*SolidEnergy(?=\s*\{)', 'UnlitGeneric', updated, count=1)
+        if n:
+            reasons.append('SolidEnergy -> additive UnlitGeneric approximation')
+    if re.match(r'\s*Black\s*\{', clean, re.I):
+        # Portal 2's tools-only Black shader is absent from the older cache.
+        updated, n = re.subn(r'(?i)^\s*Black(?=\s*\{)', 'UnlitGeneric', updated, count=1)
+        if n:
+            reasons.append('Black -> UnlitGeneric tools-material approximation')
+    if re.search(r'\b(?:FizzlerVortex|LightedFloorButton|LightedMouth)\b', updated, re.I):
+        # These Portal 2 material proxies are not registered by this engine.
+        # The affected materials contain only the unsupported proxy block, so
+        # removing it preserves their base/self-illum texture as a stable
+        # visual fallback rather than logging an error every frame.
+        updated, n = re.subn(r'(?is)\bProxies\s*\{(?:[^{}]|\{[^{}]*\})*\}', '', updated)
+        if n:
+            reasons.append('removed unavailable Portal 2 material proxy (static fallback)')
     if updated == original:
         continue
     if '..' in Path(key).parts:

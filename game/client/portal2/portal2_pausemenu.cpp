@@ -11,6 +11,7 @@
 #include "tier0/icommandline.h"
 #include "vgui_int.h"
 #include "tier1/convar.h"
+#include <vgui/ILocalize.h>
 #include <vgui/IInput.h>
 #include <vgui/IPanel.h>
 #include <vgui/IScheme.h>
@@ -21,6 +22,58 @@
 #include "tier0/memdbgon.h"
 
 using namespace vgui;
+
+static ConVar portal2_ui_language( "portal2_ui_language", "auto", FCVAR_ARCHIVE,
+	"Language for the Portal 2 ARM64 compatibility menu (auto, english, spanish, brazilian, french, german, italian, russian, polish)." );
+
+static const char *const s_ppszPortal2Languages[] =
+{
+	"english", "spanish", "brazilian", "french", "german", "italian", "russian", "polish"
+};
+
+static const char *Portal2NormalizeMenuLanguage( const char *pLanguage )
+{
+	if ( !pLanguage || !pLanguage[0] || !Q_stricmp( pLanguage, "auto" ) )
+	{
+		ConVarRef clLanguage( "cl_language" );
+		pLanguage = clLanguage.IsValid() ? clLanguage.GetString() : "english";
+	}
+
+	for ( int i = 0; i < ARRAYSIZE( s_ppszPortal2Languages ); ++i )
+	{
+		if ( !Q_stricmp( pLanguage, s_ppszPortal2Languages[i] ) )
+			return s_ppszPortal2Languages[i];
+	}
+	return "english";
+}
+
+static const char *Portal2CurrentMenuLanguage()
+{
+	return Portal2NormalizeMenuLanguage( portal2_ui_language.GetString() );
+}
+
+static void Portal2RefreshMenuLanguage()
+{
+	if ( !g_pVGuiLocalize )
+		return;
+
+	// Each complete catalog is loaded after English, so changing the language
+	// cannot leave stale tokens from the previous selection in the VGUI table.
+	g_pVGuiLocalize->AddFile( "resource/portal2_arm64_english.txt", "GAME", false );
+	const char *pLanguage = Portal2CurrentMenuLanguage();
+	if ( Q_stricmp( pLanguage, "english" ) )
+	{
+		char fileName[MAX_PATH];
+		Q_snprintf( fileName, sizeof( fileName ), "resource/portal2_arm64_%s.txt", pLanguage );
+		g_pVGuiLocalize->AddFile( fileName, "GAME", false );
+	}
+}
+
+static void Portal2SetMenuLanguage( const char *pLanguage )
+{
+	portal2_ui_language.SetValue( Portal2NormalizeMenuLanguage( pLanguage ) );
+	Portal2RefreshMenuLanguage();
+}
 
 class CPortal2FallbackPausePanel : public vgui::Panel
 {
@@ -46,12 +99,15 @@ private:
 		ACTION_RESTART,
 		ACTION_DISCONNECT,
 		ACTION_QUIT,
+		ACTION_LANGUAGE,
 		ACTION_COUNT
 	};
 
 	void RunAction( PauseAction_t action );
 	void EnsureFonts();
-	void DrawAsciiText( const char *pText, int x, int y, vgui::HFont font, Color color );
+	void DrawText( const wchar_t *pText, int x, int y, vgui::HFont font, Color color );
+	void DrawToken( const char *pToken, int x, int y, vgui::HFont font, Color color );
+	void CycleLanguage();
 	int GetActionAtPos( int x, int y ) const;
 
 	vgui::HFont m_hTitleFont;
@@ -75,7 +131,7 @@ CPortal2FallbackPausePanel::CPortal2FallbackPausePanel( vgui::Panel *pParent )
 	m_nMenuX = 0;
 	m_nMenuY = 0;
 	m_nMenuW = 460;
-	m_nMenuH = 312;
+	m_nMenuH = 368;
 	m_nButtonH = 42;
 	m_nHoverAction = -1;
 
@@ -98,6 +154,11 @@ void CPortal2FallbackPausePanel::EnsureFonts()
 {
 	if ( m_hTitleFont == vgui::INVALID_FONT )
 	{
+		// CFontManager's first dynamically-created font has handle 0 on this
+		// POSIX renderer, while MatSystemSurface treats 0 as INVALID_FONT.
+		// Reserve that handle locally; this is deliberately not a global font
+		// manager change, because it would affect every Source game.
+		vgui::surface()->CreateFont();
 		m_hTitleFont = vgui::surface()->CreateFont();
 		if ( !vgui::surface()->SetFontGlyphSet( m_hTitleFont, "Helvetica", 30, 700, 0, 0,
 			vgui::ISurface::FONTFLAG_ANTIALIAS | vgui::ISurface::FONTFLAG_DROPSHADOW ) )
@@ -161,9 +222,26 @@ void CPortal2FallbackPausePanel::RunAction( PauseAction_t action )
 	case ACTION_QUIT:
 		engine->ClientCmd_Unrestricted( "quit\n" );
 		break;
+	case ACTION_LANGUAGE:
+		CycleLanguage();
+		break;
 	default:
 		break;
 	}
+}
+
+void CPortal2FallbackPausePanel::CycleLanguage()
+{
+	const char *pCurrent = Portal2CurrentMenuLanguage();
+	for ( int i = 0; i < ARRAYSIZE( s_ppszPortal2Languages ); ++i )
+	{
+		if ( !Q_stricmp( pCurrent, s_ppszPortal2Languages[i] ) )
+		{
+			Portal2SetMenuLanguage( s_ppszPortal2Languages[( i + 1 ) % ARRAYSIZE( s_ppszPortal2Languages )] );
+			return;
+		}
+	}
+	Portal2SetMenuLanguage( "english" );
 }
 
 void CPortal2FallbackPausePanel::OnKeyCodePressed( vgui::KeyCode code )
@@ -221,29 +299,27 @@ void CPortal2FallbackPausePanel::PerformLayout()
 	SetBounds( 0, 0, wide, tall );
 
 	m_nMenuW = MIN( 460, wide - 80 );
-	m_nMenuH = 312;
+	m_nMenuH = 368;
 	m_nMenuX = ( wide - m_nMenuW ) / 2;
 	m_nMenuY = ( tall - m_nMenuH ) / 2;
 	m_nButtonH = 42;
 }
 
-void CPortal2FallbackPausePanel::DrawAsciiText( const char *pText, int x, int y, vgui::HFont font, Color color )
+void CPortal2FallbackPausePanel::DrawText( const wchar_t *pText, int x, int y, vgui::HFont font, Color color )
 {
 	if ( font == vgui::INVALID_FONT || !pText )
 		return;
 
-	wchar_t wideText[256];
-	int n = 0;
-	for ( ; pText[n] && n < ARRAYSIZE( wideText ) - 1; ++n )
-	{
-		wideText[n] = (unsigned char)pText[n];
-	}
-	wideText[n] = 0;
-
 	vgui::surface()->DrawSetTextFont( font );
 	vgui::surface()->DrawSetTextColor( color );
 	vgui::surface()->DrawSetTextPos( x, y );
-	vgui::surface()->DrawPrintText( wideText, n );
+	vgui::surface()->DrawPrintText( pText, V_wcslen( pText ) );
+}
+
+void CPortal2FallbackPausePanel::DrawToken( const char *pToken, int x, int y, vgui::HFont font, Color color )
+{
+	const wchar_t *pText = g_pVGuiLocalize ? g_pVGuiLocalize->Find( pToken ) : NULL;
+	DrawText( pText, x, y, font, color );
 }
 
 int CPortal2FallbackPausePanel::GetActionAtPos( int x, int y ) const
@@ -270,6 +346,7 @@ void CPortal2FallbackPausePanel::Paint()
 {
 	EnsureFonts();
 	PerformLayout();
+	Portal2RefreshMenuLanguage();
 
 	int wide, tall;
 	GetSize( wide, tall );
@@ -277,13 +354,15 @@ void CPortal2FallbackPausePanel::Paint()
 	vgui::surface()->DrawSetColor( 0, 0, 0, 180 );
 	vgui::surface()->DrawFilledRect( 0, 0, wide, tall );
 
-	vgui::surface()->DrawSetColor( 16, 22, 24, 238 );
+	vgui::surface()->DrawSetColor( 16, 22, 24, 242 );
 	vgui::surface()->DrawFilledRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + m_nMenuH );
 	vgui::surface()->DrawSetColor( 255, 255, 255, 32 );
 	vgui::surface()->DrawOutlinedRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + m_nMenuH );
+	vgui::surface()->DrawSetColor( 65, 196, 229, 230 );
+	vgui::surface()->DrawFilledRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + 5 );
 
-	DrawAsciiText( "PORTAL 2 ARM64", m_nMenuX + 34, m_nMenuY + 26, m_hTitleFont, Color( 235, 242, 245, 255 ) );
-	DrawAsciiText( "Menu experimental", m_nMenuX + 36, m_nMenuY + 68, m_hTextFont, Color( 150, 198, 216, 255 ) );
+	DrawToken( "#P2ARM64_TITLE", m_nMenuX + 34, m_nMenuY + 26, m_hTitleFont, Color( 235, 242, 245, 255 ) );
+	DrawToken( "#P2ARM64_SUBTITLE", m_nMenuX + 36, m_nMenuY + 68, m_hTextFont, Color( 150, 198, 216, 255 ) );
 
 	int cx, cy;
 	vgui::input()->GetCursorPosition( cx, cy );
@@ -292,10 +371,11 @@ void CPortal2FallbackPausePanel::Paint()
 
 	static const char *s_ppszActions[ACTION_COUNT] =
 	{
-		"1  Continuar",
-		"2  Reiniciar mapa",
-		"3  Desconectar",
-		"4  Salir"
+		"#P2ARM64_RESUME",
+		"#P2ARM64_RESTART",
+		"#P2ARM64_DISCONNECT",
+		"#P2ARM64_QUIT",
+		"#P2ARM64_LANGUAGE_ACTION"
 	};
 
 	const int nButtonX = m_nMenuX + 36;
@@ -312,7 +392,22 @@ void CPortal2FallbackPausePanel::Paint()
 		vgui::surface()->DrawSetColor( bHover ? 130 : 76, bHover ? 220 : 112, bHover ? 240 : 120, 180 );
 		vgui::surface()->DrawOutlinedRect( nButtonX, nButtonY, nButtonX + nButtonW, nButtonY + m_nButtonH );
 
-		DrawAsciiText( s_ppszActions[i], nButtonX + 18, nButtonY + 10, m_hTextFont, Color( 235, 242, 245, 255 ) );
+		if ( i == ACTION_LANGUAGE && g_pVGuiLocalize )
+		{
+			char token[64];
+			char language[32];
+			Q_strncpy( language, Portal2CurrentMenuLanguage(), sizeof( language ) );
+			V_strupr( language );
+			Q_snprintf( token, sizeof( token ), "#P2ARM64_LANGUAGE_%s", language );
+			wchar_t line[256];
+			g_pVGuiLocalize->ConstructString( line, sizeof( line ), g_pVGuiLocalize->Find( s_ppszActions[i] ), 1,
+				g_pVGuiLocalize->Find( token ) );
+			DrawText( line, nButtonX + 18, nButtonY + 10, m_hTextFont, Color( 235, 242, 245, 255 ) );
+		}
+		else
+		{
+			DrawToken( s_ppszActions[i], nButtonX + 18, nButtonY + 10, m_hTextFont, Color( 235, 242, 245, 255 ) );
+		}
 	}
 }
 
@@ -365,7 +460,7 @@ bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum )
 	}
 
 	if ( g_pPortal2PausePanel && g_pPortal2PausePanel->IsVisible() &&
-		keynum >= KEY_1 && keynum < KEY_1 + 4 )
+		keynum >= KEY_1 && keynum < KEY_1 + 5 )
 	{
 		g_pPortal2PausePanel->OnKeyCodePressed( keynum );
 		return true;
@@ -428,3 +523,13 @@ public:
 };
 
 static CPortal2PauseMenuSystem g_Portal2PauseMenuSystem;
+
+CON_COMMAND_F( portal2_language, "Set Portal 2 ARM64 compatibility-menu language.", FCVAR_CLIENTDLL )
+{
+	if ( args.ArgC() != 2 )
+	{
+		Msg( "portal2_language is %s (auto, english, spanish, brazilian, french, german, italian, russian, polish)\n", portal2_ui_language.GetString() );
+		return;
+	}
+	Portal2SetMenuLanguage( args[1] );
+}

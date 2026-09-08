@@ -1229,19 +1229,20 @@ void COptionsSubVideo::PrepareResolutionList()
 	int selectedItemID = -1;
 	for (int i = 0; i < count; i++, plist++)
 	{
-#if !defined( USE_SDL )
-		// don't show modes bigger than the desktop for windowed mode
+		// Only windowed modes need to fit inside the logical desktop bounds.
+		// On macOS/Retina SDL reports logical desktop dimensions, while GLM can
+		// expose render resolutions in backing pixels. Filtering fullscreen modes
+		// against the logical size hides valid 16:9 targets such as 1920x1080.
+		// Fullscreen uses SDL_WINDOW_FULLSCREEN_DESKTOP in this port and the
+		// renderer scales/letterboxes the selected render target at presentation.
 		if ( bWindowed )
-#endif
 		{
 			if ( plist->width > desktopWidth || plist->height > desktopHeight )
 			{
-				// Filter out sizes larger than our desktop.
 				continue;
 			}
 		}
-
-		GetResolutionName( plist, sz, sizeof( sz ), desktopWidth, desktopHeight );
+GetResolutionName( plist, sz, sizeof( sz ), desktopWidth, desktopHeight );
 
 		int itemID = -1;
 
@@ -1294,9 +1295,10 @@ void COptionsSubVideo::PrepareResolutionList()
 		int Height = config.m_VideoMode.m_Height;
 
 #if defined( USE_SDL )
-		// If we are switching to a new display, or the size is greater than the desktop, then
-		//	display the desktop width and height.
-		if ( bNewFullscreenDisplay || ( Width > desktopWidth ) || ( Height > desktopHeight ) )
+		// A fullscreen render target may legitimately be larger than SDL's logical
+		// Retina desktop size. Clamp only windowed modes; fullscreen-desktop will
+		// scale the chosen render target during presentation.
+		if ( bNewFullscreenDisplay || ( bWindowed && ( ( Width > desktopWidth ) || ( Height > desktopHeight ) ) ) )
 		{
 			Width = desktopWidth;
 			Height = desktopHeight;

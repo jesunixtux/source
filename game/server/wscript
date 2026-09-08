@@ -34,7 +34,7 @@ def options(opt):
 	return
 
 def configure(conf):
-game = conf.options.GAMES
+	game = conf.options.GAMES
 	conf.env.GAMES = game
 
 	if game == 'l4d':

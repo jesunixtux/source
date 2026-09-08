@@ -104,12 +104,22 @@ subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-scenes.py'
                 str(stage / 'portal2_gameplay_compat/scenes/scenes.image')], check=True)
 subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-intro-audio.py'),
                 str(p2 / 'portal2'), str(stage / 'portal2_gameplay_compat')], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-ui-localization.py'),
+                str(stage / 'portal2_gameplay_compat')], check=True)
+(stage / 'portal2/cfg/portal2_arm64.cfg').write_text('''// Isolated compatibility aliases; they do not touch Steam's Portal 2 cfg.
+alias +zoom_in +zoom
+alias -zoom_in -zoom
+alias +zoom_out +zoom
+alias -zoom_out -zoom
+''')
 (stage / 'Jugar-Portal2-Experimental.command').write_text('''#!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
 exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -windowed -w 1024 -h 768 -console \\
+  +exec portal2_arm64 \\
   +sv_cheats 1 +mat_fullbright 0 +mat_disable_bloom 1 +mat_colorcorrection 0 \\
   +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind z +zoom +bind KP_INS +zoom_in \\
   +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
   +map "${1:-sp_a1_intro1}"
 ''')
@@ -118,9 +128,11 @@ exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -windowed -w 1024 -h 768 
 set -euo pipefail
 cd "$(dirname "$0")"
 exec ./hl2_osx -game portal2 -novid -nosoundcachewrite -portal2_intro_playground \\
+  +exec portal2_arm64 \\
   -windowed -w 1024 -h 768 +sv_cheats 1 +mat_fullbright 0 \\
   +mat_disable_bloom 1 +mat_colorcorrection 0 \\
   +bind F10 portal2_pausemenu +bind ESCAPE portal2_pausemenu \\
+  +bind z +zoom +bind KP_INS +zoom_in \\
   +bind F6 portal2_equip_portalgun +bind F7 portal2_intro_playground \\
   +bind MOUSE1 +attack +bind MOUSE2 +attack2 +bind e +use \\
   +bind w +forward +bind s +back +bind a +moveleft +bind d +moveright \\

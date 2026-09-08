@@ -18,9 +18,10 @@ p.add_argument('--no-prop-lighting', action='store_true')
 p.add_argument('--pause-menu', action='store_true', help='open the experimental Portal 2 pause menu after loading the map')
 p.add_argument('--gameplay', action='store_true', help='run the opt-in gun/portal integration test (use --seconds 60)')
 p.add_argument('--intro-scenes', action='store_true', help='test the vault dialogue chain from its real map trigger (use --seconds 75)')
+p.add_argument('--elevator-transition', action='store_true', help='exercise intro1\'s authored elevator I/O and map transition (use --seconds 30)')
 args = p.parse_args()
-if args.gameplay and args.intro_scenes:
-    p.error('Choose --gameplay or --intro-scenes, not both')
+if sum((args.gameplay, args.intro_scenes, args.elevator_transition)) > 1:
+    p.error('Choose only one opt-in integration test')
 if not 10 <= args.seconds <= 120:
     p.error('--seconds must be between 10 and 120')
 stage = args.stage.resolve()
@@ -40,6 +41,8 @@ if args.gameplay:
     command += ['-portal2_gameplay_test']
 if args.intro_scenes:
     command += ['-portal2_intro_scene_test']
+if args.elevator_transition:
+    command += ['-portal2_elevator_transition_test']
 if args.no_prop_lighting:
     command += ['+r_proplightingfromdisk', '0']
 command += ['+map', args.map]
@@ -78,7 +81,13 @@ if args.gameplay:
 if args.intro_scenes:
     passed = passed and all(f'PORTAL2_INTRO scene completed PreHub01RelaxationVaultIntro0{i}' in text for i in range(1, 5))
     passed = passed and not any('Failed to load sound "vo/announcer/' in line for line in text.splitlines())
-label = 'GAMEPLAY' if args.gameplay else ('INTRO SCENES' if args.intro_scenes else 'MAP LOAD')
+if args.elevator_transition:
+    passed = passed and 'PORTAL2_ELEVATOR_TEST started authored elevator I/O' in text
+    passed = passed and any(
+        f'PORTAL2_INTRO elevator changing level ({route}): sp_a1_intro1 -> sp_a1_intro2' in text
+        for route in ('authored trigger', 'fallback'))
+    passed = passed and text.count('SV_ActivateServer: setting tickrate') >= 2
+label = 'GAMEPLAY' if args.gameplay else ('INTRO SCENES' if args.intro_scenes else ('ELEVATOR TRANSITION' if args.elevator_transition else 'MAP LOAD'))
 print(f'{label} {"PASS" if passed else "FAIL"}: alive={alive}, server_active={activated}, shader_index_error={bad_shader}')
 print(f'Artifacts: {out}')
 print('Tests are bounded fixtures, not a full campaign playthrough. Gameplay checks gun, traversal and cube/button/door I/O; intro-scenes checks the vault dialogue chain. Inspect map.png for visual quality.')
