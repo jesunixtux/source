@@ -144,6 +144,9 @@ public:
 	void FillClip( void );
 	void CheckHolsterReload( void );
 	void ItemHolsterFrame( void );
+#ifdef PORTAL2
+	virtual void ItemPreFrame( void );
+#endif
 	bool Holster( CBaseCombatWeapon *pSwitchingTo = NULL );
 	bool Deploy( void );
 

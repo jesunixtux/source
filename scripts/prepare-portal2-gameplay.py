@@ -28,6 +28,8 @@ for archive in legacy_archives:
     for name in archive:
         legacy_entries.setdefault(name.lower(), (archive, name))
 prefixes = ('models/weapons/v_portalgun.', 'models/weapons/w_portalgun.', 'models/portals/',
+            'models/player/chell/player.', 'models/player_animations.',
+            'materials/models/player/chell/',
             'materials/models/weapons/v_models/v_portalgun/',
             'materials/models/weapons/w_models/portalgun/', 'materials/models/portals/',
             'materials/effects/portal_', 'materials/sprites/portalgun_effects',

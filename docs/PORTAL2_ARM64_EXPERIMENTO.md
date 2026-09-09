@@ -30,6 +30,7 @@ normalmente el jugador todavía no tiene la pistola en este mapa.
 - WASD: desplazarse; ratón: mirar; espacio: saltar.
 - Clic izquierdo/derecho: portal azul/naranja sobre paneles blancos válidos.
 - E: recoger o soltar el cubo; colocarlo sobre el botón activa la puerta.
+- Z: mantener el zoom; soltar para recuperar el campo de visión normal.
 - F6: volver a equipar la pistola; F7: volver a la cámara de pruebas.
 - Escape/F10: menú de pausa experimental. En teclados que usan teclas multimedia
   puede ser necesario pulsar Fn junto con F6/F7/F10.
@@ -127,7 +128,12 @@ clang++ -std=c++11 -fsanitize=undefined,address \
 python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" --screenshot
 
 python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
-  --gameplay --seconds 60 --screenshot
+  --gameplay --seconds 90 --screenshot
+
+python3 scripts/test-portal2-gameplay-assets.py \
+  "$HOME/Library/Application Support/Steam/steamapps/common/Portal" \
+  "$HOME/Library/Application Support/Steam/steamapps/common/Portal 2" \
+  --stage "$PORTAL2_STAGE_DIR"
 
 python3 scripts/test-portal2-render.py "$PORTAL2_STAGE_DIR" \
   --intro-scenes --seconds 75 --screenshot
@@ -152,6 +158,18 @@ visual. La captura requiere autorización de grabación de pantalla de macOS.
 - Ataques con la pistola real, portales recíprocamente enlazados y un cruce
   observado dentro de `CProp_Portal::TeleportTouchingEntity`.
 - Recogida del cubo y apertura/cierre de la puerta por el botón y los relés del mapa.
+- Secuencia `idle_carrying` al sostener el cubo; zoom a 35 grados y retorno al FOV
+  normal. Los ataques y el zoom entran por `PlayerRunCommand`, no por llamadas
+  directas a `PrimaryAttack`/`SecondaryAttack`.
+- Ausencia de fallos de lectura de los tres PCF compatibles del arma/portales
+  y de mensajes `EntityPortalled` con longitud incorrecta.
+
+La prueba jugable guarda además `gun-blue.png`, `gun-orange.png`,
+`gun-carrying.png` y `gun-zoom.png`. En un arranque frío la carga puede consumir
+más de 20 segundos: usa 90 segundos para alcanzar todas las comprobaciones.
+La prueba de recursos compara modelos/texturas con Portal 2 y los tres PCF con
+Portal 1 byte a byte, además de verificar los hashes de `ORIGIN.txt`. Sin
+`--stage` genera y elimina exclusivamente una carpeta temporal de prueba.
 
 La prueba coloca automáticamente al jugador y al cubo en posiciones de ensayo;
 no es un recorrido manual completo. Durante ella se ignoran los controles del
@@ -208,17 +226,43 @@ la pistola eliminan localmente el proxy `LightedMouth`, que este renderer no
 registra: conserva sus texturas y autoiluminación sin el aviso por cuadro.
 `ORIGIN.txt` registra hashes y procedencia de los recursos.
 
-En ARM64 la pasada `PortalRefract` de etapa 2 puede quedar negra aunque el
-portal exista y teletransporte correctamente. La preparación adapta sólo
-`portalstaticoverlay_1/2` a `PortalStaticOverlay`, conservando la máscara y el
-color azul/naranja. Es una superficie estática de compatibilidad: prioriza que
-el portal se vea y pueda usarse sobre la refracción animada original.
+La reparación del 9 de septiembre elimina el relleno opaco añadido sobre los
+portales y conserva sus materiales `PortalRefract`. El contorno auxiliar es
+elíptico y exclusivo de `PORTAL2`; no sustituye ni demuestra por sí mismo la
+vista recursiva del otro lado. Su vida útil sigue a la entidad del portal, sin
+el temporizador de 999 segundos que antes lo hacía desaparecer.
 
-Las partículas PCF de Portal y Portal 2 todavía no se deserializan con el
-lector de partículas presente en esta rama; por ello el disparo, la creación y
-el cruce de portales funcionan, pero faltan estelas/chispas y se registran como
-partículas desconocidas. No se debe presentar el DMX heredado como solución:
-la verificación de arranque lo detecta explícitamente como incompatible.
+El lector de partículas admite DMX binario 2, no el binario 5 de Portal 2.
+Había un error en el preparador: validaba los PCF de Portal 1, pero extraía los
+de Portal 2. Ahora `portalgun.pcf`, `portal_projectile.pcf` y `portals.pcf` se
+extraen realmente de Portal 1 y sus efectos cargan en la prueba. Esto no hace
+compatibles todas las demás partículas de Portal 2.
+
+La pistola Studio 49 no recibe los bodygroups de los chips del modelo antiguo:
+ese grupo representa PotatOS en Portal 2. La actividad `ACT_VM_PICKUP_IDLE`
+se registra solo para `PORTAL2`. Como el controlador de recogida evita el
+`ItemPostFrame` del arma, su reposo con pinzas abiertas avanza desde
+`ItemPreFrame` tanto en servidor como en cliente predictivo. Los objetivos
+antiguos conservan su camino de animación.
+
+`EntityPortalled` declara ahora los 32 bytes que realmente envía (dos handles
+de 32 bits y seis floats), en lugar de depender de `sizeof(long)`, que daba
+40 bytes en ARM64. Esta corrección conserva el formato de red de 32 bits.
+
+Verificación del 9 de septiembre: compilación ARM64 y `GAMEPLAY PASS` durante
+90 segundos en `portal2_arm64_gun_repair_20260909`, diagnóstico
+`20260909-135051-614869`. También pasa la comprobación de 116 hashes de recursos.
+Las capturas muestran la pistola, el cubo sostenido, el zoom y el borde con
+partículas. **La vista del otro lado del portal todavía no aparece en estas
+capturas**: el éxito del cruce no implica que el render recursivo esté reparado.
+El registro confirma HDR entero activo y `mat_fullbright=0`; la sala sigue
+siendo tenue, sin forzar iluminación plana para ocultarlo.
+
+La prueba inyecta botones en el comando del servidor; no sustituye una sesión
+manual para comprobar todos los controles y la predicción cliente. No se
+recompilaron ni ejecutaron Portal 1 y Half-Life 2 en esta última verificación.
+Los cambios de animación y el auxiliar de diagnóstico quedan delimitados por
+`PORTAL2` para no añadir esa dependencia a los objetivos antiguos.
 
 ## Bink en ARM64
 

@@ -424,6 +424,14 @@ bool CPortalRenderable_FlatBasic::CalcFrustumThroughPortal( const Vector &ptCurr
 void CPortalRenderable_FlatBasic::RenderPortalViewToBackBuffer( CViewRender *pViewRender, const CViewSetup &cameraView )
 {
 	VPROF( "CPortalRenderable_FlatBasic::RenderPortalViewToBackBuffer" );
+#ifdef PORTAL2
+	static float nextDiagnostic = 0;
+	if ( gpGlobals->curtime > nextDiagnostic )
+	{
+		nextDiagnostic = gpGlobals->curtime + 5;
+		DevMsg( "PORTAL2_RENDER backbuffer static=%.3f open=%.3f linked=%d\n", m_fStaticAmount, m_fOpenAmount, m_pLinkedPortal!=NULL );
+	}
+#endif
 
 	if( m_fStaticAmount == 1.0f )
 		return; //not going to see anything anyways

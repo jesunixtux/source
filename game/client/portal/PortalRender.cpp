@@ -453,6 +453,15 @@ void CPortalRender::EnteredPortal( CPortalRenderable *pEnteredPortal )
 bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
 {	  
 	VPROF( "CPortalRender::DrawPortalsUsingStencils" );
+#ifdef PORTAL2
+	static float nextPortalDiagnostic = 0;
+	const bool diagnostic = gpGlobals->curtime > nextPortalDiagnostic && m_iViewRecursionLevel == 0;
+	if ( diagnostic )
+	{
+		nextPortalDiagnostic = gpGlobals->curtime + 5.0f;
+		DevMsg( "PORTAL2_RENDER active=%d stencilbits=%d enabled=%d depth=%d\n", m_ActivePortals.Count(), materials->StencilBufferBits(), r_portal_use_stencils.GetInt(), r_portal_stencil_depth.GetInt() );
+	}
+#endif
 
 	if( !ShouldUseStencilsToRenderPortals() )
 		return false;
@@ -474,6 +483,9 @@ bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
 		CPortalRenderable *pPortalRenderable = m_ActivePortals[i];
 		C_BaseEntity *pPairedEntity = pPortalRenderable->PortalRenderable_GetPairedEntity();
 		bool bIsVisible = (pPairedEntity == NULL) || (pPairedEntity->IsVisible() && pPairedEntity->ShouldDraw()); //either unknown visibility or definitely visible.
+#ifdef PORTAL2
+		if ( diagnostic ) DevMsg( "PORTAL2_RENDER portal=%d visible=%d linked=%d\n", i, bIsVisible, pPortalRenderable->GetLinkedPortal()!=NULL );
+#endif
 
 		if ( !pPortalRenderable->m_bIsPlaybackPortal )
 		{
@@ -565,6 +577,9 @@ bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
 
 		m_RecursiveViewComplexFrustums[m_iViewRecursionLevel + 1].RemoveAll(); //clear any previously stored complex frustum
 		
+#ifdef PORTAL2
+		if ( diagnostic ) DevMsg( "PORTAL2_RENDER candidate=%d update=%d\n", i, pCurrentPortal->ShouldUpdatePortalView_BasedOnView( *pViewSetup, m_RecursiveViewComplexFrustums[m_iViewRecursionLevel] ) );
+#endif
 		if( (pCurrentPortal->GetLinkedPortal() == NULL) ||
 			(pCurrentPortal == m_pRenderingViewExitPortal) ||
 			(pCurrentPortal->ShouldUpdatePortalView_BasedOnView( *pViewSetup, m_RecursiveViewComplexFrustums[m_iViewRecursionLevel] ) == false) )
@@ -1170,8 +1185,6 @@ bool CPortalRender::IsPortalViewID( view_id_t id )
 
 	return false;
 }
-
-
 
 
 

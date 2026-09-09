@@ -38,6 +38,14 @@ static bool CheckOutputFormats()
 static CWeaponPortalgun *Gun(CPortal_Player *p)
 { return dynamic_cast<CWeaponPortalgun *>(p->Weapon_OwnsThisType("weapon_portalgun")); }
 
+static int g_TestPressedButtons=0, g_TestHeldButtons=0;
+int Portal2GameplayTestButtons()
+{
+    const int buttons=g_TestPressedButtons | g_TestHeldButtons;
+    g_TestPressedButtons=0;
+    return buttons;
+}
+
 bool Portal2GameplayTestOwnsInput()
 { return (CommandLine()->FindParm("-portal2_gameplay_test") || CommandLine()->FindParm("-portal2_intro_scene_test")) &&
     FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro1"); }
@@ -73,7 +81,8 @@ class CPortal2GameplayTest : public CAutoGameSystemPerFrame
 {
 public:
     CPortal2GameplayTest() : CAutoGameSystemPerFrame("Portal2GameplayTest"), m_step(0),m_start(-1),m_crossed(false) {}
-    void LevelInitPreEntity() { m_step=0; m_start=-1; m_crossed=false; }
+    void LevelInitPreEntity()
+    { m_step=0; m_start=-1; m_crossed=false; g_TestPressedButtons=g_TestHeldButtons=0; }
     bool Shoot(CPortal_Player *p,bool orange)
     {
         CWeaponPortalgun *gun=Gun(p);
@@ -91,7 +100,9 @@ public:
                     yaw,result,tr.fraction,tr.startsolid,tr.surface.name?tr.surface.name:"<none>");
             if(result<0.3f || (orange && blue && hit.DistTo(blue->GetAbsOrigin())<160)) continue;
             p->SnapEyeAngles(aim);
-            if(orange) gun->SecondaryAttack(); else gun->PrimaryAttack();
+            // Exercise PlayerRunCommand/ItemPostFrame rather than invoking an
+            // attack directly. Only this opt-in fixture injects the buttons.
+            g_TestPressedButtons=orange?IN_ATTACK2:IN_ATTACK;
             Msg("PORTAL2_GAMEPLAY_TEST attack=%s aim=%d %d result=%.3f\n",orange?"orange":"blue",pitch,yaw,result);
             return true;
         }
@@ -219,6 +230,31 @@ public:
                 Msg("PORTAL2_GAMEPLAY_TEST portal_visual_camera=blue\n");
             }
             m_step=9;
+        }
+        if(m_step==9 && elapsed>43) { g_TestHeldButtons=IN_ZOOM; m_step=10; }
+        if(m_step==10 && elapsed>44)
+        {
+            Msg("PORTAL2_GAMEPLAY_TEST zoom_in=%s fov=%d\n",p->GetFOV()<=36?"PASS":"FAIL",p->GetFOV());
+            m_step=11;
+        }
+        if(m_step==11 && elapsed>45) { g_TestHeldButtons=0; m_step=12; }
+        if(m_step==12 && elapsed>46)
+        {
+            Msg("PORTAL2_GAMEPLAY_TEST zoom_out=%s fov=%d\n",p->GetFOV()==p->GetDefaultFOV()?"PASS":"FAIL",p->GetFOV());
+            m_step=13;
+        }
+        if(m_step==13 && elapsed>48)
+        {
+            const char *model=STRING(p->GetModelName());
+            Msg("PORTAL2_GAMEPLAY_TEST player_model=%s model=%s\n",
+                FStrEq(model,"models/player/chell/player.mdl")?"PASS":"FAIL",model);
+            engine->ClientCommand(p->edict(),"thirdperson\ncam_idealdist 100\n");
+            m_step=14;
+        }
+        if(m_step==14 && elapsed>54)
+        {
+            engine->ClientCommand(p->edict(),"firstperson\n");
+            m_step=15;
         }
     }
     void PlayerTeleported(CBaseEntity *player,CProp_Portal *entry)

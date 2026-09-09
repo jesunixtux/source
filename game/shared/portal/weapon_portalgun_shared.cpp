@@ -360,6 +360,19 @@ bool CWeaponPortalgun::Deploy( void )
 	return bReturn;
 }
 
+#ifdef PORTAL2
+void CWeaponPortalgun::ItemPreFrame( void )
+{
+	BaseClass::ItemPreFrame();
+	// The pickup controller occupies m_hUseEntity, so the player intentionally
+	// skips weapon ItemPostFrame while carrying. Advance the pickup animation
+	// from PreFrame (on both server and predicting client) instead of freezing
+	// at the end of idle_to_carrying until the cube is dropped.
+	if ( m_bOpenProngs && HasWeaponIdleTimeElapsed() )
+		WeaponIdle();
+}
+#endif
+
 void CWeaponPortalgun::WeaponIdle( void )
 {
 	//See if we should idle high or low

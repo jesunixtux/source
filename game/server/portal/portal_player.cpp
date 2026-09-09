@@ -213,7 +213,11 @@ END_DATADESC()
 
 ConVar sv_regeneration_wait_time ("sv_regeneration_wait_time", "1.0", FCVAR_REPLICATED );
 
+#ifdef PORTAL2
+const char *g_pszChellModel = "models/player/chell/player.mdl";
+#else
 const char *g_pszChellModel = "models/player/chell.mdl";
+#endif
 const char *g_pszPlayerModel = g_pszChellModel;
 
 
@@ -588,8 +592,10 @@ void CPortal_Player::ClearExpression( void )
 
 void CPortal_Player::PreThink( void )
 {
+#ifdef PORTAL2
 	extern void Portal2GameplayTestPlayerFrame();
 	Portal2GameplayTestPlayerFrame();
+#endif
 
 	QAngle vOldAngles = GetLocalAngles();
 	QAngle vTempAngles = GetLocalAngles();
@@ -1570,9 +1576,10 @@ void CPortal_Player::PlayerRunCommand(CUserCmd *ucmd, IMoveHelper *moveHelper)
 #ifdef PORTAL2
 	const bool bWasDucking = ( GetFlags() & FL_DUCKING ) != 0;
 	extern bool Portal2GameplayTestOwnsInput();
+	extern int Portal2GameplayTestButtons();
 	if ( Portal2GameplayTestOwnsInput() )
 	{
-		ucmd->buttons = 0;
+		ucmd->buttons = Portal2GameplayTestButtons();
 		ucmd->forwardmove = ucmd->sidemove = ucmd->upmove = 0;
 		ucmd->viewangles = EyeAngles();
 	}
