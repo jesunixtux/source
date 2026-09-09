@@ -680,7 +680,11 @@ void CPortalRenderable_FlatBasic::DrawPreStencilMask( void )
 
 void CPortalRenderable_FlatBasic::DrawStencilMask( void )
 {
+#ifdef PORTAL2
+	DrawSimplePortalMesh( m_Materials.m_Portal_Stencil_Hole, 4.0f );
+#else
 	DrawSimplePortalMesh( m_Materials.m_Portal_Stencil_Hole );
+#endif
 	DrawRenderFixMesh( g_pPortalRender->m_MaterialsAccess.m_WriteZ_Model );
 }
 

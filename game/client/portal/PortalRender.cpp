@@ -33,6 +33,9 @@ static ConVar r_forcecheapwater( "r_forcecheapwater", "0", FCVAR_CLIENTDLL | FCV
 
 ConVar r_portal_use_stencils( "r_portal_use_stencils", "1", FCVAR_CLIENTDLL, "Render portal views using stencils (if available)" ); //draw portal views using stencil rendering
 ConVar r_portal_stencil_depth( "r_portal_stencil_depth", "2", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "When using stencil views, this changes how many views within views we see" );
+#ifdef PORTAL2
+static ConVar portal2_debug_stencil_mask("portal2_debug_stencil_mask", "0", FCVAR_CHEAT, "Diagnostic: paint portal stencil magenta");
+#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -640,6 +643,16 @@ bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
 				pRenderContext->SetStencilPassOperation( STENCILOPERATION_KEEP );
 				pRenderContext->SetStencilReferenceValue( iStencilReferenceValue );
 				pRenderContext->ClearBuffersObeyStencil( false, true );
+#ifdef PORTAL2
+				if ( portal2_debug_stencil_mask.GetBool() && diagnostic )
+				{
+					unsigned char pixel[4] = {};
+					pRenderContext->ClearColor4ub(255,0,255,255);
+					pRenderContext->ClearBuffersObeyStencil(true,false);
+					pRenderContext->ReadPixels(iX+iWidth/2,iY+iHeight/2,1,1,pixel,IMAGE_FORMAT_RGBA8888);
+					Msg("PORTAL2_MASK before_scene pixel=%u,%u,%u\n",pixel[0],pixel[1],pixel[2]);
+				}
+#endif
 			}
 
 
@@ -686,6 +699,24 @@ bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
 			//step 4, patch up the fact that we just made a hole in the wall because it's not *really* a hole at all
 			{
 				pCurrentPortal->DrawPostStencilFixes();
+#ifdef PORTAL2
+				if ( portal2_debug_stencil_mask.GetBool() )
+				{
+					pRenderContext->ClearColor4ub(255,0,255,255);
+					pRenderContext->ClearBuffersObeyStencil(true,false);
+					if ( diagnostic )
+					{
+						unsigned char pixel[4] = {};
+						pRenderContext->ReadPixels(iX+iWidth/2,iY+iHeight/2,1,1,pixel,IMAGE_FORMAT_RGBA8888);
+						Msg("PORTAL2_MASK equal pixel=%u,%u,%u\n",pixel[0],pixel[1],pixel[2]);
+						pRenderContext->SetStencilCompareFunction(STENCILCOMPARISONFUNCTION_ALWAYS);
+						pRenderContext->ClearBuffersObeyStencil(true,false);
+						pRenderContext->ReadPixels(iX+iWidth/2,iY+iHeight/2,1,1,pixel,IMAGE_FORMAT_RGBA8888);
+						Msg("PORTAL2_MASK always pixel=%u,%u,%u\n",pixel[0],pixel[1],pixel[2]);
+						pRenderContext->SetStencilCompareFunction(STENCILCOMPARISONFUNCTION_EQUAL);
+					}
+				}
+#endif
 			}
 		}
 
@@ -1185,7 +1216,4 @@ bool CPortalRender::IsPortalViewID( view_id_t id )
 
 	return false;
 }
-
-
-
 

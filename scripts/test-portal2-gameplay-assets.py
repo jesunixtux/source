@@ -15,6 +15,7 @@ import vpk
 PCFS = ('particles/portalgun.pcf', 'particles/portal_projectile.pcf',
         'particles/portals.pcf')
 GUN_MODELS = ('models/weapons/v_portalgun.', 'models/weapons/w_portalgun.')
+PLAYER_MODELS = ('models/player/chell/player.', 'models/player_animations.')
 GUN_MATERIALS = ('materials/models/weapons/v_models/v_portalgun/',
                  'materials/models/weapons/w_models/portalgun/')
 # Include the shader inputs not covered by prepare's generic dependency scan.
@@ -46,7 +47,7 @@ def verify(stage, portal, portal2):
     failures = []
     required = set(PCFS + ('scripts/weapon_portalgun.txt',))
     counts = {'legacy_particles': 0, 'portal2_models': 0, 'portal2_textures': 0,
-              'gun_materials': 0, 'texture_references': 0, 'origin_hashes': 0}
+              'player_models': 0, 'gun_materials': 0, 'texture_references': 0, 'origin_hashes': 0}
 
     def check(condition, description):
         if not condition:
@@ -68,6 +69,10 @@ def verify(stage, portal, portal2):
     check(staged(weapon) == read_entry(legacy, weapon), 'Weapon definition must retain the Portal 1 fallback')
 
     for name in modern:
+        if name.startswith(PLAYER_MODELS):
+            required.add(name)
+            check(staged(name) == read_entry(modern, name), 'Not the Portal 2 player model bytes: ' + name)
+            counts['player_models'] += 1
         if name.startswith(GUN_MODELS):
             required.add(name)
             data = staged(name)
@@ -105,6 +110,7 @@ def verify(stage, portal, portal2):
                 counts['texture_references'] += 1
             counts['gun_materials'] += 1
     check(counts['portal2_models'] >= 6, 'Expected both complete Portal 2 gun model sets')
+    check(counts['player_models'] > 0, 'No Portal 2 Chell model files checked')
     check(counts['portal2_textures'] > 0, 'No Portal 2 gun textures checked')
     check(counts['gun_materials'] > 0, 'No Portal 2 gun materials checked')
 

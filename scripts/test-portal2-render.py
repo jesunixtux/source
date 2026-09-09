@@ -16,6 +16,7 @@ p.add_argument('--seconds', type=int, default=20)
 p.add_argument('--screenshot', action='store_true')
 p.add_argument('--no-prop-lighting', action='store_true')
 p.add_argument('--portal-texture', action='store_true', help='compare the render-to-texture portal path against stencil rendering')
+p.add_argument('--portal-mask-debug', action='store_true', help='diagnostic magenta stencil fill, not a visual acceptance test')
 p.add_argument('--pause-menu', action='store_true', help='open the experimental Portal 2 pause menu after loading the map')
 p.add_argument('--gameplay', action='store_true', help='run the opt-in gun/portal integration test (use --seconds 90 for a cold launch)')
 p.add_argument('--intro-scenes', action='store_true', help='test the vault dialogue chain from its real map trigger (use --seconds 75)')
@@ -53,6 +54,8 @@ if args.no_prop_lighting:
     command += ['+r_proplightingfromdisk', '0']
 if args.portal_texture:
     command += ['+r_portal_use_stencils', '0']
+if args.portal_mask_debug:
+    command += ['+portal2_debug_stencil_mask', '1']
 command += ['+map', args.map]
 if args.gameplay:
     command += ['+mat_hdr_level', '+mat_info', '+mat_fullbright', '+mat_phong']
