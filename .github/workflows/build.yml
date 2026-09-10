@@ -2,6 +2,13 @@ name: Build
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: source-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
