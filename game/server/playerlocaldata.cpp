@@ -159,6 +159,10 @@ BEGIN_SIMPLE_DATADESC( CPlayerLocalData )
 	DEFINE_EMBEDDED( m_PlayerFog ),
 	DEFINE_EMBEDDED( m_fog ),
 	DEFINE_EMBEDDED( m_audio ),
+	DEFINE_FIELD( m_nDuckTimeMsecs, FIELD_INTEGER ),
+	DEFINE_FIELD( m_nJumpTimeMsecs, FIELD_INTEGER ),
+	DEFINE_FIELD( m_nDuckJumpTimeMsecs, FIELD_INTEGER ),
+	DEFINE_FIELD( m_fTBeamEndTime, FIELD_TIME ),
 	
 	// "Why don't we save this field, grandpa?"
 	//
@@ -185,6 +189,10 @@ CPlayerLocalData::CPlayerLocalData()
 	m_audio.ent.Set( NULL );
 	m_pOldSkyCamera = NULL;
 	m_bDrawViewmodel = true;
+	m_nDuckTimeMsecs = 0;
+	m_nJumpTimeMsecs = 0;
+	m_nDuckJumpTimeMsecs = 0;
+	m_fTBeamEndTime = 0.0f;
 }
 
 

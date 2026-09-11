@@ -84,6 +84,12 @@ public:
 	CNetworkVarEmbedded( audioparams_t, m_audio );
 
 	CNetworkVar( bool, m_bSlowMovement );
+
+	// TF2/Portal2 additions
+	CNetworkVar( int, m_nDuckTimeMsecs );		// amount of time the player has been ducking (in ms)
+	CNetworkVar( int, m_nJumpTimeMsecs );		// amount of time the player has been held in a jump (in ms)
+	CNetworkVar( int, m_nDuckJumpTimeMsecs );	// amount of time the player has been holding down the jump in a duck-jump (in ms)
+	CNetworkVar( float, m_fTBeamEndTime );		// Time that the tractor beam should end (ties into m_bSlowMovement)
 };
 
 EXTERN_SEND_TABLE(DT_Local);

@@ -33,6 +33,10 @@ public:
 		m_iv_vecPunchAngle.Setup( &m_vecPunchAngle.m_Value, LATCH_SIMULATION_VAR );
 		m_iv_vecPunchAngleVel.Setup( &m_vecPunchAngleVel.m_Value, LATCH_SIMULATION_VAR );
 		m_flFOVRate = 0;
+		m_nDuckTimeMsecs = 0;
+		m_nJumpTimeMsecs = 0;
+		m_nDuckJumpTimeMsecs = 0;
+		m_fTBeamEndTime = 0.0f;
 	}
 
 	unsigned char			m_chAreaBits[MAX_AREA_STATE_BYTES];				// Area visibility flags.
@@ -57,6 +61,12 @@ public:
 	Vector					m_vecClientBaseVelocity;  
 	CNetworkQAngle( m_vecPunchAngle );		// auto-decaying view angle adjustment
 	CInterpolatedVar< QAngle >	m_iv_vecPunchAngle;
+
+	// TF2/Portal2 additions
+	int						m_nDuckTimeMsecs;		// amount of time the player has been ducking (in ms)
+	int						m_nJumpTimeMsecs;		// amount of time the player has been held in a jump (in ms)
+	int						m_nDuckJumpTimeMsecs;	// amount of time the player has been holding down the jump in a duck-jump (in ms)
+	float					m_fTBeamEndTime;		// Time that the tractor beam should end
 
 	CNetworkQAngle( m_vecPunchAngleVel );		// velocity of auto-decaying view angle adjustment
 	CInterpolatedVar< QAngle >	m_iv_vecPunchAngleVel;

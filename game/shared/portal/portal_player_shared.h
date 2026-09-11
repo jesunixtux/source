@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -172,6 +172,8 @@ struct CachedPaintPowerChoiceResult
 		wasIgnored = false;
 	}
 };
+
+typedef CUtlVectorFixed< CachedPaintPowerChoiceResult, PAINT_POWER_TYPE_COUNT_PLUS_NO_POWER > CachedPaintPowerChoiceResultArray;
 
 //=============================================================================
 // Contact Determination (used for determining available paint powers)
