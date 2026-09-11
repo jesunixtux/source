@@ -446,13 +446,6 @@ BEGIN_DATADESC( CPortal_Player )
 
 END_DATADESC()
 
-BEGIN_ENT_SCRIPTDESC( CPortal_Player, CBaseMultiplayerPlayer , "Player" )
-	DEFINE_SCRIPTFUNC( IncWheatleyMonitorDestructionCount, "Set number of wheatley monitors destroyed by the player." )
-	DEFINE_SCRIPTFUNC( GetWheatleyMonitorDestructionCount, "Get number of wheatley monitors destroyed by the player." )
-	DEFINE_SCRIPTFUNC( TurnOffPotatos, "Turns Off the Potatos material light" )
-	DEFINE_SCRIPTFUNC( TurnOnPotatos, "Turns On the Potatos material light" )
-END_SCRIPTDESC();
-
 extern const char *g_pszPlayerModel;
 
 const char* g_pszPlayerAnimations = "models/player_animations.mdl";
@@ -2471,7 +2464,7 @@ void CPortal_Player::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 // Purpose: Override setup bones so that is uses the render angles from
 //			the Portal animation state to setup the hitboxes.
 //-----------------------------------------------------------------------------
-void CPortal_Player::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
+void CPortal_Player::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
 {
 	VPROF_BUDGET( "CBaseAnimating::SetupBones", VPROF_BUDGETGROUP_SERVER_ANIM );
 
