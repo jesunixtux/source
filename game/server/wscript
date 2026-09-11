@@ -40,7 +40,7 @@ def configure(conf):
 	if game == 'l4d':
 		conf.env.append_unique('DEFINES', ['GAME_L4D=1'])
 	if game == 'portal2':
-		conf.env.append_unique('DEFINES', ['PORTAL2=1', 'PORTAL2_DLL=1'])
+		conf.env.append_unique('DEFINES', ['PORTAL2=1', 'PORTAL2_DLL=1', 'NO_STEAM=1'])
 
 	if game not in games.keys():
 		conf.fatal("Couldn't find game: ", game)

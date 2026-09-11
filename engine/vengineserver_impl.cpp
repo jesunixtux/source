@@ -1730,6 +1730,37 @@ public:
 		sv.SetPausedForced( bPaused, flDuration );
 	}
 
+	virtual bool HasPaintmap() OVERRIDE
+	{
+		return false;
+	}
+
+	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent ) OVERRIDE
+	{
+		return false;
+	}
+
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColor ) OVERRIDE
+	{
+		surfColor.RemoveAll();
+	}
+
+	virtual void RemoveAllPaint() OVERRIDE
+	{
+	}
+
+	virtual void PaintAllSurfaces( BYTE color ) OVERRIDE
+	{
+	}
+
+	virtual void RemovePaint( const model_t* pModel ) OVERRIDE
+	{
+	}
+
+	virtual void RefreshScreenIfNecessary() OVERRIDE
+	{
+	}
+
 private:
 	
 	// Purpose: Sends a temp entity to the client ( follows the format of the original MESSAGE_BEGIN stuff from HL1

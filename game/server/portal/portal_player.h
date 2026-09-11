@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -323,7 +323,7 @@ public:
 	float GetImplicitVerticalStepSpeed() const;
 	void SetImplicitVerticalStepSpeed( float speed );
 
-	const CPortalPlayerLocalData& GetPortalPlayerLocalData() const;
+	inline const CPortalPlayerLocalData& GetPortalPlayerLocalData() const { return m_PortalLocal; }
 
 	virtual Vector EyePosition();
 

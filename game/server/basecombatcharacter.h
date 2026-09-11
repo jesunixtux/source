@@ -15,6 +15,8 @@
 #pragma once
 #endif
 
+class CProp_Portal;
+
 #ifdef INVASION_DLL
 #include "tf_shareddefs.h"
 

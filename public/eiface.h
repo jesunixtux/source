@@ -445,6 +445,20 @@ public:
 	virtual eFindMapResult FindMap( /* in/out */ char *pMapName, int nMapNameMax ) = 0;
 	
 	virtual void SetPausedForced( bool bPaused, float flDuration = -1.f ) = 0;
+
+	// Update the 360 pacifier/spinner
+	virtual void RefreshScreenIfNecessary() = 0;
+
+	// Tells the engine to allocate paint surfaces
+	virtual bool HasPaintmap() = 0;
+
+	// Returns true if the surface paint colors changed
+	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent ) = 0;
+
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColor ) = 0;
+	virtual void RemoveAllPaint() = 0;
+	virtual void PaintAllSurfaces( BYTE color ) = 0;
+	virtual void RemovePaint( const model_t* pModel ) = 0;
 };
 
 // These only differ in new items added to the end
