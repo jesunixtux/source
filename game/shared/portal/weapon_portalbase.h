@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -54,7 +54,7 @@ public:
 	CPortal_Player* GetPortalPlayerOwner() const;
 
 	// Get specific Portal weapon ID (ie: WEAPON_PORTALGUN, etc)
-	virtual int GetWeaponID( void ) const { return WEAPON_NONE; }
+	virtual PortalWeaponID GetWeaponID( void ) const { return WEAPON_NONE; }
 
 	void WeaponSound( WeaponSound_t sound_type, float soundtime = 0.0f );
 	
