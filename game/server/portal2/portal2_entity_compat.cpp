@@ -99,3 +99,4 @@ class CPortal2LandmarkExit : public CPointEntity {};
 LINK_ENTITY_TO_CLASS( vgui_movie_display, CPortal2MovieDisplay );
 LINK_ENTITY_TO_CLASS( info_game_event_proxy, CPortal2GameEventProxy );
 LINK_ENTITY_TO_CLASS( info_landmark_exit, CPortal2LandmarkExit );
+LINK_ENTITY_TO_CLASS( info_landmark_entry, CPortal2LandmarkExit );

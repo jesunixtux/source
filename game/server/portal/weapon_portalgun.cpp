@@ -26,6 +26,17 @@
 #define BLAST_SPEED_NON_PLAYER 1000.0f
 #define BLAST_SPEED 3000.0f
 
+// Portal 2 caps how far a portal can be placed. The stock Portal 1 code traces
+// to MAX_TRACE_LENGTH (~56756 units), which lets a gun place portals across the
+// whole map. Clamp the placement trace so the gun behaves like its P2 counterpart.
+ConVar sv_portal_placement_max_range( "sv_portal_placement_max_range", "5000", 0,
+	"Maximum distance (in units) at which the portal gun can place a portal." );
+
+static float clamp_range( float fMax )
+{
+	return MIN( fMax, sv_portal_placement_max_range.GetFloat() );
+}
+
 
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponPortalgun, DT_WeaponPortalgun )
 
@@ -80,6 +91,18 @@ extern ConVar sv_portal_placement_never_fail;
 #ifdef PORTAL2
 static ConVar portal2_portalgun_debug( "portal2_portalgun_debug", "0", FCVAR_CHEAT,
 	"Report actual portal-gun traces and placement results in the experimental port." );
+
+// The opening hotel map deliberately starts without a weapon; the dual gun is
+// granted through impulse 101 and the F6/experiment binds. This flag is the
+// single cross-map persistence this experiment honours: the engine's plain
+// changelevel restores no player state, so post-transition arrival re-equips
+// The intro chain hands out the single-portal (blue-only) gun: the continuity
+// flag carries that blue gun across map switches by re-equipping it at arrival.
+// It is not archived; it only lives for the current engine session. Default is
+// on so a fresh session with the experimental build keeps the gun across maps;
+// set it to 0 to disable the carry-over.
+ConVar portal2_resume_portalgun( "portal2_resume_portalgun", "1", 0,
+	"Portal 2 experiment: carry the intro blue-only portal gun across intro map arrivals." );
 #endif
 
 
@@ -137,7 +160,21 @@ void CWeaponPortalgun::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 		Assert( (m_iPortalLinkageGroupID >= 0) && (m_iPortalLinkageGroupID < 256) );
 	}
 
-	BaseClass::OnPickedUp( pNewOwner );		
+	BaseClass::OnPickedUp( pNewOwner );
+
+#ifdef PORTAL2
+	// The intro chain hands over the single-portal (blue-only) gun. A dropped
+	// gun that is picked back up must restore a usable blue setup regardless of
+	// the restrictive keyfields maps keep on their placed portal guns.
+	// SetCanFirePortal1 already plays the pickup sound once.
+	if ( portal2_resume_portalgun.GetBool() )
+	{
+		SetCanFirePortal1();
+		return;
+	}
+#endif
+
+	PlayPickupSound();
 }
 
 void CWeaponPortalgun::CreateSounds()
@@ -391,19 +428,19 @@ float CWeaponPortalgun::TraceFirePortal( bool bPortal2, const Vector &vTraceStar
 				vFinalPosition = pPortal->m_vDelayedPosition;
 				qFinalAngles = pPortal->m_qDelayedAngles;
 
-				UTIL_TraceLine( vTraceStart - vDirection * 16.0f, vTraceStart + (vDirection * m_fMaxRange1), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
+				UTIL_TraceLine( vTraceStart - vDirection * 16.0f, vTraceStart + (vDirection * clamp_range( m_fMaxRange1 )), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
 
 				return PORTAL_ANALOG_SUCCESS_NEAR;
 			}
 
-			UTIL_TraceLine( vTraceStart - vDirection * 16.0f, vTraceStart + (vDirection * m_fMaxRange1), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
+			UTIL_TraceLine( vTraceStart - vDirection * 16.0f, vTraceStart + (vDirection * clamp_range( m_fMaxRange1 )), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
 
 			return PORTAL_ANALOG_SUCCESS_OVERLAP_LINKED;
 		}
 	}
 
 	// Trace to see where the portal hit
-	UTIL_TraceLine( vTraceStart, vTraceStart + (vDirection * m_fMaxRange1), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
+	UTIL_TraceLine( vTraceStart, vTraceStart + (vDirection * clamp_range( m_fMaxRange1 )), MASK_SHOT_PORTAL, &traceFilterPortalShot, &tr );
 
 	if ( !tr.DidHit() || tr.startsolid )
 	{
@@ -441,7 +478,7 @@ float CWeaponPortalgun::TraceFirePortal( bool bPortal2, const Vector &vTraceStar
 			CBasePropDoor *pRotatingDoor = static_cast<CBasePropDoor *>( list[i] );
 
 			Ray_t rayDoor;
-			rayDoor.Init( vTraceStart, vTraceStart + (vDirection * m_fMaxRange1) );
+			rayDoor.Init( vTraceStart, vTraceStart + (vDirection * clamp_range( m_fMaxRange1 )) );
 
 			trace_t trDoor;
 			pRotatingDoor->TestCollision( rayDoor, 0, trDoor );
@@ -733,13 +770,12 @@ static ConCommand upgrade_portal("upgrade_portalgun", CC_UpgradePortalGun, "Equi
 
 
 #ifdef PORTAL2
-// The opening hotel map deliberately starts without a weapon. Keep equipping
-// the dual gun explicit so normal map triggers can still control progression.
 static void CC_Portal2EquipPortalgun( const CCommand &args )
 {
-	CPortal_Player *pPlayer = ToPortalPlayer( UTIL_GetCommandClient() );
-	if ( !pPlayer && GameRules() && !GameRules()->IsMultiplayer() )
-		pPlayer = ToPortalPlayer( UTIL_GetLocalPlayer() );
+	CBaseEntity *pOwnerEntity = UTIL_GetCommandClient();
+	if ( !pOwnerEntity && GameRules() && !GameRules()->IsMultiplayer() )
+		pOwnerEntity = UTIL_GetLocalPlayer();
+	CPortal_Player *pPlayer = ToPortalPlayer( pOwnerEntity );
 	if ( !pPlayer || !pPlayer->IsAlive() )
 	{
 		Warning( "PORTAL2_PORTALGUN: load a map and wait for the player before equipping.\n" );
@@ -759,16 +795,21 @@ static void CC_Portal2EquipPortalgun( const CCommand &args )
 		return;
 	}
 
+	// Optional "blue" argument restores the intro single-portal gun; the
+	// default form stays the experimental dual setup for F6/playground use.
+	const bool bBlueOnly = args.ArgC() >= 2 && FStrEq( args[1], "blue" );
 	pPortalGun->SetCanFirePortal1();
-	pPortalGun->SetCanFirePortal2();
+	if ( !bBlueOnly )
+		pPortalGun->SetCanFirePortal2();
 	const bool bEquipped = pPlayer->GetActiveWeapon() == pPortalGun || pPlayer->Weapon_Switch( pPortalGun );
+	portal2_resume_portalgun.SetValue( 1 );
 	Msg( "PORTAL2_PORTALGUN equipped=%d blue=%d orange=%d linkage=%u\n",
 		bEquipped ? 1 : 0, pPortalGun->CanFirePortal1() != 0, pPortalGun->CanFirePortal2() != 0,
 		(unsigned int)pPortalGun->m_iPortalLinkageGroupID );
 }
 
 static ConCommand portal2_equip_portalgun( "portal2_equip_portalgun", CC_Portal2EquipPortalgun,
-	"Equip the dual portal gun in an already loaded experimental Portal 2 map.", FCVAR_CHEAT );
+	"Equip the dual portal gun in an already loaded experimental Portal 2 map. Optional 'blue' restores the intro single-portal (blue-only) gun.", FCVAR_CHEAT );
 #endif
 
 static void change_portalgun_linkage_id_f( const CCommand &args )

@@ -94,6 +94,16 @@ private:
 
 CAudioDeviceAudioQueue *wave = NULL;
 
+// Number of 256-frame (1024 byte, 16-bit stereo at 44100Hz, ~5.8ms) buffers the
+// driver keeps queued in the AudioQueue. This depth IS the audible latency on
+// top of snd_mixahead, because GetOutputPosition reports the write, not the
+// play, position. Vanilla (16 buffers ≈ 93ms) + the 100ms mix-ahead put every
+// sound ~200ms behind its trigger; keep the queue shallow. Lower it only if
+// the machine can feed the queue every frame without starving.
+static ConVar snd_audioqueue_depth( "snd_audioqueue_depth", "8", FCVAR_CHEAT,
+	"Max 256-frame audio buffers kept queued in the macOS AudioQueue output (latency vs underrun safety)." );
+static ConVar snd_audioqueue_debug( "snd_audioqueue_debug", "0", FCVAR_CHEAT,
+	"Log the macOS AudioQueue depth and any underruns." );
 
 static void AudioCallback(void *pContext, AudioQueueRef pQueue, AudioQueueBufferRef pBuffer)
 {
@@ -323,12 +333,13 @@ int CAudioDeviceAudioQueue::PaintBegin( float mixAheadTime, int soundtime, int p
 //-----------------------------------------------------------------------------
 void CAudioDeviceAudioQueue::PaintEnd( void )
 {
-	int	cblocks = 4 << 1; 
+	int cblocks = MAX( 4, snd_audioqueue_depth.GetInt() );
 
 	if ( m_bRunning && m_buffersSent == m_buffersCompleted )
 	{
 		// We are running the audio queue but have become starved of buffers.
 		// Stop the audio queue so we force a restart of it.
+		Msg( "AUDIOQUEUE STARVED, restarting\n" );
 		AudioQueueStop( m_Queue, true );
 	}
 
@@ -336,7 +347,7 @@ void CAudioDeviceAudioQueue::PaintEnd( void )
 	// submit a few new sound blocks
 	//
 	// 44K sound support
-	while (((m_buffersSent - m_buffersCompleted) >> SAMPLE_16BIT_SHIFT) < cblocks)
+	while ((m_buffersSent - m_buffersCompleted) < cblocks)
 	{	
 		int iBuf = m_buffersSent&BUFF_MASK; 
 		
@@ -351,6 +362,18 @@ void CAudioDeviceAudioQueue::PaintEnd( void )
 		}
 		
 		m_buffersSent++;
+	}
+
+	if ( snd_audioqueue_debug.GetBool() )
+	{
+		static int logged;
+		if ( ( logged++ & 0x3FF ) == 0 )
+		{
+			int depth = m_buffersSent - m_buffersCompleted;
+			ConVarRef mixahead( "snd_mixahead" );
+			float mix = mixahead.IsValid() ? mixahead.GetFloat() : 0.03f;
+			Msg( "AUDIOQUEUE depth=%d %.1fms mixahead=%.3f\n", depth, depth * ( BUFFER_SIZE / 4.0f ) / 44100.0f * 1000.0f, mix );
+		}
 	}
 
 	

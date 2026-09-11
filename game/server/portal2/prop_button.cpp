@@ -28,6 +28,7 @@ LINK_ENTITY_TO_CLASS(prop_button, CPropButton);
 
 void CPropButton::Precache(void)
 {
+	SetModelName(AllocPooledString(BUTTON_MODEL));
 	PrecacheModel(BUTTON_MODEL);
 
 	PrecacheScriptSound(PRESS_SOUND);
@@ -38,7 +39,7 @@ void CPropButton::Precache(void)
 
 void CPropButton::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	Press();
+	BaseClass::Use(pActivator,pCaller,useType,value);
 }
 
 void CPropButton::ReachedEndOfSequence(void)
@@ -58,6 +59,7 @@ void CPropButton::ReachedEndOfSequence(void)
 
 void CPropButton::Press(void)
 {
+	if(!BeginPress()) return;
 	PropSetAnim("down");
 	m_iszDefaultAnim = MAKE_STRING("idle_down");
 	EmitSound(PRESS_SOUND);
@@ -72,8 +74,8 @@ void CPropButton::Unpress(void)
 void CPropButton::Spawn(void)
 {
 	Precache();
-	BaseClass::Spawn();
 	SetModel(BUTTON_MODEL);
+	BaseClass::Spawn();
 
 	idleSequenceId = LookupSequence("idle");
 	downSequenceId = LookupSequence("down");

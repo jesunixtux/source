@@ -8,6 +8,17 @@ BEGIN_DATADESC(CPropButtonBase)
 DEFINE_USEFUNC(Use),
 //DEFINE_KEYFIELD(areaPortalName, FIELD_STRING, "AreaPortalWindow"),
 DEFINE_INPUTFUNC(FIELD_VOID, "Press", InputPress),
+DEFINE_INPUTFUNC(FIELD_VOID, "Lock", InputLock),
+DEFINE_INPUTFUNC(FIELD_VOID, "Unlock", InputUnlock),
+DEFINE_KEYFIELD(m_flDelay, FIELD_FLOAT, "Delay"),
+DEFINE_KEYFIELD(m_bLocked, FIELD_BOOLEAN, "StartLocked"),
+DEFINE_FIELD(m_bPressed, FIELD_BOOLEAN),
+DEFINE_FIELD(m_hPressActivator, FIELD_EHANDLE),
+DEFINE_FIELD(idleSequenceId, FIELD_INTEGER),
+DEFINE_FIELD(downSequenceId, FIELD_INTEGER),
+DEFINE_FIELD(upSequenceId, FIELD_INTEGER),
+DEFINE_FIELD(idleDownSequenceId, FIELD_INTEGER),
+DEFINE_THINKFUNC(Reset),
 
 DEFINE_OUTPUT(m_OnPressed, "OnPressed"),
 DEFINE_OUTPUT(m_OnButtonReset, "OnButtonReset"),
@@ -34,17 +45,30 @@ int CPropButtonBase::ObjectCaps()
 
 void CPropButtonBase::InputPress(inputdata_t& data)
 {
+	m_hPressActivator=data.pActivator;
 	Press();
 }
 
 void CPropButtonBase::Press()
 {
-	if (GetSequence() != idleSequenceId)
-		return;
+	BeginPress();
+}
+
+bool CPropButtonBase::BeginPress()
+{
+	if(m_bLocked || m_bPressed) return false;
+	m_bPressed=true;
+	// CDynamicProp does not call ReachedEndOfSequence. Use a separate
+	// saved context think so resetting the button cannot replace AnimThink.
+	SetContextThink(&CPropButtonBase::Reset, gpGlobals->curtime+MAX(0.1f,m_flDelay), "Portal2ButtonReset");
+	m_OnPressed.FireOutput(m_hPressActivator.Get(),this);
+	return true;
 }
 
 void CPropButtonBase::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
+	if(useType==USE_OFF) return;
+	m_hPressActivator=pActivator;
 	Press();
 }
 
@@ -62,12 +86,14 @@ void CPropButtonBase::Spawn(void)
 
 void CPropButtonBase::Unpress(void)
 {
-	m_OnPressed.FireOutput(this, this);
 }
 
 void CPropButtonBase::Reset(void)
 {
-	m_OnButtonReset.FireOutput(this, this);
+	if(!m_bPressed) return;
+	m_bPressed=false;
+	Unpress();
+	m_OnButtonReset.FireOutput(m_hPressActivator.Get(), this);
 }
 
 void CPropButtonBase::ReachedEndOfSequence(void)

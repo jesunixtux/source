@@ -127,7 +127,9 @@
 // non-raycasted weapons see this as solid (includes grates)
 #define MASK_SHOT_HULL				(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_MONSTER|CONTENTS_WINDOW|CONTENTS_DEBRIS|CONTENTS_GRATE)
 // hits solids (not grates) and passes through everything else
-#define MASK_SHOT_PORTAL			(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW|CONTENTS_MONSTER)
+// CONTENTS_DETAIL lets portal placement see func_detail brushes, which Portal 2
+// maps use for most portalable white panels (they compile to detail, not world).
+#define MASK_SHOT_PORTAL			(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW|CONTENTS_MONSTER|CONTENTS_DETAIL)
 // everything normally solid, except monsters (world+brush only)
 #define MASK_SOLID_BRUSHONLY		(CONTENTS_SOLID|CONTENTS_MOVEABLE|CONTENTS_WINDOW|CONTENTS_GRATE)
 // everything normally solid for player movement, except monsters (world+brush only)

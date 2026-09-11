@@ -75,6 +75,9 @@ void CWeaponPortalgun::Precache()
 	PrecacheScriptSound( "Portal.fizzle_invalid_surface" );
 	PrecacheScriptSound( "Weapon_Portalgun.powerup" );
 	PrecacheScriptSound( "Weapon_PhysCannon.HoldSound" );
+	// The P2 "powerup" script depends on operator_stacks this engine can't parse,
+	// so play the pickup sound directly from the raw wave instead.
+	PrecacheSound( "weapon_ambient/wpn_portalgun_activation_01.wav" );
 
 #ifndef CLIENT_DLL
 	PrecacheParticleSystem( "portal_1_projectile_stream" );
@@ -166,7 +169,15 @@ void CWeaponPortalgun::SetCanFirePortal1( bool bCanFire /*= true*/ )
 
 	pOwner->ViewPunch( QAngle( random->RandomFloat( -1, -0.5f ), random->RandomFloat( -1, 1 ), 0 ) );
 
-	EmitSound( "Weapon_Portalgun.powerup" );
+	PlayPickupSound();
+}
+
+void CWeaponPortalgun::PlayPickupSound( void )
+{
+	// The P2 "Weapon_Portalgun.powerup" script entry needs operator_stacks this
+	// engine cannot parse, so play the raw wave directly: it is the same file
+	// Portal 2 uses when the gun is acquired.
+	EmitSound( "weapon_ambient/wpn_portalgun_activation_01.wav" );
 }
 
 void CWeaponPortalgun::SetCanFirePortal2( bool bCanFire /*= true*/ )
@@ -196,7 +207,7 @@ void CWeaponPortalgun::SetCanFirePortal2( bool bCanFire /*= true*/ )
 
 	pOwner->ViewPunch( QAngle( random->RandomFloat( -1, -0.5f ), random->RandomFloat( -1, 1 ), 0 ) );
 
-	EmitSound( "Weapon_Portalgun.powerup" );
+	PlayPickupSound();
 }
 
 //-----------------------------------------------------------------------------

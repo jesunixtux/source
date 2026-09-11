@@ -5,6 +5,13 @@
 #define	OPEN_SOUND "prop_portal_door.open"
 #define	CLOSE_SOUND "prop_portal_door.close"
 
+// CDynamicProp::AnimThink reverts an entity to m_iszDefaultAnim when its
+// animation ends, so a door that runs the "open" sequence then immediately
+// slides back to "idleclose". Poll for the end of the open/close cycle and
+// switch to the matching idle pose from there, instead of letting AnimThink
+// snap the door back to its spawn pose.
+static const char *s_pSeqThinkContext = "Portal2DoorSequenceComplete";
+
 class CPropTestchamberDoor : public CDynamicProp
 {
 public:
@@ -26,6 +33,7 @@ public:
 	void Close(void);
 
 	void ReachedEndOfSequence(void);
+	void SequenceCompleteThink(void);
 
 	void InputOpen(inputdata_t &inputData);
 	void InputClose(inputdata_t &inputData);
@@ -49,6 +57,8 @@ BEGIN_DATADESC(CPropTestchamberDoor)
 
 DEFINE_INPUTFUNC(FIELD_VOID, "Open", InputOpen),
 DEFINE_INPUTFUNC(FIELD_VOID, "Close", InputClose),
+
+DEFINE_THINKFUNC(SequenceCompleteThink),
 
 DEFINE_KEYFIELD(areaPortalName, FIELD_STRING, "AreaPortalWindow"),
 
@@ -107,15 +117,15 @@ void CPropTestchamberDoor::Open(void)
 	UpdateAreaPortals(true);
 	m_OnOpen.FireOutput(this, this);
 	PropSetAnim("open");
-	//SetSequence(openSequenceId);
+	SetContextThink( &CPropTestchamberDoor::SequenceCompleteThink, gpGlobals->curtime + 0.1f, s_pSeqThinkContext );
 	EmitSound(OPEN_SOUND);
 }
 
 void CPropTestchamberDoor::Close(void)
 {
 	m_OnClose.FireOutput(this, this);
-	//SetSequence(closeSequenceId);
 	PropSetAnim("close");
+	SetContextThink( &CPropTestchamberDoor::SequenceCompleteThink, gpGlobals->curtime + 0.1f, s_pSeqThinkContext );
 	EmitSound(CLOSE_SOUND);
 }
 
@@ -154,4 +164,20 @@ void CPropTestchamberDoor::ReachedEndOfSequence(void)
 		m_iszDefaultAnim = MAKE_STRING("idleclose");
 		UpdateAreaPortals(false);
 	}
+}
+
+void CPropTestchamberDoor::SequenceCompleteThink(void)
+{
+	if ( GetSequence() == openSequenceId || GetSequence() == closeSequenceId )
+	{
+		if ( SequenceLoops() || GetCycle() >= 0.98f )
+		{
+			ReachedEndOfSequence();
+			return;
+		}
+	}
+
+	// Either the cycle is still running or the opposite animation started;
+	// keep waiting until the current open/close sequence finishes.
+	SetContextThink( &CPropTestchamberDoor::SequenceCompleteThink, gpGlobals->curtime + 0.1f, s_pSeqThinkContext );
 }

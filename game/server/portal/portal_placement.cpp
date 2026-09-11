@@ -245,7 +245,7 @@ bool TracePortalCorner( const CProp_Portal *pIgnorePortal, const Vector &vOrigin
 
 	// Check for enclosing wall
 	trace_t trEnclosingWall;
-	UTIL_TraceLine( vOrigin + vForward, vCorner + vForward, MASK_SOLID_BRUSHONLY|CONTENTS_MONSTER, pTraceFilterPortalShot, &trEnclosingWall );
+	UTIL_TraceLine( vOrigin + vForward, vCorner + vForward, MASK_SOLID_BRUSHONLY|CONTENTS_MONSTER|CONTENTS_DETAIL, pTraceFilterPortalShot, &trEnclosingWall );
 
 	if ( trSurfaceEdge.fraction < trEnclosingWall.fraction )
 	{
@@ -1091,7 +1091,7 @@ bool IsPortalOnValidSurface( const Vector &vOrigin, const Vector &vForward, cons
 
 		Ray_t ray;
 		ray.Init( ptCorner + vForward, ptCorner - vForward );
-		enginetrace->TraceRay( ray, MASK_SOLID_BRUSHONLY, traceFilterPortalShot, &tr );
+		enginetrace->TraceRay( ray, MASK_SOLID_BRUSHONLY|CONTENTS_DETAIL, traceFilterPortalShot, &tr );
 
 		if ( tr.startsolid )
 		{
@@ -1292,12 +1292,12 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 		{
 			Vector vSmallForward = vForward * 0.05f;
 			trace_t FloorTrace;
-			UTIL_TraceLine( vOrigin + vSmallForward, vOrigin + vSmallForward - (vUp * (PORTAL_HALF_HEIGHT + 1.5f)), MASK_SOLID_BRUSHONLY, &traceFilterPortalShot, &FloorTrace );
+			UTIL_TraceLine( vOrigin + vSmallForward, vOrigin + vSmallForward - (vUp * (PORTAL_HALF_HEIGHT + 1.5f)), MASK_SOLID_BRUSHONLY|CONTENTS_DETAIL, &traceFilterPortalShot, &FloorTrace );
 			if( FloorTrace.fraction < 1.0f )
 			{
 				//we hit floor in that 1 extra unit, now doublecheck to make sure we didn't hit something else
 				trace_t FloorTrace_Verify;
-				UTIL_TraceLine( vOrigin + vSmallForward, vOrigin + vSmallForward - (vUp * (PORTAL_HALF_HEIGHT - 0.1f)), MASK_SOLID_BRUSHONLY, &traceFilterPortalShot, &FloorTrace_Verify );
+				UTIL_TraceLine( vOrigin + vSmallForward, vOrigin + vSmallForward - (vUp * (PORTAL_HALF_HEIGHT - 0.1f)), MASK_SOLID_BRUSHONLY|CONTENTS_DETAIL, &traceFilterPortalShot, &FloorTrace_Verify );
 				if( FloorTrace_Verify.fraction == 1.0f )
 				{
 					//if we're in here, we're definitely in a floor matching configuration, bump down to match the floor better

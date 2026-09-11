@@ -10,6 +10,7 @@
 #include "player_pickup.h"
 #include "weapon_physcannon.h"
 #include "baseviewmodel.h"
+#include "prop_button_base.h"
 #include "tier0/memdbgon.h"
 
 static bool CheckOutputFormats()
@@ -47,8 +48,61 @@ int Portal2GameplayTestButtons()
 }
 
 bool Portal2GameplayTestOwnsInput()
-{ return (CommandLine()->FindParm("-portal2_gameplay_test") || CommandLine()->FindParm("-portal2_intro_scene_test")) &&
-    FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro1"); }
+{ return ((CommandLine()->FindParm("-portal2_gameplay_test") || CommandLine()->FindParm("-portal2_intro_scene_test")) &&
+    FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro1")) ||
+    (CommandLine()->FindParm("-portal2_buttons_test") && FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro2")); }
+
+class CPortal2ButtonsTest : public CAutoGameSystemPerFrame
+{
+public:
+    CPortal2ButtonsTest() : CAutoGameSystemPerFrame("Portal2ButtonsTest"), m_start(-1),m_step(0) {}
+    void LevelInitPreEntity() { m_start=-1; m_step=0; }
+    void FrameUpdatePostEntityThink()
+    {
+        if(!CommandLine()->FindParm("-portal2_buttons_test") || !FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro2")) return;
+        CBasePlayer *player=UTIL_GetLocalPlayer();
+        if(!player || !player->IsAlive() || m_step>=8) return;
+        if(m_start<0) m_start=gpGlobals->curtime;
+        if(gpGlobals->curtime-m_start < 10.0f+m_step*2.0f) return;
+        const int choices[]={1,2,3,1};
+        const int choice=choices[m_step/2];
+        char name[64]; Q_snprintf(name,sizeof(name),"blue_%d_portal_button",choice);
+        CPropButtonBase *button=dynamic_cast<CPropButtonBase *>(gEntList.FindEntityByName(NULL,name));
+        if(!button) { Warning("PORTAL2_BUTTONS missing button %d\n",choice); m_step=8; return; }
+        if((m_step%2)==0)
+        {
+            // The first/repeated button uses PlayerUse via an actual command;
+            // the other two cover the map's Press input and virtual dispatch.
+            if(choice==1)
+            {
+                Vector forward; button->GetVectors(&forward,NULL,NULL);
+                const Vector origin=button->GetAbsOrigin()+forward*40.0f;
+                QAngle aim; VectorAngles(button->GetAbsOrigin()+Vector(0,0,48)-(origin+player->GetViewOffset()),aim);
+                player->Teleport(&origin,&aim,&vec3_origin);
+                g_TestPressedButtons=IN_USE;
+            }
+            else
+            { variant_t empty; button->AcceptInput("Press",player,player,empty,0); }
+        }
+        else
+        {
+            bool correct=button->IsLocked() && !button->IsPressed();
+            Msg("PORTAL2_BUTTONS state chosen=%d locked=%d pressed=%d\n",choice,button->IsLocked(),button->IsPressed());
+            for(int i=1;i<=3;++i)
+            {
+                Q_snprintf(name,sizeof(name),"portal_blue_%d",i);
+                CProp_Portal *portal=dynamic_cast<CProp_Portal *>(gEntList.FindEntityByName(NULL,name));
+                Msg("PORTAL2_BUTTONS portal=%d active=%d\n",i,portal ? (int)portal->m_bActivated : -1);
+                correct=correct && portal && (portal->m_bActivated==(i==choice));
+            }
+            Msg("PORTAL2_BUTTONS select_%d=%s chosen=%d\n",m_step/2+1,correct?"PASS":"FAIL",choice);
+        }
+        ++m_step;
+    }
+private:
+    float m_start; int m_step;
+};
+static CPortal2ButtonsTest g_Portal2ButtonsTest;
 
 class CPortal2EventQueueTest : public CPointEntity
 {
@@ -112,7 +166,7 @@ public:
     }
     void FrameUpdatePostEntityThink()
     {
-        if(!Portal2GameplayTestOwnsInput()) return;
+        if(!Portal2GameplayTestOwnsInput() || !FStrEq(STRING(gpGlobals->mapname),"sp_a1_intro1")) return;
         CPortal_Player *p=ToPortalPlayer(UTIL_GetLocalPlayer());
         if(!p || !p->IsAlive()) return;
         if(m_start<0)
@@ -255,6 +309,15 @@ public:
         {
             engine->ClientCommand(p->edict(),"firstperson\n");
             m_step=15;
+        }
+        if(m_step==15 && elapsed>57 && orange && orange->IsActivedAndLinked())
+        {
+            Vector normal; orange->GetVectors(&normal,NULL,NULL);
+            const Vector origin=orange->GetAbsOrigin()+normal*160-p->GetViewOffset();
+            QAngle aim; VectorAngles(-normal,aim);
+            p->Teleport(&origin,&aim,&vec3_origin);
+            Msg("PORTAL2_GAMEPLAY_TEST portal_visual_camera=orange\n");
+            m_step=16;
         }
     }
     void PlayerTeleported(CBaseEntity *player,CProp_Portal *entry)

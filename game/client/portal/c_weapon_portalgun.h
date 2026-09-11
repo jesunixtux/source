@@ -152,6 +152,7 @@ public:
 
 	void SetCanFirePortal1( bool bCanFire = true );
 	void SetCanFirePortal2( bool bCanFire = true );
+	void PlayPickupSound( void );
 	float CanFirePortal1( void ) { return m_bCanFirePortal1; }
 	float CanFirePortal2( void ) { return m_bCanFirePortal2; }
 

@@ -59,6 +59,7 @@ public:
 	virtual void Activate();
 	void DoEffectBlast( bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
+	void PlayPickupSound( void );
 
 	virtual bool ShouldDrawCrosshair( void );
 	float GetPortal1Placablity( void ) { return m_fCanPlacePortal1OnThisSurface; }

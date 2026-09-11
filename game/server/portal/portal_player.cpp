@@ -300,6 +300,8 @@ void CPortal_Player::Precache( void )
 
 	PrecacheScriptSound( "PortalPlayer.Woosh" );
 	PrecacheScriptSound( "PortalPlayer.FallRecover" );
+	PrecacheScriptSound( "PortalPlayer.BonkYelp" );
+	PrecacheScriptSound( "PortalPortal.PainYelp" );
 
 	PrecacheModel ( "sprites/glow01.vmt" );
 
@@ -1653,7 +1655,18 @@ void CPortal_Player::CheatImpulseCommands( int iImpulse )
 		{
 			if( sv_cheats->GetBool() )
 			{
-				GiveAllItems();
+				CWeaponPortalgun *pPortalGun = static_cast<CWeaponPortalgun*>( GiveNamedItem( "weapon_portalgun" ) );
+
+				if ( !pPortalGun )
+				{
+					pPortalGun = static_cast<CWeaponPortalgun*>( Weapon_OwnsThisType( "weapon_portalgun" ) );
+				}
+
+				if ( pPortalGun )
+				{
+					pPortalGun->SetCanFirePortal1();
+					pPortalGun->SetCanFirePortal2();
+				}
 			}
 		}
 		break;

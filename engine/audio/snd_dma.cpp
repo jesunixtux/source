@@ -461,7 +461,24 @@ static ConVar volume( "volume", "1.0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_XBOX, "Soun
 // user configurable music volume
 ConVar snd_musicvolume( "snd_musicvolume", "1.0", FCVAR_ARCHIVE | FCVAR_ARCHIVE_XBOX, "Music volume", true, 0.0f, true, 1.0f );	
 
-ConVar snd_mixahead( "snd_mixahead", "0.1", FCVAR_ARCHIVE );
+ConVar snd_mixahead( "snd_mixahead", "0.03", FCVAR_ARCHIVE );
+#ifdef PORTAL2
+// The experiment must keep audio tight against the visuals: the mix-ahead plus
+// the output driver's queued buffers is the total audible latency behind the
+// trigger that started the sound. snd_mixahead is archived and may hold 0.1s
+// from a previous session; cap the actual schedule so sounds stop arriving
+// ~100ms late. Raise the cap only to trade latency for underrun safety.
+ConVar portal2_snd_mixahead_cap( "portal2_snd_mixahead_cap", "0.03", FCVAR_CHEAT );
+static float GetSoundMixAhead( void )
+{
+	return MIN( snd_mixahead.GetFloat(), portal2_snd_mixahead_cap.GetFloat() );
+}
+#else
+static float GetSoundMixAhead( void )
+{
+	return snd_mixahead.GetFloat();
+}
+#endif
 ConVar snd_mix_async( "snd_mix_async", "0" );
 #ifdef _DEBUG
 static ConCommand snd_mixvol("snd_mixvol", MXR_DebugSetMixGroupVolume, "Set named Mixgroup to mix volume.");
@@ -6322,7 +6339,7 @@ void S_Update( const AudioState_t *pAudioState )
 	// mix some sound
 	// try to stay at least one frame + mixahead ahead in the mix.
 	g_EstFrameTime = (g_EstFrameTime * 0.9f) + (g_pSoundServices->GetHostFrametime() * 0.1f);
-	S_Update_( g_EstFrameTime + snd_mixahead.GetFloat() );
+	S_Update_( g_EstFrameTime + GetSoundMixAhead() );
 }
 
 CON_COMMAND( snd_dumpclientsounds, "Dump sounds to VXConsole" )
@@ -6483,13 +6500,13 @@ void S_ExtraUpdate( void )
 	float delta = (tNow - g_LastMixTime);
 	// we know we were at least snd_mixahead seconds ahead of the output the last time we did mixing
 	// if we're not close to running out just exit to avoid small mix batches
-	if ( delta > 0 && delta < (snd_mixahead.GetFloat() * 0.9f) )
+	if ( delta > 0 && delta < (GetSoundMixAhead() * 0.9f) )
 		return;
 	g_LastMixTime = tNow;
 
 	g_pSoundServices->OnExtraUpdate();
 	// Shouldn't have to do any work here if your framerate hasn't dropped
-	S_Update_( snd_mixahead.GetFloat() );
+	S_Update_( GetSoundMixAhead() );
 }
 
 extern void DEBUG_StartSoundMeasure(int type, int samplecount );
@@ -6567,7 +6584,7 @@ void S_Update_Thread()
 		// large update times causes the mixer to demand more audio data
 		// the 360 decoder has finite latency and cannot fulfill spike requests
 		float t0 = Plat_FloatTime();
-		S_Update_Guts( frameTime + snd_mixahead.GetFloat() );
+		S_Update_Guts( frameTime + GetSoundMixAhead() );
 		int updateTime = ( Plat_FloatTime() - t0 ) * 1000.0f;
 
 		// try to maintain a steadier rate by compensating for fluctuating mix times

@@ -681,6 +681,9 @@ void CPortalRenderable_FlatBasic::DrawPreStencilMask( void )
 void CPortalRenderable_FlatBasic::DrawStencilMask( void )
 {
 #ifdef PORTAL2
+	// The legacy 0.25-unit bias leaves the aperture depth-occluded by the
+	// converted intro1 panels. Bias only the stencil surface, not the physical
+	// teleport plane; retain depth testing instead of using an ignore-Z mask.
 	DrawSimplePortalMesh( m_Materials.m_Portal_Stencil_Hole, 4.0f );
 #else
 	DrawSimplePortalMesh( m_Materials.m_Portal_Stencil_Hole );

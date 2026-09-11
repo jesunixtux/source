@@ -10,6 +10,9 @@
 #include "tier0/icommandline.h"
 #include "tier0/memdbgon.h"
 
+static ConVar portal2_intro_script_debug( "portal2_intro_script_debug", "0", FCVAR_CHEAT,
+    "Log every intro1 script call and scene overlap." );
+
 static void Fire( const char *target, const char *input, const char *arg, float delay, CBaseEntity *caller )
 {
     variant_t value;
@@ -100,6 +103,21 @@ public:
         const char *id = data.value.String();
         KeyValues *entry = Scene( id );
         if ( !entry ) return;
+        // The map routes BOTH the end of the p2_intro movie and the
+        // enter_chamber_trigger (returning to the bed) through
+        // relay_start_map -> GladosPlayVcd(0).  In the stock VM the second
+        // request queues behind the announcer chain; our native adapter would
+        // overlap it, doubling the vault narration.  Start the chain once.
+        if ( FStrEq( id, "PreHub01RelaxationVaultIntro01" ) && m_vaultStarted )
+        {
+            Msg( "PORTAL2_INTRO vault chain replay skipped (already started)\n" );
+            return;
+        }
+        if ( FStrEq( id, "PreHub01RelaxationVaultIntro01" ) )
+            m_vaultStarted = true;
+        if ( portal2_intro_script_debug.GetBool() )
+            Msg( "PORTAL2_INTRO play %s caller=%s overlap=%d\n", id,
+                data.pCaller ? data.pCaller->GetDebugName() : "<none>", m_scenes.Count() );
         const char *path = entry->GetString("vcd");
         const float duration = GetSceneDuration( path );
         if ( duration <= 0 )
@@ -128,6 +146,9 @@ public:
     {
         KeyValues *entry = Scene( data.value.String() );
         if ( !entry ) return;
+        if ( portal2_intro_script_debug.GetBool() )
+            Msg( "PORTAL2_INTRO complete %s caller=%s\n", data.value.String(),
+                data.pCaller ? data.pCaller->GetDebugName() : "<none>" );
         Msg( "PORTAL2_INTRO scene completed %s\n", data.value.String() );
         Fires( entry, false, this );
         if ( entry->GetFloat("postdelay") >= 0 ) Next( entry, entry->GetFloat("postdelay"), this );
@@ -193,6 +214,8 @@ public:
     }
     bool Run( CBaseEntity *host, const char *code )
     {
+        if ( portal2_intro_script_debug.GetBool() )
+            Msg( "PORTAL2_INTRO script %s via %s\n", code, host->GetDebugName() );
         char name[128]; int n = 0;
         while ( *code == ' ' ) ++code;
         while ( code[n] && code[n] != '(' && code[n] != ' ' && n < (int)sizeof(name)-1 ) { name[n] = code[n]; ++n; }
@@ -275,6 +298,10 @@ LINK_ENTITY_TO_CLASS( logic_script, CPortal2ScriptHost );
 
 bool Portal2RunIntroScript( CBaseEntity *host, const char *code )
 {
+    extern bool Portal2RunArrivalScript(CBaseEntity *,const char *);
+    if(Portal2RunArrivalScript(host,code)) return true;
+    extern bool Portal2RunIntroDepartureScript(CBaseEntity *,const char *);
+    if(Portal2RunIntroDepartureScript(host,code)) return true;
     if ( !FStrEq( STRING(gpGlobals->mapname), "sp_a1_intro1" ) ) return false;
     CPortal2IntroRuntime *runtime = dynamic_cast<CPortal2IntroRuntime *>(
         gEntList.FindEntityByClassname( NULL, "portal2_intro_runtime" ) );
