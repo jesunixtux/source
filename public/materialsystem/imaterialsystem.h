@@ -1895,3 +1895,7 @@ extern IMaterialSystem *materials;
 extern IMaterialSystem *g_pMaterialSystem;
 
 #endif // IMATERIALSYSTEM_H
+
+
+//Note: This file is a part of the Source Engine and is used for defining the interface for the material system. It includes various methods for managing materials, meshes, rendering contexts, and other related functionalities. The code also includes utility classes for managing render data and PIX events for debugging purposes.
+//JezuxixTUX Edited
