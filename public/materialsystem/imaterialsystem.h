@@ -53,7 +53,29 @@ class IMatRenderContext;
 class ICallQueue;
 struct MorphWeight_t;
 class IFileList;
-struct ShaderStencilState_t;
+struct ShaderStencilState_t
+{
+    bool m_bEnable;
+    int m_nReferenceValue;
+    int m_nWriteMask;
+    int m_nTestMask;
+    int m_CompareFunc;
+    int m_PassOp;
+    int m_FailOp;
+    int m_ZFailOp;
+
+    ShaderStencilState_t()
+    {
+        m_bEnable = false;
+        m_nReferenceValue = 0;
+        m_nWriteMask = 0;
+        m_nTestMask = 0;
+        m_CompareFunc = 0;
+        m_PassOp = 0;
+        m_FailOp = 0;
+        m_ZFailOp = 0;
+    }
+};
 
 
 //-----------------------------------------------------------------------------

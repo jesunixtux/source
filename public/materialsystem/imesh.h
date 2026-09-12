@@ -36,7 +36,10 @@ typedef uint64 VertexFormat_t;
 // Stencil state used to draw a mesh.  Kept minimal for the macOS port: the
 // reference value and write mask are sufficient for portal rendering.
 //-----------------------------------------------------------------------------
-struct ShaderStencilState_t
+
+
+//struct ShaderStencilState_t Redundancia Se comentó para probar
+
 {
 	bool	m_bEnable;
 	int		m_nReferenceValue;
