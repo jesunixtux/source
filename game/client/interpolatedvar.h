@@ -15,6 +15,7 @@
 #include "lerp_functions.h"
 #include "animationlayer.h"
 #include "convar.h"
+#include "mathlib/mathlib.h"
 
 
 #include "tier0/memdbgon.h"
@@ -494,6 +495,42 @@ public:
 
 	// Get the time of the oldest entry.
 	float GetOldestEntry();
+
+	// Port compatibility: Portal 2 added support for simultaneous player/view position
+	// discontinuities (portal teleports mid-interpolation).  The macOS port keeps the
+	// game code compiling with these no-op / minimal implementations.
+	// Returns the effective time we will use for the currentTime sample.
+	float GetInterpolatedTime( float fCurTime )
+	{
+		float fTargetTime = fCurTime - m_InterpolationAmount;
+		float fOldestEntryTime = GetOldestEntry();
+		fOldestEntryTime = MIN( fOldestEntryTime, fCurTime ); //pull entries in the future to now
+		return MAX( fTargetTime, fOldestEntryTime );
+	}
+
+	bool HasDiscontinuityForTime( float fCurTime )
+	{
+		return false;
+	}
+
+	bool GetDiscontinuityTransform( float fCurTime, matrix3x4_t &matOut )
+	{
+		return false;
+	}
+
+	void InsertDiscontinuity( const matrix3x4_t &matTransform, float fDiscontinuityTime )
+	{
+	}
+
+	bool RemoveDiscontinuity( float fDiscontinuityTime, const matrix3x4_t *pFailureTransform = NULL )
+	{
+		return false;
+	}
+
+	float GetInterpolationAmount() const
+	{
+		return m_InterpolationAmount;
+	}
 
 	// set a debug name (if not provided by constructor)
 	void	SetDebugName(const char *pName ) { m_pDebugName = pName; }
@@ -1583,6 +1620,19 @@ public:
 		: CInterpolatedVarArrayBase< Type, false >(pDebugName) 
 	{
 		this->SetMaxCount( 1 );
+	}
+};
+
+// Portal 2's CDiscontinuousInterpolatedVar added discontinuity tracking for
+// portal teleports.  The methods above provide compatibility stubs, so the base
+// CInterpolatedVar already exposes the P2 interface.
+template< typename Type >
+class CDiscontinuousInterpolatedVar : public CInterpolatedVar< Type >
+{
+public:
+	CDiscontinuousInterpolatedVar( const char *pDebugName = NULL )
+		: CInterpolatedVar< Type >(pDebugName)
+	{
 	}
 };
 

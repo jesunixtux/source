@@ -1209,6 +1209,10 @@ protected:
 	int BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QAngle &oldAngles, Vector &oldVel, int &bNoMoreChanges );
 	void BaseInterpolatePart2( Vector &oldOrigin, QAngle &oldAngles, Vector &oldVel, int nChangeFlags );
 
+	// Portal 2 support: returns the current time adjusted for the local player's
+	// final predicted time when this entity is predictable/client-created.
+	float GetEffectiveInterpolationCurTime( float currentTime );
+
 
 public:
 	// Accessors for above

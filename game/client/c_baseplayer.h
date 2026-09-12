@@ -62,6 +62,13 @@ public:
 #define CHASE_CAM_DISTANCE_MAX	96.0f
 #define WALL_OFFSET				6.0f
 
+enum PlayerRenderMode_t
+{
+	PLAYER_RENDER_NONE = 0,
+	PLAYER_RENDER_FIRSTPERSON,
+	PLAYER_RENDER_THIRDPERSON,
+};
+
 
 bool IsInFreezeCam( void );
 
