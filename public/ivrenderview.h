@@ -298,6 +298,18 @@ public:
 	virtual void			Push2DView( const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;
 	virtual void			PopView( Frustum frustumPlanes ) = 0;
 
+	// Portal 2 compatibility wrappers. Keep these non-virtual so the
+	// IVRenderView vtable remains unchanged while accepting the newer call form.
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
+	{
+		Push3DView( view, nFlags, pRenderTarget, frustumPlanes );
+	}
+
+	void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes )
+	{
+		PopView( frustumPlanes );
+	}
+
 	// Sets the main view
 	virtual void			SetMainView( const Vector &vecOrigin, const QAngle &angles ) = 0;
 
