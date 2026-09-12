@@ -34,6 +34,13 @@ inline bool VGui_IsSplitScreen()
 	return false;
 }
 
+// Portal 2 queries whether the current view is a splitscreen picture-in-picture
+// pass. This macOS ARM64 port is single-player only, so that can never happen.
+inline bool VGui_IsSplitScreenPIP()
+{
+	return false;
+}
+
 #ifdef CLIENT_DLL
 // The player whose view is currently being rendered (single player: the local
 // player). A macro so it expands at the call site where C_BasePlayer is complete.

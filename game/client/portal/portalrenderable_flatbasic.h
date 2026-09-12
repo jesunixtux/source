@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -13,6 +13,23 @@
 #endif
 
 #include "PortalRender.h"
+
+// Portal 2's branch provides value-returning VectorMin/VectorMax overloads.
+// Keep these local compatibility overloads inline so the imported renderer can
+// use the newer call form without changing the older mathlib ABI.
+inline Vector VectorMin( const Vector &a, const Vector &b )
+{
+	Vector result;
+	VectorMin( a, b, result );
+	return result;
+}
+
+inline Vector VectorMax( const Vector &a, const Vector &b )
+{
+	Vector result;
+	VectorMax( a, b, result );
+	return result;
+}
 
 struct PortalMeshPoint_t;
 #define PORTALRENDERFIXMESH_OUTERBOUNDPLANES 12
