@@ -5062,6 +5062,11 @@ void CMaterialSystem::UnbindMaterial( IMaterial *pMaterial )
 	Assert( (pMaterial == NULL) || ((IMaterialInternal *)pMaterial)->IsRealTimeVersion() );
 	if ( m_HardwareRenderContext.GetCurrentMaterial() == pMaterial )
 	{
+		// The material is already being destroyed.  Clear the render context
+		// before binding the fallback material; otherwise CShaderAPIDx8::Bind
+		// compares against the now-invalid current material and calls through
+		// its dead vtable during shutdown.
+		m_HardwareRenderContext.SetCurrentMaterialInternal( NULL );
 		m_HardwareRenderContext.Bind( g_pErrorMaterial, NULL );
 	}
 }

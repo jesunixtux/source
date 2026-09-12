@@ -12357,15 +12357,11 @@ void CShaderAPIDx8::Bind( IMaterial* pMaterial )
 	LOCK_SHADERAPI();
 	IMaterialInternal* pMatInt = static_cast<IMaterialInternal*>( pMaterial );
 
-	bool bMaterialChanged;
-	if ( m_pMaterial && pMatInt && m_pMaterial->InMaterialPage() && pMatInt->InMaterialPage() )
-	{
-		bMaterialChanged = ( m_pMaterial->GetMaterialPage() != pMatInt->GetMaterialPage() );
-	}
-	else
-	{
-		bMaterialChanged = ( m_pMaterial != pMatInt ) || ( m_pMaterial && m_pMaterial->InMaterialPage() ) || ( pMatInt && pMatInt->InMaterialPage() );
-	}
+	// During material-system shutdown the previous material can already be
+	// destructing.  Do not call virtual methods on it just to evaluate the
+	// material-page fast path; pointer identity is sufficient to decide
+	// whether the shader API needs a new binding and remains valid here.
+	bool bMaterialChanged = ( m_pMaterial != pMatInt );
 
 	if ( bMaterialChanged )
 	{
@@ -14349,4 +14345,3 @@ static void r_blocking_spew_threshold_callback( IConVar *var, const char *pOldVa
 
 ConVar r_blocking_spew_threshold( "r_blocking_spew_threshold", "-1", 0, "Enable spew of Direct3D Blocks. Specify the minimum blocking time in milliseconds before spewing a warning.", r_blocking_spew_threshold_callback );
 #endif
-

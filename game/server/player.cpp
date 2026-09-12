@@ -8028,6 +8028,15 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 
 void CBasePlayer::SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName )
 {
+	// Some ARM64 compatibility physics backends can fail to build the player
+	// hulls.  The movement code already supports a player without a physics
+	// controller, so do not dereference a NULL object during map startup.
+	if ( !pStandModel || !pCrouchModel || !physenv )
+	{
+		Warning( "CBasePlayer::SetupVPhysicsShadow: player physics shadow unavailable; continuing without it\n" );
+		return;
+	}
+
 	solid_t solid;
 	Q_strncpy( solid.surfaceprop, "player", sizeof(solid.surfaceprop) );
 	solid.params = g_PhysDefaultObjectParams;

@@ -6171,28 +6171,37 @@ static CProportionalHeightProperty proportional_height_converter;
 //static CProportionalXPosProperty xposconverter;
 //static CProportionalYPosProperty yposconverter;
 
-static CUtlDict< IPanelAnimationPropertyConverter *, int > g_AnimationPropertyConverters;
+// This dictionary is accessed by panel-animation registration objects during
+// shared-library startup.  Keep it function-local so it is constructed before
+// the first registration, regardless of translation-unit initialization order.
+static CUtlDict< IPanelAnimationPropertyConverter *, int >& AnimationPropertyConverters()
+{
+	static CUtlDict< IPanelAnimationPropertyConverter *, int > converters;
+	return converters;
+}
 
 static IPanelAnimationPropertyConverter *FindConverter( char const *typeName )
 {
-	int lookup = g_AnimationPropertyConverters.Find( typeName );
-	if ( lookup == g_AnimationPropertyConverters.InvalidIndex() )
+	CUtlDict< IPanelAnimationPropertyConverter *, int >& converters = AnimationPropertyConverters();
+	int lookup = converters.Find( typeName );
+	if ( lookup == converters.InvalidIndex() )
 		return NULL;
 
-	IPanelAnimationPropertyConverter *converter = g_AnimationPropertyConverters[ lookup ];
+	IPanelAnimationPropertyConverter *converter = converters[ lookup ];
 	return converter;
 }
 
 void Panel::AddPropertyConverter( char const *typeName, IPanelAnimationPropertyConverter *converter )
 {
-	int lookup = g_AnimationPropertyConverters.Find( typeName );
-	if ( lookup != g_AnimationPropertyConverters.InvalidIndex() )
+	CUtlDict< IPanelAnimationPropertyConverter *, int >& converters = AnimationPropertyConverters();
+	int lookup = converters.Find( typeName );
+	if ( lookup != converters.InvalidIndex() )
 	{
 		Msg( "Already have converter for type %s, ignoring...\n", typeName );
 		return;
 	}
 
-	g_AnimationPropertyConverters.Insert( typeName, converter );
+	converters.Insert( typeName, converter );
 }
 
 //-----------------------------------------------------------------------------

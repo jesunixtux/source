@@ -729,9 +729,15 @@ void CPortalRender::DrawEarlyZPortals( CViewRender *pViewRender )
 //-----------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------
 bool CPortalRender::DrawPortalsUsingStencils( CViewRender *pViewRender )
-{	  
+{
 	VPROF_BUDGET( "CPortalRender::DrawPortalsUsingStencils", "DrawPortalsUsingStencils" );
 
+	// The compatibility renderer can receive a portal draw before the global
+	// view/frustum has been published.  Portal rendering is optional for the
+	// frame, so skip it rather than passing a NULL frustum into the mesh clipper.
+	if ( !view || !view->GetFrustum() )
+		return false;
+	
 	if ( !r_portal_fastpath.GetBool() || 
 		 ( g_pMaterialSystem->GetThreadMode() == MATERIAL_SINGLE_THREADED ) )	// only QMS supports the VB restores I'm doing right now
 	{
