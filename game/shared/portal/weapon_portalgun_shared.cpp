@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "weapon_portalgun_shared.h"
 #include "portal_mp_gamerules.h"
+#include "achievement_stubs.h"
 #include "npcevent.h"
 #include "in_buttons.h"
 #include "rumble_shared.h"

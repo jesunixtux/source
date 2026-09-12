@@ -16,6 +16,7 @@
 #include "portal_shareddefs.h"
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/mm_helpers.h"
+#include "achievement_stubs.h"
 
 #ifndef CLIENT_DLL
 #include "player_voice_listener.h"

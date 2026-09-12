@@ -86,6 +86,8 @@ public:
 	
 	static CPortal_Player *CreatePlayer( const char *className, edict_t *ed );
 
+	void	FirePlayerProxyOutput( const char *pszOutputName, variant_t variant, CBaseEntity *pActivator, CBaseEntity *pCaller );
+
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 

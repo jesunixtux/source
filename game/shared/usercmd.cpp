@@ -187,6 +187,46 @@ void WriteUsercmd( bf_write *buf, const CUserCmd *to, const CUserCmd *from )
 		buf->WriteOneBit( 0 );
 	}
 #endif
+
+	if ( to->player_held_entity != from->player_held_entity )
+	{
+		buf->WriteOneBit( 1 );
+		buf->WriteUBitLong( to->player_held_entity, MAX_EDICT_BITS );
+	}
+	else
+	{
+		buf->WriteOneBit( 0 );
+	}
+
+	if ( to->held_entity_was_grabbed_through_portal != from->held_entity_was_grabbed_through_portal )
+	{
+		buf->WriteOneBit( 1 );
+		buf->WriteUBitLong( to->held_entity_was_grabbed_through_portal, MAX_EDICT_BITS );
+	}
+	else
+	{
+		buf->WriteOneBit( 0 );
+	}
+
+	if ( to->command_acknowledgements_pending != from->command_acknowledgements_pending )
+	{
+		buf->WriteOneBit( 1 );
+		buf->WriteUBitLong( to->command_acknowledgements_pending, 8 );
+	}
+	else
+	{
+		buf->WriteOneBit( 0 );
+	}
+
+	if ( to->predictedPortalTeleportations != from->predictedPortalTeleportations )
+	{
+		buf->WriteOneBit( 1 );
+		buf->WriteUBitLong( to->predictedPortalTeleportations, 8 );
+	}
+	else
+	{
+		buf->WriteOneBit( 0 );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -303,4 +343,24 @@ void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from )
 		}
 	}
 #endif
+
+	if ( buf->ReadOneBit() )
+	{
+		move->player_held_entity = buf->ReadUBitLong( MAX_EDICT_BITS );
+	}
+
+	if ( buf->ReadOneBit() )
+	{
+		move->held_entity_was_grabbed_through_portal = buf->ReadUBitLong( MAX_EDICT_BITS );
+	}
+
+	if ( buf->ReadOneBit() )
+	{
+		move->command_acknowledgements_pending = buf->ReadUBitLong( 8 );
+	}
+
+	if ( buf->ReadOneBit() )
+	{
+		move->predictedPortalTeleportations = buf->ReadUBitLong( 8 );
+	}
 }

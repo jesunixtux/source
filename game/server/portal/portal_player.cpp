@@ -30,6 +30,7 @@
 #include "datacache/imdlcache.h"
 #include "bone_setup.h"
 #include "portal_gamestats.h"
+#include "achievement_stubs.h"
 #include "physicsshadowclone.h"
 #include "physics_prop_ragdoll.h"
 #include "soundenvelope.h"
@@ -126,6 +127,11 @@ extern ConVar sv_bonus_challenge;
 extern ConVar ai_debug_dyninteractions;
 
 extern void PaintPowerPickup( int colorIndex, CBasePlayer *pPlayer );
+
+// The challenge-mode "all players ready" notification is not present in this port.
+void ChallengePlayersReady( void )
+{
+}
 
 
 #define COOP_PING_DECAL_NAME "overlays/coop_ping_decal"
@@ -578,17 +584,6 @@ CPortal_Player::CPortal_Player()
 
 CPortal_Player::~CPortal_Player( void )
 {
-#ifdef PORTAL2
-	if ( GameRules() && GameRules()->IsMultiplayer() && !IsSplitScreenPlayer() )
-	{
-		CPortal_Player *pOtherPlayer = ToPortalPlayer( UTIL_OtherPlayer( this ) );
-		if ( pOtherPlayer )
-		{
-			pOtherPlayer->RemovePictureInPicturePlayer( this );
-		}
-	}
-#endif
-
 	ClearSceneEvents( NULL, true );
 
 	if ( m_PlayerAnimState )
@@ -608,6 +603,11 @@ CEG_NOINLINE CPortal_Player *CPortal_Player::CreatePlayer( const char *className
 }
 
 CEG_PROTECT_STATIC_MEMBER_FUNCTION( CPortal_Player_CreatePlayer, CPortal_Player::CreatePlayer );
+
+// The logic_playerproxy entity family does not exist in this port's player base.
+void CPortal_Player::FirePlayerProxyOutput( const char *pszOutputName, variant_t variant, CBaseEntity *pActivator, CBaseEntity *pCaller )
+{
+}
 
 void CPortal_Player::UpdateOnRemove( void )
 {
@@ -1040,16 +1040,13 @@ void CPortal_Player::Spawn(void)
 		}
 		else if ( !PortalMPGameRules()->IsPlayerDataReceived( 0 ) || !PortalMPGameRules()->IsPlayerDataReceived( 1 ) )
 		{
-			if ( !engine->GetSplitScreenPlayerAttachToEdict( 1 ) && !engine->GetSplitScreenPlayerAttachToEdict( 2 ) )
+			if ( bIsBlue )
 			{
-				if ( bIsBlue )
-				{
-					engine->ClientCommand( edict(), "playvideo_end_level_transition coop_bluebot_load 1" );
-				}
-				else
-				{
-					engine->ClientCommand( edict(), "playvideo_end_level_transition coop_orangebot_load 1" );
-				}
+				engine->ClientCommand( edict(), "playvideo_end_level_transition coop_bluebot_load 1" );
+			}
+			else
+			{
+				engine->ClientCommand( edict(), "playvideo_end_level_transition coop_orangebot_load 1" );
 			}
 		}
 	}
@@ -1122,9 +1119,6 @@ void CPortal_Player::OnFullyConnected()
 		m_lifeState = LIFE_DEAD;
 		SetMoveType( MOVETYPE_NONE );
 
-		// Set any splitscreen players associated as waiting too
-		Assert( GetSplitScreenPlayers().Count() == 0 || GetSplitScreenPlayers().Count() == 1 );
-
 		// Respawn
 		SetThink( &CPortal_Player::PlayerTransitionCompleteThink );
 		SetNextThink( gpGlobals->curtime + 1.0f );
@@ -1138,16 +1132,6 @@ void CPortal_Player::OnFullyConnected()
 			SetNextThink( gpGlobals->curtime + flOtherPlayerTimeout );	// Wait 40 seconds for other players to connect
 
 			SetContextThink( &CPortal_Player::PlayerCatchPatnerNotConnectingThink, gpGlobals->curtime + flNotConnectingTimeout, CATCHPATNERNOTCONNECTING_THINK_CONTEXT );
-		}
-
-		// Self is not in this list. With 1 splitscreen partner this list has 1 player
-		for ( int i = 0; i < GetSplitScreenPlayers().Count(); ++i )
-		{
-			CPortal_Player *pPlayer = static_cast< CPortal_Player* >( GetSplitScreenPlayers()[ i ].Get() );
-			if ( pPlayer )
-			{
-				pPlayer->OnFullyConnected();
-			}
 		}
 	}
 	else
@@ -1582,49 +1566,49 @@ float CPortal_Player::PlayScene( const char *pszScene, float flDelay, AI_Respons
 	if ( GameRules()->IsMultiplayer() )
 	{
 		CPortalMPStats *pStats = GetPortalMPStats();
-		if ( response && response->m_szMatchingRule && pStats )
+		if ( response && response->GetMatchingRule() && pStats )
 		{
 			bool bHelmetOpener = false;
 
 			// These match the exact name of the rule we want to fire achievements based on minus ballbot/eggbot prefix
-			if ( V_strstr( response->m_szMatchingRule, "teamgesturehighfive_success") != NULL )
+			if ( V_strstr( response->GetMatchingRule(), "teamgesturehighfive_success") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[1]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_HIGHFIVE );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "gesturesmallwave") != NULL ||
-					V_strstr( response->m_szMatchingRule, "gestureportalgunsmallwave") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "gesturesmallwave") != NULL ||
+					V_strstr( response->GetMatchingRule(), "gestureportalgunsmallwave") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[2]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_WAVE );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "teamgesturerps_success") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "teamgesturerps_success") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[3]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_RPS );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "gesturelaugh") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "gesturelaugh") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[4]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_LAUGH );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "gesturerobotdance") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "gesturerobotdance") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[5]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_ROBOTDANCE );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "teamgestureteamhug_success") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "teamgestureteamhug_success") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[7]", this );
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_HUG );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "gesturetrickfire") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "gesturetrickfire") != NULL )
 			{
 				UTIL_RecordAchievementEvent( "ACH.TAUNTS[8]", this );
 				m_bTrickFire = true;
 				pStats->IncrementPlayerTauntsUsedMap( this, TAUNT_TRICKFIRE );
 			}
-			else if ( V_strstr( response->m_szMatchingRule, "gesturebasketball") != NULL )
+			else if ( V_strstr( response->GetMatchingRule(), "gesturebasketball") != NULL )
 			{
 				if ( GetTeamNumber() == TEAM_BLUE )
 				{
@@ -1633,8 +1617,8 @@ float CPortal_Player::PlayScene( const char *pszScene, float flDelay, AI_Respons
 			}
 			else
 			{
-				bool bEggTease = ( V_strstr( response->m_szMatchingRule, "teamgestureteameggtease_success") != NULL );
-				bool bBallTease = ( V_strstr( response->m_szMatchingRule, "teamgestureteamballtease_success") != NULL );
+				bool bEggTease = ( V_strstr( response->GetMatchingRule(), "teamgestureteameggtease_success") != NULL );
+				bool bBallTease = ( V_strstr( response->GetMatchingRule(), "teamgestureteamballtease_success") != NULL );
 				if ( bEggTease || bBallTease )
 				{
 					UTIL_RecordAchievementEvent( "ACH.TAUNTS[6]", this );
@@ -2996,7 +2980,7 @@ bool CPortal_Player::ClientCommand( const CCommand &args )
 		for( int i = 1; i <= gpGlobals->maxClients; ++i )
 		{
 			CBasePlayer *pToPlayer = UTIL_PlayerByIndex( i );
-			if ( pToPlayer && !pToPlayer->IsSplitScreenPlayer() )
+			if ( pToPlayer )
 			{
 				engine->ClientCommand( pToPlayer->edict(), "stopvideos" );
 				engine->ClientCommand( pToPlayer->edict(), "playvideo_end_level_transition coop_bots_load 1" );
@@ -3141,7 +3125,7 @@ bool CPortal_Player::ClientCommand( const CCommand &args )
 		for( int i = 1; i <= gpGlobals->maxClients; ++i )
 		{
 			CBasePlayer *pToPlayer = UTIL_PlayerByIndex( i );
-			if ( pToPlayer && !pToPlayer->IsSplitScreenPlayer() )
+			if ( pToPlayer )
 			{
 				engine->ClientCommand( pToPlayer->edict(), "stopvideos" );
 				engine->ClientCommand( pToPlayer->edict(), "playvideo_end_level_transition coop_bots_load_wave 1" );

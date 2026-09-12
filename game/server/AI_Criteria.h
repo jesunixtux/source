@@ -194,8 +194,10 @@ public:
 	float			GetDelay() const;
 	float			GetPreDelay() const;
 
-	void			SetContext( const char *context );
+void SetContext( const char *context );
 	const char *	GetContext( void ) const { return m_szContext; }
+
+	const char *	GetMatchingRule( void ) const { return m_szMatchingRule; }
 
 	bool			IsApplyContextToWorld( void ) { return m_bApplyContextToWorld; }
 

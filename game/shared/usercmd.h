@@ -163,6 +163,15 @@ public:
 	CUtlVector< CEntityGroundContact > entitygroundcontact;
 #endif
 
+	// Portal 2: entity being held this command (entindex, 0 == none)
+	int		player_held_entity;
+	// Portal 2: the portal the held entity was grabbed through (entindex, 0 == none)
+	int		held_entity_was_grabbed_through_portal;
+	// Portal 2: number of outstanding commands for which the server has not yet acked a portal transform
+	int		command_acknowledgements_pending;
+	// Portal 2: portal teleports the client already predicted for this command
+	int		predictedPortalTeleportations;
+
 };
 
 void ReadUsercmd( bf_read *buf, CUserCmd *move, CUserCmd *from );

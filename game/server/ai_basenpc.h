@@ -385,6 +385,8 @@ struct ScriptedNPCInteraction_t
 		flDelay = 5.0;
 		flDistSqr = (DSS_MAX_DIST * DSS_MAX_DIST);
 		flNextAttemptTime = 0;
+		flCameraDistance = 0.0f;
+		angCameraAngles = vec3_angle;
 		iszMyWeapon = NULL_STRING;
 		iszTheirWeapon = NULL_STRING;
 
@@ -405,6 +407,8 @@ struct ScriptedNPCInteraction_t
 	Vector		vecRelativeVelocity;		// Desired relative velocity of the other NPC
 	float		flDelay;					// Delay before interaction can be used again
 	float		flDistSqr;					// Max distance sqr from the relative origin the NPC is allowed to be to trigger
+	float		flCameraDistance;			// Distance to plant the camera along the forward vector for this interaction
+	QAngle		angCameraAngles;			// Angles for the camera during this interaction
 	string_t	iszMyWeapon;				// Classname of the weapon I'm holding, if any
 	string_t	iszTheirWeapon;				// Classname of the weapon my interaction partner is holding, if any
 	ScriptedNPCInteraction_Phases_t sPhases[SNPCINT_NUM_PHASES];

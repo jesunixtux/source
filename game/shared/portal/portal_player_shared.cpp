@@ -8,6 +8,7 @@
 #include "cbase.h"
 #include <functional>
 #include "portal_player_shared.h"
+#include "achievement_stubs.h"
 //#include "portal_playeranimstate.h"
 #include "debugoverlay_shared.h"
 #include "mesh.h"
