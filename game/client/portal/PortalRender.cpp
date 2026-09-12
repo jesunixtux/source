@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -23,6 +23,8 @@
 #include "toolframework_client.h"
 #include "vgui_int.h"
 #include "renderparm.h"
+#include "shaderapi/ishaderapi.h"
+#include "shaderapi/ishadershadow.h"
 
 #ifdef PORTAL
 #include "c_prop_portal.h"
