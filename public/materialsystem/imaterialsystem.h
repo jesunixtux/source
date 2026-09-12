@@ -1402,17 +1402,74 @@ public:
 
 	// Portal 2 convenience helper. Non-virtual so the material-system vtable is
 	// preserved; applies the grouped stencil state using the existing state calls.
-	void SetStencilState( const ShaderStencilState_t &state )
-	{
-		SetStencilEnable( state.m_bEnable );
-		SetStencilFailOperation( (StencilOperation_t)state.m_FailOp );
-		SetStencilZFailOperation( (StencilOperation_t)state.m_ZFailOp );
-		SetStencilPassOperation( (StencilOperation_t)state.m_PassOp );
-		SetStencilCompareFunction( (StencilComparisonFunction_t)state.m_CompareFunc );
-		SetStencilReferenceValue( state.m_nReferenceValue );
-		SetStencilTestMask( state.m_nTestMask );
-		SetStencilWriteMask( state.m_nWriteMask );
-	}
+void SetStencilState( const ShaderStencilState_t &state )
+{
+    StencilOperation_t failOp = STENCILOPERATION_KEEP;
+    StencilOperation_t zFailOp = STENCILOPERATION_KEEP;
+    StencilOperation_t passOp = STENCILOPERATION_KEEP;
+    StencilComparisonFunction_t compareFunc = STENCILCOMPARISONFUNCTION_ALWAYS;
+
+    switch ( state.m_FailOp )
+    {
+        case 0: failOp = STENCILOPERATION_KEEP; break;
+        case 1: failOp = STENCILOPERATION_ZERO; break;
+        case 2: failOp = STENCILOPERATION_REPLACE; break;
+        case 3: failOp = STENCILOPERATION_INCRSAT; break;
+        case 4: failOp = STENCILOPERATION_DECRSAT; break;
+        case 5: failOp = STENCILOPERATION_INVERT; break;
+        case 6: failOp = STENCILOPERATION_INCR; break;
+        case 7: failOp = STENCILOPERATION_DECR; break;
+        default: Assert( false ); break;
+    }
+
+    switch ( state.m_ZFailOp )
+    {
+        case 0: zFailOp = STENCILOPERATION_KEEP; break;
+        case 1: zFailOp = STENCILOPERATION_ZERO; break;
+        case 2: zFailOp = STENCILOPERATION_REPLACE; break;
+        case 3: zFailOp = STENCILOPERATION_INCRSAT; break;
+        case 4: zFailOp = STENCILOPERATION_DECRSAT; break;
+        case 5: zFailOp = STENCILOPERATION_INVERT; break;
+        case 6: zFailOp = STENCILOPERATION_INCR; break;
+        case 7: zFailOp = STENCILOPERATION_DECR; break;
+        default: Assert( false ); break;
+    }
+
+    switch ( state.m_PassOp )
+    {
+        case 0: passOp = STENCILOPERATION_KEEP; break;
+        case 1: passOp = STENCILOPERATION_ZERO; break;
+        case 2: passOp = STENCILOPERATION_REPLACE; break;
+        case 3: passOp = STENCILOPERATION_INCRSAT; break;
+        case 4: passOp = STENCILOPERATION_DECRSAT; break;
+        case 5: passOp = STENCILOPERATION_INVERT; break;
+        case 6: passOp = STENCILOPERATION_INCR; break;
+        case 7: passOp = STENCILOPERATION_DECR; break;
+        default: Assert( false ); break;
+    }
+
+    switch ( state.m_CompareFunc )
+    {
+        case 0: compareFunc = STENCILCOMPARISONFUNCTION_NEVER; break;
+        case 1: compareFunc = STENCILCOMPARISONFUNCTION_LESS; break;
+        case 2: compareFunc = STENCILCOMPARISONFUNCTION_EQUAL; break;
+        case 3: compareFunc = STENCILCOMPARISONFUNCTION_LESSEQUAL; break;
+        case 4: compareFunc = STENCILCOMPARISONFUNCTION_GREATER; break;
+        case 5: compareFunc = STENCILCOMPARISONFUNCTION_NOTEQUAL; break;
+        case 6: compareFunc = STENCILCOMPARISONFUNCTION_GREATEREQUAL; break;
+        case 7: compareFunc = STENCILCOMPARISONFUNCTION_ALWAYS; break;
+        default: Assert( false ); break;
+    }
+
+    SetStencilEnable( state.m_bEnable );
+    SetStencilFailOperation( failOp );
+    SetStencilZFailOperation( zFailOp );
+    SetStencilPassOperation( passOp );
+    SetStencilCompareFunction( compareFunc );
+    SetStencilReferenceValue( state.m_nReferenceValue );
+    SetStencilTestMask( state.m_nTestMask );
+    SetStencilWriteMask( state.m_nWriteMask );
+}
 	virtual void ClearStencilBufferRectangle(int xmin, int ymin, int xmax, int ymax,int value) =0;	
 
 	virtual void SetRenderTargetEx( int nRenderTargetID, ITexture *pTexture ) = 0;
