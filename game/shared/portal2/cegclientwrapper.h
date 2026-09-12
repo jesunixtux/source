@@ -60,6 +60,7 @@ namespace CEG
 #define RANDOM_CEG_TEST_SECRET_PERIOD( _first, _period )
 
 // SteamWorks is not linked into this build.
+#define STEAMWORKS_TESTSECRET()
 #define STEAMWORKS_TESTSECRETALWAYS()
 
 #endif // CEGCLIENTWRAPPER_H

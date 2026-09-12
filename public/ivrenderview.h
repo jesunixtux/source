@@ -133,6 +133,14 @@ struct VisOverrideData_t
 {
 	Vector		m_vecVisOrigin;					// The point to to use as the viewpoint for area portal backface cull checks.
 	float		m_fDistToAreaPortalTolerance;	// The distance from an area portal before using the full screen as the viewable portion.
+
+	// Portal 2: portal-specific visibility override data used to trim the recursive view frustum to the portal polygon.
+	Vector		m_vPortalCorners[4];			// Corners of the portal you are looking through.
+	bool		m_bTrimFrustumToPortalCorners;	// If true, use m_vPortalCorners to shrink the frustum.
+
+	Vector		m_vPortalOrigin;				// Origin of the portal for visibility calculations.
+	Vector		m_vPortalForward;				// Forward vector of the portal.
+	float		m_flPortalRadius;				// Radius of the portal (sqrt(width^2 + height^2)).
 };
 
 

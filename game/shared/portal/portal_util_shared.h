@@ -12,6 +12,7 @@
 
 #include "engine/IEngineTrace.h"
 #include "paint_color_manager.h"
+#include "mathlib/vplane.h"
 
 extern bool g_bBulletPortalTrace;
 
@@ -138,6 +139,7 @@ struct FindClosestPassableSpace_TraceAdapter_t
 };
 
 bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, unsigned int iIterations, Vector &vCenterOut, int axisDirectionFlags, FindClosestPassableSpace_TraceAdapter_t *pAdapter );
+bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut, int axisDirectionFlags = FL_AXIS_DIRECTION_NONE );
 
 bool UTIL_FindClosestPassableSpace_InPortal( const CPortal_Base2D *pPortal, const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut );
 bool UTIL_FindClosestPassableSpace_InPortal_CenterMustStayInFront( const CPortal_Base2D *pPortal, const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut );
@@ -192,6 +194,14 @@ typedef CUtlVector<PortalRadiusExtension_t> PortalRadiusExtensionVector;
 void ExtendRadiusThroughPortals( const Vector &vecOrigin, const QAngle &vecAngles, float flRadius, PortalRadiusExtensionVector &portalRadiusExtensions );
 
 void UTIL_Portal_Laser_Prevent_Tilting( Vector& vDirection );
+
+// Portal 2: compute the edge planes of the view frustum that pass through a convex polygon.
+// Returns the number of planes written to pOutputFrustum (capped at iOutputFrustumMaxPlanes).
+int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pVerts, int iVertCount, const Vector &vVisOrigin,
+	const VPlane *pInputFrustum, int iInputFrustumPlanes, VPlane *pOutputFrustum,
+	int iOutputFrustumMaxPlanes, int flags );
+
+bool IntersectRayWithAACylinder( const Ray_t &ray, const Vector &center, float radius, float height, CBaseTrace *pTrace );
 
 class CPolyhedron;
 class CPhysCollide;

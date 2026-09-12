@@ -12,6 +12,7 @@
 
 
 #include "weapon_portalbasecombatweapon.h"
+#include "weapon_portalgun_shared.h"
 
 #include "prop_portal.h"
 
@@ -44,6 +45,12 @@ public:
 	CNetworkVar( float,	m_fEffectsMaxSize2 );
 
 public:
+	// Portal handles and last positions (shared prediction state)
+	CHandle<CProp_Portal> m_hPrimaryPortal;
+	CHandle<CProp_Portal> m_hSecondaryPortal;
+	Vector					m_vecBluePortalPos;
+	Vector					m_vecOrangePortalPos;
+
 	virtual const Vector& GetBulletSpread( void )
 	{
 		static Vector cone = VECTOR_CONE_10DEGREES;
@@ -59,7 +66,7 @@ public:
 	virtual void UpdateOnRemove( void );
 	void Spawn( void );
 	virtual void Activate();
-	void DoEffectBlast( bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
+	void DoEffectBlast( CBaseEntity *pOwner, bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
 	void PlayPickupSound( void );
 
@@ -103,8 +110,15 @@ public:
 	void FirePortalDirection1( inputdata_t &inputdata );
 	void FirePortalDirection2( inputdata_t &inputdata );
 
-	float TraceFirePortal( bool bPortal2, const Vector &vTraceStart, const Vector &vDirection, trace_t &tr, Vector &vFinalPosition, QAngle &qFinalAngles, int iPlacedBy, bool bTest = false );
-	float FirePortal( bool bPortal2, Vector *pVector = 0, bool bTest = false );
+	bool TraceFirePortal( const Vector &vTraceStart, const Vector &vDirection, bool bPortal2, PortalPlacedBy_t ePlacedBy, TracePortalPlacementInfo_t &placementInfo );
+	PortalPlacementResult_t FirePortal( bool bPortal2, Vector *pVector = 0 );
+	CProp_Portal *GetAssociatedPortal( bool bPortal2 );
+
+	bool PortalTraceClippedByBlockers( ComplexPortalTrace_t *pTraceResults, int nNumResultSegments, const Vector &vecDirection, bool bIsSecondPortal, TracePortalPlacementInfo_t &placementInfo );
+	bool AttemptStealCoopPortal( TracePortalPlacementInfo_t &placementInfo );
+	bool AttemptSnapToPlacementHelper( CProp_Portal *pPortal, ComplexPortalTrace_t *pTraceResults, int nNumResultSegments, PortalPlacedBy_t ePlacedBy, TracePortalPlacementInfo_t &placementInfo );
+
+	Activity GetPrimaryAttackActivity( void );
 
 	CSoundPatch		*m_pMiniGravHoldSound;
 

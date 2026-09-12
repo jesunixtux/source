@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -147,6 +147,9 @@ extern char *g_ppszPortalPassThroughMaterials[];
 
 
 #define USE_SLOWTIME 0
+
+// Portal 2 prediction-diff debugging macro. Base port disables diff printing.
+#define EASY_DIFFPRINT( ... ) ((void)0)
 
 
 #endif // PORTAL_SHAREDDEFS_H

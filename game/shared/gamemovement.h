@@ -85,6 +85,9 @@ protected:
 	// Set ground data, etc.
 	void			FinishMove( void );
 
+	// Portal 2: reset the cached point contents used by water checks. Base implementation is a no-op.
+	void			ResetGetWaterContentsForPointCache( void ) {}
+
 	virtual float	CalcRoll( const QAngle &angles, const Vector &velocity, float rollangle, float rollspeed );
 
 	virtual	void	DecayPunchAngle( void );

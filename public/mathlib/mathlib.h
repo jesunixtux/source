@@ -13,6 +13,7 @@
 #include "tier0/commonmacros.h"
 #include "mathlib/vector.h"
 #include "mathlib/vector2d.h"
+#include "mathlib/vplane.h"
 #include "tier0/dbg.h"
 
 #include "mathlib/math_pfns.h"
@@ -181,7 +182,22 @@ public:
 	}
 
 	inline const cplane_t *GetPlane( int i ) const { return &m_Plane[i]; }
+	inline void GetPlane( int i, Vector *pNormal, float *pDist ) const
+	{
+		*pNormal = m_Plane[i].normal;
+		*pDist = m_Plane[i].dist;
+	}
 	inline const Vector &GetAbsNormal( int i ) const { return m_AbsNormal[i]; }
+
+	// Initialize all planes from a VPlane array (e.g., a Frustum[FRUSTUM_NUMPLANES]).
+	void SetPlanes( const VPlane *pPlanes )
+	{
+		for ( int i = 0; i < FRUSTUM_NUMPLANES; ++i )
+		{
+			SetPlane( i, PLANE_ANYZ, pPlanes[i].m_Normal, pPlanes[i].m_Dist );
+		}
+	}
+	void SetPlanes( const VPlane (&frustum)[FRUSTUM_NUMPLANES] ) { SetPlanes( static_cast<const VPlane *>( frustum ) ); }
 
 private:
 	cplane_t	m_Plane[FRUSTUM_NUMPLANES];

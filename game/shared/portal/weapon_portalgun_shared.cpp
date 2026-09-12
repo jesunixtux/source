@@ -339,18 +339,6 @@ void CWeaponPortalgun::SetCanFirePortal2( bool bCanFire /*= true*/ )
 #endif
 }
 
-
-bool CWeaponPortalgun::CanFirePortal1( void ) const
-{
-	return m_bCanFirePortal1;
-}
-
-
-bool CWeaponPortalgun::CanFirePortal2( void ) const
-{
-	return m_bCanFirePortal2;
-}
-
 #if defined( CLIENT_DLL )
 ConVar cl_predict_portal_placement( "cl_predict_portal_placement", "1", FCVAR_NONE, "Controls whether we attempt to compensate for lag by predicting portal placement on the client when playing multiplayer." );
 #endif

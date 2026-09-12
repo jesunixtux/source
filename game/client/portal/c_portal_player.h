@@ -239,7 +239,7 @@ public:
 
 	virtual void ForceDuckThisFrame( void );
 
-	inline const C_PortalPlayerLocalData& GetPortalPlayerLocalData() const { return m_PortalLocal; }
+	const C_PortalPlayerLocalData& GetPortalPlayerLocalData() const;
 
 	bool	m_bPitchReorientation;
 	float	m_fReorientationRate;

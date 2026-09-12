@@ -610,5 +610,9 @@ bool				UTIL_IsHolidayActive( /*EHoliday*/ int eHoliday );
 // holidays overlapping, the list order will act as priority.
 const char		   *UTIL_GetActiveHolidayString();
 
+// Portal 2 helpers for trace-filter pooling. Base implementation allocates/deallocates a simple filter.
+inline ITraceFilter *LockTraceFilter( int collisionGroup ) { return new CTraceFilterSimple( NULL, collisionGroup ); }
+inline void UnlockTraceFilter( ITraceFilter *pFilter ) { delete pFilter; }
+
 
 #endif // UTIL_SHARED_H

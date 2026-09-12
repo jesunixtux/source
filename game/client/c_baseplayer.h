@@ -25,6 +25,7 @@
 #include "c_env_fog_controller.h"
 #include "igameevents.h"
 #include "GameEventListener.h"
+#include "vphysics_interface.h"
 
 #if defined USES_ECON_ITEMS
 #include "econ_item.h"
@@ -108,6 +109,31 @@ public:
 	virtual void	GetToolRecordingState( KeyValues *msg );
 
 	virtual float GetPlayerMaxSpeed();
+
+	// Portal 2: physics flags and helpers used by predicted gamemovement.
+	enum
+	{
+		PFLAG_VPHYSICS_MOTIONCONTROLLER = ( 1 << 4 ),
+	};
+	unsigned int	m_afPhysicsFlags;
+	bool			HasPhysicsFlag( unsigned int flag ) { return ( m_afPhysicsFlags & flag ) != 0; }
+	Vector			Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
+	float			PredictedServerTime( void ) const { return gpGlobals->curtime; }
+
+	void			ForceButtons( int nButtons ) { m_nButtons |= nButtons; }
+	void			ClearUseEntity( void ) { m_hUseEntity = NULL; }
+	void			SetTouchedPhysics( bool bTouched ) {}
+
+	// Portal 2 vphysics state stubs (client prediction does not run vphysics controller).
+	enum
+	{
+		VPHYS_WALK = 0,
+		VPHYS_CROUCH,
+		VPHYS_NOCLIP,
+	};
+	void					SetVCollisionState( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, int collisionState ) {}
+	IPhysicsPlayerController	*m_pPhysicsController;
+	IPhysicsObject			*m_pShadowCrouch;
 
 	void	SetAnimationExtension( const char *pExtension );
 

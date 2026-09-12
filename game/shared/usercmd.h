@@ -58,6 +58,12 @@ public:
 #if defined( HL2_DLL ) || defined( HL2_CLIENT_DLL )
 		entitygroundcontact.RemoveAll();
 #endif
+
+		// Portal 2 fields
+		player_held_entity = 0;
+		held_entity_was_grabbed_through_portal = 0;
+		command_acknowledgements_pending = 0;
+		predictedPortalTeleportations = 0;
 	}
 
 	CUserCmd& operator =( const CUserCmd& src )
@@ -85,6 +91,12 @@ public:
 		entitygroundcontact			= src.entitygroundcontact;
 #endif
 
+		// Portal 2 fields
+		player_held_entity					= src.player_held_entity;
+		held_entity_was_grabbed_through_portal	= src.held_entity_was_grabbed_through_portal;
+		command_acknowledgements_pending		= src.command_acknowledgements_pending;
+		predictedPortalTeleportations			= src.predictedPortalTeleportations;
+
 		return *this;
 	}
 
@@ -111,6 +123,13 @@ public:
 		CRC32_ProcessBuffer( &crc, &random_seed, sizeof( random_seed ) );
 		CRC32_ProcessBuffer( &crc, &mousedx, sizeof( mousedx ) );
 		CRC32_ProcessBuffer( &crc, &mousedy, sizeof( mousedy ) );
+
+		// Portal 2 fields must participate in the command checksum.
+		CRC32_ProcessBuffer( &crc, &player_held_entity, sizeof( player_held_entity ) );
+		CRC32_ProcessBuffer( &crc, &held_entity_was_grabbed_through_portal, sizeof( held_entity_was_grabbed_through_portal ) );
+		CRC32_ProcessBuffer( &crc, &command_acknowledgements_pending, sizeof( command_acknowledgements_pending ) );
+		CRC32_ProcessBuffer( &crc, &predictedPortalTeleportations, sizeof( predictedPortalTeleportations ) );
+
 		CRC32_Final( &crc );
 
 		return crc;

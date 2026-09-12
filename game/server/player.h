@@ -404,6 +404,7 @@ public:
 #endif
 
 	bool					HasPhysicsFlag( unsigned int flag ) { return (m_afPhysicsFlags & flag) != 0; }
+	Vector					Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
 
 	// Weapon stuff
 	virtual Vector			Weapon_ShootPosition( );

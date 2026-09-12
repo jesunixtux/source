@@ -13,6 +13,7 @@
 
 
 #include "weapon_portalbasecombatweapon.h"
+#include "weapon_portalgun_shared.h"
 
 #include "c_prop_portal.h"
 #include "fx_interpvalue.h"
@@ -121,6 +122,14 @@ private:
 	CNetworkVar( float,	m_fEffectsMaxSize2 );
 
 public:
+	unsigned char m_iPortalLinkageGroupID; // which portal linkage group this gun is tied to, usually set by mapper, or inherited from owning player's index
+
+	// Portal handles and last positions (shared client/server prediction state)
+	CHandle<CProp_Portal> m_hPrimaryPortal;
+	CHandle<CProp_Portal> m_hSecondaryPortal;
+	Vector					m_vecBluePortalPos;
+	Vector					m_vecOrangePortalPos;
+
 	virtual const Vector& GetBulletSpread( void )
 	{
 		static Vector cone = VECTOR_CONE_10DEGREES;
@@ -132,11 +141,11 @@ public:
 	virtual void OnRestore( void );
 	virtual void UpdateOnRemove( void );
 	void Spawn( void );
-	void DoEffectCreate( Vector &vDir, Vector &ptStart, Vector &ptEnd, bool bPortal1, bool bPlayer );
 
 	virtual bool ShouldDrawCrosshair( void );
 	float GetPortal1Placablity( void ) { return m_fCanPlacePortal1OnThisSurface; }
 	float GetPortal2Placablity( void ) { return m_fCanPlacePortal2OnThisSurface; }
+	void SetLastFiredPortal( int iLastFiredPortal ) { m_iLastFiredPortal = iLastFiredPortal; }
 	int GetLastFiredPortal( void ) { return m_iLastFiredPortal; }
 	bool IsHoldingObject( void ) { return m_bOpenProngs; }
 
@@ -163,12 +172,21 @@ public:
 	void FirePortal1( void );
 	void FirePortal2( void );
 
+	PortalPlacementResult_t FirePortal( bool bPortal2, Vector *pVector = 0 );
+	bool TraceFirePortal( const Vector &vTraceStart, const Vector &vDirection, bool bPortal2, PortalPlacedBy_t ePlacedBy, TracePortalPlacementInfo_t &placementInfo );
+	CProp_Portal *GetAssociatedPortal( bool bPortal2 );
+
+	bool PortalTraceClippedByBlockers( ComplexPortalTrace_t *pTraceResults, int nNumResultSegments, const Vector &vecDirection, bool bIsSecondPortal, TracePortalPlacementInfo_t &placementInfo );
+	bool AttemptStealCoopPortal( TracePortalPlacementInfo_t &placementInfo );
+	bool AttemptSnapToPlacementHelper( CProp_Portal *pPortal, ComplexPortalTrace_t *pTraceResults, int nNumResultSegments, PortalPlacedBy_t ePlacedBy, TracePortalPlacementInfo_t &placementInfo );
+
 	void DryFire( void );
 	virtual float GetFireRate( void ) { return 0.7; };
 	void WeaponIdle( void );
 	void UseDeny( void );
 	void ResetRefireTime( void );
 	void PostAttack( void );
+	Activity GetPrimaryAttackActivity( void );
 
 protected:
 
@@ -178,6 +196,7 @@ protected:
 
 	// Portalgun effects
 	void	DoEffect( int effectType, Vector *pos = NULL );
+	void	DoEffectBlast( CBaseEntity *pOwner, bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
 
 	void	DoEffectClosed( void );
 	void	DoEffectReady( void );

@@ -1400,10 +1400,19 @@ public:
 	virtual void SetStencilTestMask(uint32 msk) = 0;
 	virtual void SetStencilWriteMask(uint32 msk) = 0;
 
-	// Portal 2 convenience helper. Implemented as a non-virtual helper so the
-	// material-system vtable is not disturbed; runtime stencil setup will need
-	// to be wired to the individual state calls above for correctness.
-	void SetStencilState( const ShaderStencilState_t &state ) {}
+	// Portal 2 convenience helper. Non-virtual so the material-system vtable is
+	// preserved; applies the grouped stencil state using the existing state calls.
+	void SetStencilState( const ShaderStencilState_t &state )
+	{
+		SetStencilEnable( state.m_bEnable );
+		SetStencilFailOperation( (StencilOperation_t)state.m_FailOp );
+		SetStencilZFailOperation( (StencilOperation_t)state.m_ZFailOp );
+		SetStencilPassOperation( (StencilOperation_t)state.m_PassOp );
+		SetStencilCompareFunction( (StencilComparisonFunction_t)state.m_CompareFunc );
+		SetStencilReferenceValue( state.m_nReferenceValue );
+		SetStencilTestMask( state.m_nTestMask );
+		SetStencilWriteMask( state.m_nWriteMask );
+	}
 	virtual void ClearStencilBufferRectangle(int xmin, int ymin, int xmax, int ymax,int value) =0;	
 
 	virtual void SetRenderTargetEx( int nRenderTargetID, ITexture *pTexture ) = 0;

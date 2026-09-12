@@ -112,12 +112,14 @@ public:
 
 	//finds brushes in an AABB, prone to some false positives
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<int> *pOutput, int iContentsMask = 0xFFFFFFFF );
+	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask = 0xFFFFFFFF, int cmodelIndex = 0 );
 
 	//Creates a CPhysCollide out of all displacements wholly or partially contained in the specified AABB
 	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs );
 
-	//retrieve brush planes and contents, returns true if data is being returned in the output pointers, false if the brush doesn't exist
-	virtual bool GetBrushInfo( int iBrush, CUtlVector<Vector4D> *pPlanesOut, int *pContentsOut );
+	//retrieve brush planes and contents, returns zero if the brush doesn't exist,
+	//returns positive number of sides filled out if the array can hold them all, negative number of slots needed to hold info if the array is too small
+	virtual int GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize );
 
 	virtual bool PointOutsideWorld( const Vector &ptTest ); //Tests a point to see if it's outside any playable area
 
@@ -605,6 +607,41 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 // Output : CPhysCollide* the collision mesh created from all the displacements partially contained in the specified box
 //					Note: We're not clipping to the box. Collidable may be larger than the box provided.
 //-----------------------------------------------------------------------------
+void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask, int cmodelIndex )
+{
+	// For now, gather world brushes and copy them into the query. The cmodelIndex
+	// parameter (used for non-world brush entities) is accepted but not yet used;
+	// this is tracked as runtime debt for moving brush entity portal collision.
+	CUtlVector<int> brushIndices;
+	GetBrushesInAABB( vMins, vMaxs, &brushIndices, iContentsMask );
+
+	CCollisionBSPData *pBSPData = GetCollisionBSPData();
+	int maxSides = 0;
+	for ( int i = 0; i < brushIndices.Count(); ++i )
+	{
+		cbrush_t *pBrush = &pBSPData->map_brushes[brushIndices[i]];
+		int sides = pBrush->IsBox() ? 6 : pBrush->numsides;
+		if ( sides > maxSides )
+			maxSides = sides;
+	}
+
+	if ( brushIndices.Count() == 0 )
+	{
+		BrushQuery.ReleasePrivateData();
+		return;
+	}
+
+	uint32 *pData = new uint32[brushIndices.Count()];
+	for ( int i = 0; i < brushIndices.Count(); ++i )
+	{
+		pData[i] = brushIndices[i];
+	}
+
+	BrushQuery.AdoptBrushes( pData, brushIndices.Count(), maxSides );
+}
+
+
+
 CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs )
 {
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
@@ -717,56 +754,67 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 	return pCollide;
 }
 
-bool CEngineTrace::GetBrushInfo( int iBrush, CUtlVector<Vector4D> *pPlanesOut, int *pContentsOut )
+int CEngineTrace::GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize )
 {
 	CCollisionBSPData *pBSPData = GetCollisionBSPData();
 
 	if( iBrush < 0 || iBrush >= pBSPData->numbrushes )
-		return false;
+		return 0;
 
 	cbrush_t *pBrush = &pBSPData->map_brushes[iBrush];
+	ContentsOut = pBrush->contents;
 
-	if( pPlanesOut )
+	int iSides = pBrush->IsBox() ? 6 : pBrush->numsides;
+
+	if( !pBrushSideInfoOut || iBrushSideInfoArraySize == 0 )
+		return -iSides;
+
+	if( iBrushSideInfoArraySize < iSides )
+		return -iSides;
+
+	if ( pBrush->IsBox() )
 	{
-		pPlanesOut->RemoveAll();
-		Vector4D p;
-		if ( pBrush->IsBox() )
-		{
-			cboxbrush_t *pBox = &pBSPData->map_boxbrushes[pBrush->GetBox()];
+		cboxbrush_t *pBox = &pBSPData->map_boxbrushes[pBrush->GetBox()];
 
-			for ( int i = 0; i < 6; i++ )
-			{
-				p.Init(0,0,0,0);
-				if ( i < 3 )
-				{
-					p[i] = 1.0f;
-					p[3] = pBox->maxs[i];
-				}
-				else
-				{
-					p[i-3] = -1.0f;
-					p[3] = -pBox->mins[i-3];
-				}
-				pPlanesOut->AddToTail( p );
-			}
-		}
-		else
+		for ( int i = 0; i < 6; i++ )
 		{
-			cbrushside_t *stopside = &pBSPData->map_brushsides[pBrush->firstbrushside];
-			// Note:  Don't do this in the [] since the final one on the last brushside will be past the end of the array end by one index
-			stopside += pBrush->numsides;
-			for( cbrushside_t *side = &pBSPData->map_brushsides[pBrush->firstbrushside]; side != stopside; ++side )
+			Vector normal( 0.0f, 0.0f, 0.0f );
+			float dist = 0.0f;
+			if ( i < 3 )
 			{
-				Vector4D pVec( side->plane->normal.x, side->plane->normal.y, side->plane->normal.z, side->plane->dist );
-				pPlanesOut->AddToTail( pVec );
+				normal[i] = 1.0f;
+				dist = pBox->maxs[i];
 			}
+			else
+			{
+				normal[i-3] = -1.0f;
+				dist = -pBox->mins[i-3];
+			}
+			pBrushSideInfoOut[i].plane.normal = normal;
+			pBrushSideInfoOut[i].plane.dist = dist;
+			pBrushSideInfoOut[i].plane.type = ( i < 3 ) ? i : ( i - 3 + 3 );
+			pBrushSideInfoOut[i].plane.signbits = SignbitsForPlane( &pBrushSideInfoOut[i].plane );
+			pBrushSideInfoOut[i].bevel = 0;
+			pBrushSideInfoOut[i].thin = 0;
+		}
+	}
+	else
+	{
+		cbrushside_t *stopside = &pBSPData->map_brushsides[pBrush->firstbrushside];
+		stopside += pBrush->numsides;
+		int i = 0;
+		for( cbrushside_t *side = &pBSPData->map_brushsides[pBrush->firstbrushside]; side != stopside; ++side, ++i )
+		{
+			pBrushSideInfoOut[i].plane.normal = side->plane->normal;
+			pBrushSideInfoOut[i].plane.dist = side->plane->dist;
+			pBrushSideInfoOut[i].plane.type = side->plane->type;
+			pBrushSideInfoOut[i].plane.signbits = side->plane->signbits;
+			pBrushSideInfoOut[i].bevel = side->bBevel;
+			pBrushSideInfoOut[i].thin = 0;
 		}
 	}
 
-	if( pContentsOut )
-		*pContentsOut = pBrush->contents;
-
-	return true;
+	return iSides;
 }
 
 //Tests a point to see if it's outside any playable area

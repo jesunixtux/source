@@ -55,6 +55,12 @@ public:
 //		m_bUseExplicitViewVector = false;
         m_bViewToProjectionOverride = false;
 		m_eStereoEye = STEREO_EYE_MONO;
+
+		m_bCustomViewMatrix = false;
+		m_matCustomViewMatrix = matrix3x4_t(
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f );
 	}
 
 // shared by 2D & 3D views
@@ -129,6 +135,10 @@ public:
 	// This does NOT override the Z range - that will be set up as normal (i.e. the values in this matrix will be ignored).
     bool        m_bViewToProjectionOverride;
     VMatrix     m_ViewToProjection;
+
+	// Portal 2: allow code to supply a custom view matrix for this view setup (recursive portal rendering).
+	bool		m_bCustomViewMatrix;
+	matrix3x4_t	m_matCustomViewMatrix;
 };
 
 

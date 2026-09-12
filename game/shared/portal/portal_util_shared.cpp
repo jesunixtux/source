@@ -3478,3 +3478,177 @@ bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtent
 	vCenterOut = vCenter;
 	return false;
 }
+
+bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut, int axisDirectionFlags )
+{
+	// The supplied trace filter and mask are ignored in this stub; we still report
+	// failure and return the input center.
+	return UTIL_FindClosestPassableSpace( vCenter, vExtents, vIndecisivePush, iIterations, vCenterOut, axisDirectionFlags, NULL );
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+// Purpose: Compute the edge planes of the view frustum that pass through a convex polygon.
+//          The positive half-space of each resulting plane contains the polygon interior.
+//          If pInputFrustum is provided, those planes are appended (capped by max planes).
+//          This is the Portal 2 behavior used for recursive portal/mirror frustum culling.
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+int UTIL_CalcFrustumThroughConvexPolygon( const Vector *pVerts, int iVertCount, const Vector &vVisOrigin,
+	const VPlane *pInputFrustum, int iInputFrustumPlanes, VPlane *pOutputFrustum,
+	int iOutputFrustumMaxPlanes, int flags )
+{
+	if ( iVertCount < 3 || iOutputFrustumMaxPlanes <= 0 )
+		return 0;
+
+	// Compute a reliable interior point for orientation.
+	Vector vCentroid = vec3_origin;
+	for ( int i = 0; i < iVertCount; ++i )
+	{
+		vCentroid += pVerts[i];
+	}
+	vCentroid *= ( 1.0f / iVertCount );
+
+	int iOut = 0;
+	for ( int i = 0; i < iVertCount && iOut < iOutputFrustumMaxPlanes; ++i )
+	{
+		const Vector &v0 = pVerts[i];
+		const Vector &v1 = pVerts[( i + 1 ) % iVertCount];
+
+		Vector vEdge = v1 - v0;
+		Vector vToOrigin = vVisOrigin - v0;
+
+		Vector vNormal;
+		CrossProduct( vEdge, vToOrigin, vNormal );
+		if ( vNormal.IsZero( 1.0e-6f ) )
+			continue;
+
+		vNormal.NormalizeInPlace();
+
+		VPlane plane;
+		plane.Init( vNormal, vNormal.Dot( v0 ) );
+
+		// Ensure the positive half-space contains the polygon interior.
+		if ( plane.DistTo( vCentroid ) < 0.0f )
+		{
+			vNormal *= -1.0f;
+			plane.Init( vNormal, vNormal.Dot( v0 ) );
+		}
+
+		pOutputFrustum[iOut] = plane;
+		++iOut;
+	}
+
+	// Append optional input frustum planes if there is room.
+	if ( pInputFrustum && iInputFrustumPlanes > 0 )
+	{
+		for ( int j = 0; j < iInputFrustumPlanes && iOut < iOutputFrustumMaxPlanes; ++j )
+		{
+			pOutputFrustum[iOut] = pInputFrustum[j];
+			++iOut;
+		}
+	}
+
+	return iOut;
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+// Purpose: Intersect a ray with an axis-aligned cylinder (portal player hull tests).
+//          Adapted from the server-side HL2 player implementation.
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+static bool LineCircleIntersection( const Vector2D &center, const float radius,
+	const Vector2D &vLinePt, const Vector2D &vLineDir,
+	float *fIntersection1, float *fIntersection2 )
+{
+	Vector2D P;
+	P[0] = vLinePt[0] - center[0];
+	P[1] = vLinePt[1] - center[1];
+
+	float a = vLineDir.Dot( vLineDir );
+	float b = 2.0f * P.Dot( vLineDir );
+	float c = P.Dot( P ) - ( radius * radius );
+
+	float insideSqr = b * b - 4 * a * c;
+	if ( insideSqr <= 0.000001f )
+		return false;
+
+	float sqr = FastSqrt( insideSqr );
+	float denom = 1.0f / ( 2.0f * a );
+
+	*fIntersection1 = ( -b - sqr ) * denom;
+	*fIntersection2 = ( -b + sqr ) * denom;
+
+	return true;
+}
+
+static void Portal_ClearTrace( const Vector &vecRayStart, const Vector &vecRayDelta, CBaseTrace *pTrace )
+{
+	pTrace->startpos = vecRayStart;
+	pTrace->endpos = vecRayStart + vecRayDelta;
+	pTrace->startsolid = false;
+	pTrace->allsolid = false;
+	pTrace->fraction = 1.0f;
+	pTrace->contents = 0;
+}
+
+bool IntersectRayWithAACylinder( const Ray_t &ray, const Vector &center, float radius, float height, CBaseTrace *pTrace )
+{
+	Assert( ray.m_IsRay );
+	Portal_ClearTrace( ray.m_Start, ray.m_Delta, pTrace );
+
+	float halfHeight = height * 0.5f;
+
+	Vector vStart = ray.m_Start - center;
+	Vector vEnd = vStart + ray.m_Delta;
+
+	float flEnterFrac, flLeaveFrac;
+	if ( FloatMakePositive( ray.m_Delta.z ) < 1e-8f )
+	{
+		if ( ( vStart.z < -halfHeight ) || ( vStart.z > halfHeight ) )
+			return false;
+
+		flEnterFrac = 0.0f;
+		flLeaveFrac = 1.0f;
+	}
+	else
+	{
+		flEnterFrac = IntersectRayWithAAPlane( vStart, vEnd, 2, 1, halfHeight );
+		flLeaveFrac = IntersectRayWithAAPlane( vStart, vEnd, 2, 1, -halfHeight );
+
+		if ( flLeaveFrac < flEnterFrac )
+		{
+			V_swap( flLeaveFrac, flEnterFrac );
+		}
+
+		if ( flLeaveFrac < 0.0f || flEnterFrac > 1.0f )
+			return false;
+	}
+
+	float flCircleEnterFrac, flCircleLeaveFrac;
+	if ( !LineCircleIntersection( vec3_origin.AsVector2D(), radius,
+		vStart.AsVector2D(), ray.m_Delta.AsVector2D(), &flCircleEnterFrac, &flCircleLeaveFrac ) )
+	{
+		return false;
+	}
+
+	if ( flCircleLeaveFrac < 0.0f || flCircleEnterFrac > 1.0f )
+		return false;
+
+	if ( flEnterFrac < flCircleEnterFrac )
+		flEnterFrac = flCircleEnterFrac;
+	if ( flLeaveFrac > flCircleLeaveFrac )
+		flLeaveFrac = flCircleLeaveFrac;
+
+	if ( flLeaveFrac < flEnterFrac )
+		return false;
+
+	VectorMA( ray.m_Start, flEnterFrac, ray.m_Delta, pTrace->endpos );
+	pTrace->fraction = flEnterFrac;
+	pTrace->contents = CONTENTS_SOLID;
+
+	Vector collisionCenter;
+	CalcClosestPointOnLineSegment( pTrace->endpos, center + Vector( 0, 0, halfHeight ), center - Vector( 0, 0, halfHeight ), collisionCenter );
+
+	pTrace->plane.normal = pTrace->endpos - collisionCenter;
+	VectorNormalize( pTrace->plane.normal );
+
+	return true;
+}

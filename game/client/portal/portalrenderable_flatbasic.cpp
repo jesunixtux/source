@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -21,6 +21,7 @@
 #include "view_scene.h"
 #include "tier0/vprof.h"
 #include "materialsystem/imaterialvar.h"
+#include "engine/ivdebugoverlay.h"
 
 
 extern ConVar r_portal_fastpath;

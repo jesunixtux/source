@@ -822,8 +822,13 @@ public:
 	void							ShutdownPredictable( void );
 
 	virtual void					SetPredictable( bool state );
-	bool							GetPredictable( void ) const;
-	void							PreEntityPacketReceived( int commands_acknowledged );
+	bool						GetPredictable( void ) const;
+
+	// Portal 2: predicted ground entities can adjust their position for this command time.
+	// Base client implementation is a no-op.
+	virtual void					PredictPosition( float predictingAt ) {}
+
+	void						PreEntityPacketReceived( int commands_acknowledged );
 	void							PostEntityPacketReceived( void );
 	bool							PostNetworkDataReceived( int commands_acknowledged );
 	bool							GetPredictionEligible( void ) const;

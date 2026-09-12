@@ -433,6 +433,10 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 
 	m_flNextAchievementAnnounceTime = 0;
 
+	m_afPhysicsFlags = 0;
+	m_pPhysicsController = NULL;
+	m_pShadowCrouch = NULL;
+
 	m_bFiredWeapon = false;
 
 	m_flTimeLastTouchedGround = 0.0f;

@@ -18,6 +18,7 @@
 #include "util_shared.h"
 #include "portal_util_shared.h"
 #include "collisionutils.h"
+#include "physics_shared.h"
 #include "portal_mp_gamerules.h"
 
 #ifdef CLIENT_DLL
@@ -456,7 +457,7 @@ bool CPortal_Player::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask,
 		mstudiobone_t *pBone = pStudioHdr->pBone(pbox->bone);
 		tr.surface.name = "**studio**";
 		tr.surface.flags = SURF_HITBOX;
-		tr.surface.surfaceProps = pBone->GetSurfaceProp();
+		tr.surface.surfaceProps = physprops ? physprops->GetSurfaceIndex( pBone->pszSurfaceProp() ) : 0;
 	}
 
 	return true;

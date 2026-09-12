@@ -121,10 +121,77 @@ public:
 
 
 //-----------------------------------------------------------------------------
+struct BrushSideInfo_t
+{
+	cplane_t		plane;		// The plane of the brush side
+	unsigned short	bevel;		// Bevel plane?
+	unsigned short	thin;		// Thin?
+};
+
+class CBrushQuery
+{
+public:
+	CBrushQuery( void )
+	{
+		m_iCount = 0;
+		m_pBrushes = NULL;
+		m_iMaxBrushSides = 0;
+		m_pReleaseFunc = NULL;
+		m_pData = NULL;
+	}
+	~CBrushQuery( void )
+	{
+		ReleasePrivateData();
+	}
+	void ReleasePrivateData( void )
+	{
+		if ( m_pReleaseFunc )
+		{
+			m_pReleaseFunc( this );
+		}
+
+		m_iCount = 0;
+		m_pBrushes = NULL;
+		m_iMaxBrushSides = 0;
+		m_pReleaseFunc = NULL;
+		m_pData = NULL;
+	}
+
+	inline int Count( void ) const { return m_iCount; }
+	inline uint32 *Base( void ) { return m_pBrushes; }
+	inline uint32 operator[]( int iIndex ) const { return m_pBrushes[iIndex]; }
+	inline uint32 GetBrushNumber( int iIndex ) const { return m_pBrushes[iIndex]; }
+
+	inline int MaxBrushSides( void ) const { return m_iMaxBrushSides; }
+
+	// Adopt ownership of a brush index array allocated with new[].
+	void AdoptBrushes( uint32 *pBrushes, int count, int maxSides )
+	{
+		ReleasePrivateData();
+		m_iCount = count;
+		m_pBrushes = pBrushes;
+		m_iMaxBrushSides = maxSides;
+		m_pReleaseFunc = &DefaultRelease;
+	}
+
+	static void DefaultRelease( CBrushQuery *pQuery )
+	{
+		delete[] pQuery->m_pBrushes;
+		pQuery->m_pBrushes = NULL;
+	}
+
+protected:
+	int		m_iCount;
+	uint32	*m_pBrushes;
+	int		m_iMaxBrushSides;
+	void	(*m_pReleaseFunc)( CBrushQuery * );
+	void	*m_pData;
+};
+
 // Interface the engine exposes to the game DLL
 //-----------------------------------------------------------------------------
-#define INTERFACEVERSION_ENGINETRACE_SERVER	"EngineTraceServer003"
-#define INTERFACEVERSION_ENGINETRACE_CLIENT	"EngineTraceClient003"
+#define INTERFACEVERSION_ENGINETRACE_SERVER	"EngineTraceServer004"
+#define INTERFACEVERSION_ENGINETRACE_CLIENT	"EngineTraceClient004"
 abstract_class IEngineTrace
 {
 public:
@@ -174,12 +241,14 @@ public:
 
 	//finds brushes in an AABB, prone to some false positives
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<int> *pOutput, int iContentsMask = 0xFFFFFFFF ) = 0;
+	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask = 0xFFFFFFFF, int cmodelIndex = 0 ) = 0;
 
 	//Creates a CPhysCollide out of all displacements wholly or partially contained in the specified AABB
 	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs ) = 0;
 
-	//retrieve brush planes and contents, returns true if data is being returned in the output pointers, false if the brush doesn't exist
-	virtual bool GetBrushInfo( int iBrush, CUtlVector<Vector4D> *pPlanesOut, int *pContentsOut ) = 0;
+	//retrieve brush planes and contents, returns zero if the brush doesn't exist,
+	//returns positive number of sides filled out if the array can hold them all, negative number of slots needed to hold info if the array is too small
+	virtual int GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize ) = 0;
 
 	virtual bool PointOutsideWorld( const Vector &ptTest ) = 0; //Tests a point to see if it's outside any playable area
 
