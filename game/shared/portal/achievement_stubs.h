@@ -14,10 +14,16 @@
 #pragma once
 
 #include "baseentity.h"
+#include "KeyValues.h"
 
 inline void UTIL_RecordAchievementEvent( const char *szAchievementName, CBaseEntity *pActivator )
 {
 	// Achievements are disabled in the NO_STEAM build.
+}
+
+inline void UTIL_SendClientCommandKVToPlayer( KeyValues *kv )
+{
+	// The bots this command animated are not scripted in this port.
 }
 
 #endif // ACHIEVEMENT_STUBS_H

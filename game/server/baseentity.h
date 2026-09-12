@@ -1217,6 +1217,8 @@ public:
 	virtual const QAngle &LocalEyeAngles( void );	// Direction of eyes
 	virtual Vector	EarPosition( void );			// position of ears
 
+	float GetDistanceToEntity( const CBaseEntity *other ) const; // Distance between GetAbsOrigins.
+
 	Vector	EyePosition( void ) const;			// position of eyes
 	const QAngle &EyeAngles( void ) const;		// Direction of eyes in world space
 	const QAngle &LocalEyeAngles( void ) const;	// Direction of eyes
@@ -2712,6 +2714,14 @@ public:
 void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_OriginXY( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_OriginZ( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
+
+inline float CBaseEntity::GetDistanceToEntity( const CBaseEntity *other ) const
+{
+	if( other == NULL )
+		return -1.0f;
+
+	return ( GetAbsOrigin() - other->GetAbsOrigin() ).Length();
+}
 
 
 #endif // BASEENTITY_H

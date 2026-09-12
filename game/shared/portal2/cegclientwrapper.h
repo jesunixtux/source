@@ -47,10 +47,10 @@ namespace CEG
 #define CEG_GCV_START()			
 #define CEG_GCV_FINISH()		
 
-#define CEG_PROTECT_FUNCTION( _func )					((void)0)
-#define CEG_PROTECT_MEMBER_FUNCTION( _class_method )	((void)0)
-#define CEG_PROTECT_STATIC_MEMBER_FUNCTION( _name, _func )	((void)0)
-#define CEG_PROTECT_VIRTUAL_FUNCTION( _name )			((void)0)
+#define CEG_PROTECT_FUNCTION( _func )					static const int _func##_CEG_PROTECTED = 0
+#define CEG_PROTECT_MEMBER_FUNCTION( _class_method )	static const int _class_method##_CEG_PROTECTED = 0
+#define CEG_PROTECT_STATIC_MEMBER_FUNCTION( _name, _func )	static const int _name##_CEG_PROTECTED = 0
+#define CEG_PROTECT_VIRTUAL_FUNCTION( _name )			static const int _name##_CEG_PROTECTED = 0
 
 #define CEG_GET_CONSTANT_VALUE( _constant )	( CEG::_constant )
 

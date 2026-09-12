@@ -26,6 +26,18 @@ public:
 	~AI_CriteriaSet();
 
 	void AppendCriteria( const char *criteria, const char *value = "", float weight = 1.0f );
+	inline void AppendCriteria( const char *criteria, int value, float weight = 1.0f )
+	{
+		char szValue[ 32 ];
+		V_snprintf( szValue, sizeof( szValue ), "%d", value );
+		AppendCriteria( criteria, szValue, weight );
+	}
+	inline void AppendCriteria( const char *criteria, float value, float weight = 1.0f )
+	{
+		char szValue[ 32 ];
+		V_snprintf( szValue, sizeof( szValue ), "%g", value );
+		AppendCriteria( criteria, szValue, weight );
+	}
 	void RemoveCriteria( const char *criteria );
 	
 	void Describe();

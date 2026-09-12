@@ -8705,6 +8705,11 @@ void CBasePlayer::InputSetFogController( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
+void CBasePlayer::SetFogController( CFogController *pFogController )
+{
+	m_Local.m_PlayerFog.m_hCtrl.Set( pFogController );
+}
+
 void CBasePlayer::InitFogController( void )
 {
 	// Setup with the default master controller.

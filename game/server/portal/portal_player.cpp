@@ -25,6 +25,8 @@
 #include "ai_basenpc.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "portal_base2d_shared.h"
+#include "portal_grabcontroller_shared.h"
+#include "tier0/icommandline.h"
 #include "player_pickup.h"	// for player pickup code
 #include "vphysics/player_controller.h"
 #include "datacache/imdlcache.h"
@@ -2617,7 +2619,7 @@ void CPortal_Player::Teleport( const Vector *newPosition, const QAngle *newAngle
 {
 	Vector oldOrigin = GetLocalOrigin();
 	QAngle oldAngles = GetLocalAngles();
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport( newPosition, newAngles, newVelocity );
 	m_angEyeAngles = pl.v_angle;
 
 	m_PlayerAnimState->Teleport( newPosition, newAngles, this );
@@ -2953,7 +2955,7 @@ bool CPortal_Player::ClientCommand( const CCommand &args )
 		CBaseEntity *pEntity = gEntList.FindEntityByName( NULL, "@glados" );
 		if ( pEntity )
 		{
-			pEntity->RunScript( args.GetCommandString(), "PingToolCommand" );
+			// VScript is not present in this port; the @glados script hook is omitted.
 		}
 		return true;
 	}
@@ -2998,23 +3000,7 @@ bool CPortal_Player::ClientCommand( const CCommand &args )
 
 		bool bBothPlayersHaveDLC = true;
 
-		if ( IsGameConsole() )
-		{
-			IMatchSession *pIMatchSession = g_pMatchFramework->GetMatchSession();
-			if ( pIMatchSession )
-			{
-				KeyValues *pFullSettings = pIMatchSession->GetSessionSettings();
-				if ( pFullSettings )
-				{
-					if ( !( ( pFullSettings->GetUint64( "members/machine0/dlcmask" ) & PORTAL2_DLCID_RETAIL_DLC1 ) &&
-						( XBX_GetNumGameUsers() > 1 ||
-						( pFullSettings->GetUint64( "members/machine1/dlcmask" ) & PORTAL2_DLCID_RETAIL_DLC1 ) ) ) )
-					{
-						bBothPlayersHaveDLC = false;
-					}
-				}
-			}
-		}
+		// Console-only DLC-mask gating is not applicable to this port.
 
 		// clear out any outstanding UI for both players
 		ClearClientUI();
@@ -3099,11 +3085,6 @@ bool CPortal_Player::ClientCommand( const CCommand &args )
 
 		// clear out any outstanding UI for both players
 		ClearClientUI();
-
-		if ( pEntity )
-		{
-			pEntity->RunScript( "RealTransitionFromMap()" );
-		}
 	}
 	else if ( FStrEq( pcmd, "select_map" ) )
 	{
@@ -3481,7 +3462,7 @@ void CPortal_Player::Event_Killed( const CTakeDamageInfo &info )
 		{
 			char szScriptCommand[ 64 ];
 			V_snprintf( szScriptCommand, sizeof( szScriptCommand ), "BotDeath(%i,%i)", ( GetTeamNumber() == TEAM_BLUE ? 2 : 1 ), info.GetDamageType() );
-			pEntity->RunScript( szScriptCommand, "PlayerDied" );
+			// VScript is not present in this port; the @glados script hook is omitted.
 		}
 
 		CPortalMPStats *pStats = GetPortalMPStats();
@@ -4084,7 +4065,7 @@ void CPortal_Player::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *p
 
 	if ( m_bClientCheckPVSDirty )
 	{
-		UTIL_SetClientCheckPVS( edict(), pvs, pvssize );
+		UTIL_SetClientVisibilityPVS( edict(), pvs, pvssize );
 		m_bClientCheckPVSDirty = false;
 	}
 }
@@ -4221,7 +4202,7 @@ void CPortal_Player::Taunt( const char *pchTauntForce /*=NULL*/, bool bAuto /*= 
 						{
 							char szScriptCommand[ 64 ];
 							V_snprintf( szScriptCommand, sizeof( szScriptCommand ), "CoopBotAnimation(%i,\"%s\")", ( GetTeamNumber() == TEAM_BLUE ? 2 : 1 ), m_szTauntForce.Get() );
-							pEntity->RunScript( szScriptCommand, "BotAnimationCommand" );
+							// VScript is not present in this port; the @glados script hook is omitted.
 						}
 
 						// On server notify all players that team taunt happened
@@ -4253,7 +4234,7 @@ void CPortal_Player::Taunt( const char *pchTauntForce /*=NULL*/, bool bAuto /*= 
 			{
 				char szScriptCommand[ 64 ];
 				V_snprintf( szScriptCommand, sizeof( szScriptCommand ), "CoopBotAnimation(%i,\"%s\")", ( GetTeamNumber() == TEAM_BLUE ? 2 : 1 ), m_szTauntForce.Get() );
-				pEntity->RunScript( szScriptCommand, "BotAnimationCommand" );
+				// VScript is not present in this port; the @glados script hook is omitted.
 			}
 		}
 	}
@@ -4401,7 +4382,7 @@ bool CPortal_Player::ValidateTeamTaunt( CPortal_Player *pInitiator, Vector &vIni
 
 		// Make sure position touches floor
 		trace_t tr;
-		CTraceFilterSkipTwoEntities filter( this, pInitiator );
+		CTraceFilterSkipTwoEntities filter( this, pInitiator, COLLISION_GROUP_NONE );
 		Ray_t ray;
 		ray.Init( vAcceptorPos + Vector( 0.0f, 0.0f, 1.0f ), vAcceptorPos + Vector( 0.0f, 0.0f, -ALLOWED_TEAM_TAUNT_Z_DIST ), GetPlayerMins(), GetPlayerMaxs() );
 		UTIL_TraceRay( ray, MASK_PLAYERSOLID, &filter, &tr );
@@ -4474,7 +4455,7 @@ void CPortal_Player::StartTaunt( void )
 			if ( pEntity )
 			{
 				int nTeam = GetTeamNumber();
-				pEntity->RunScript( UTIL_VarArgs( "PlayerTauntCamera(%i,\"%s\")", (nTeam == TEAM_BLUE) ? 2 : 1, m_szTauntForce.Get() ), "StartTaunt" );
+				// VScript is not present in this port; the @glados script hook is omitted.
 			}
 
 			UTIL_RecordAchievementEvent( UTIL_VarArgs( "ACH.TAUNT_CAMERA[%i]", PortalMPGameRules()->GetCoopSection() ), this );

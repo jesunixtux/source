@@ -12,4 +12,17 @@
 #pragma once
 #endif
 
+class CPortal_Player;
+
+// Stand-ins for the private Portal 2 gun-swap helpers. The cooperative
+// swap flow is not ported, so these are provided to keep call sites compiling.
+inline bool CheckSwapProximity( CPortal_Player *pPlayer, CPortal_Player *pOtherPlayer )
+{
+	return true;
+}
+
+inline void SwapPaintAndPortalGuns( CPortal_Player *pPlayer, CPortal_Player *pOtherPlayer )
+{
+}
+
 #endif // PAINT_SWAP_GUNS_H

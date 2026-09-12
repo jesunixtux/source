@@ -110,6 +110,8 @@ public:
 
 	void	OnExitedTractorBeam( void );
 
+	bool	IsProjectedWallBlockingTurretFromPlayer( CBasePlayer *pPlayer ) { return false; }
+
 private:
 
 	CHandle<CRopeKeyframe>	m_hRopes[ PORTAL_FLOOR_TURRET_NUM_ROPES ];

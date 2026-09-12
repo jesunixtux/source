@@ -835,6 +835,7 @@ public:
 	CNetworkVarEmbedded( CAttributeList,	m_AttributeList );
 #endif
 
+	virtual void SetFogController( CFogController *pFogController );
 	void InitFogController( void );
 	void InputSetFogController( inputdata_t &inputdata );
 

@@ -113,6 +113,10 @@ public:
 
 	bool	FVisible( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL );
 
+	bool	IsActive( void ) const { return m_bActive; }
+
+	void	TauntedByPlayer( CBasePlayer *pPlayer ) { }
+
 	Vector	EyeOffset( Activity nActivity ) 
 	{
 		Vector vForward;

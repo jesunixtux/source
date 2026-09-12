@@ -90,6 +90,7 @@ public:
 	virtual void LevelInitPreEntity();
 	virtual void LevelInitPostEntity();
 	CFogController *GetMasterFogController( void )			{ return m_pMasterController; }
+	void	SetMasterController( CFogController *pFogController )	{ m_pMasterController = pFogController; }
 
 private:
 
