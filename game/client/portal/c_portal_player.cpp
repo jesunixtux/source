@@ -25,8 +25,11 @@
 #include "input.h"
 #include "prediction.h"
 #include "choreoevent.h"
+#include "eventlist.h"
 #include "model_types.h"
 #include "materialsystem/imaterialvar.h"
+#include "materialsystem/imaterialsystem.h"
+#include "materialsystem/itexture.h"
 #include "portal_mp_gamerules.h"
 #include "collisionutils.h"
 #include "engine/ivdebugoverlay.h"
@@ -89,6 +92,32 @@ extern ConVar sv_player_funnel_gimme_dot;
 //#define ENABLE_PORTAL_EYE_INTERPOLATION_CODE
 
 extern ConVar sv_gravity;
+
+//-----------------------------------------------------------------------------
+// Purpose: Finds the world's water surface along a vertical line, for placing
+// the third person camera above water while drowning.
+//-----------------------------------------------------------------------------
+static float UTIL_FindWaterSurface( const Vector &vOrigin, float flMinZ, float flMaxZ )
+{
+	Vector vPos = vOrigin;
+	const float flStep = 8.0f;
+
+	// Walk from the top of the search range downward and return the first
+	// sample that is underground water (the air/water boundary).
+	if ( !( enginetrace->GetPointContents( vPos + Vector( 0, 0, flMaxZ - vOrigin.z ) ) & CONTENTS_WATER ) )
+	{
+		for ( float flZ = flMaxZ; flZ > flMinZ; flZ -= flStep )
+		{
+			vPos.z = flZ;
+			if ( enginetrace->GetPointContents( vPos ) & CONTENTS_WATER )
+			{
+				return flZ;
+			}
+		}
+	}
+
+	return flMinZ;
+}
 
 
 // -------------------------------------------------------------------------------- //
@@ -375,10 +404,10 @@ BEGIN_RECV_TABLE_NOBASE( CPortalPlayerShared, DT_PortalPlayerShared )
 END_RECV_TABLE()
 
 BEGIN_RECV_TABLE_NOBASE( PortalPlayerStatistics_t, DT_PortalPlayerStatistics )
-	RecvPropInt( RECVINFO( iNumPortalsPlaced ), 16, SPROP_UNSIGNED ),
-	RecvPropInt( RECVINFO( iNumStepsTaken ), 16, SPROP_UNSIGNED ),
-	RecvPropFloat( RECVINFO( fNumSecondsTaken ), 16, SPROP_NOSCALE ),
-	RecvPropFloat( RECVINFO( fDistanceTaken ), 16, SPROP_NOSCALE ),
+	RecvPropInt( RECVINFO_NOSIZE( iNumPortalsPlaced ), SPROP_UNSIGNED ),
+	RecvPropInt( RECVINFO_NOSIZE( iNumStepsTaken ), SPROP_UNSIGNED ),
+	RecvPropFloat( RECVINFO_NOSIZE( fNumSecondsTaken ), SPROP_NOSCALE ),
+	RecvPropFloat( RECVINFO_NOSIZE( fDistanceTaken ), SPROP_NOSCALE ),
 END_RECV_TABLE()
 
 IMPLEMENT_CLIENTCLASS_DT(C_Portal_Player, DT_Portal_Player, CPortal_Player)
@@ -573,10 +602,7 @@ C_Portal_Player::~C_Portal_Player( void )
 
 void C_Portal_Player::UpdateOnRemove( void )
 {
-	if( g_pGameRules->IsMultiplayer() )
-	{
-		RemoveRemoteSplitScreenViewPlayer( this );
-	}
+	// NOTE: split screen remote view players are not supported on this port.
 
 	// Stop the taunt.
 	if ( m_bWasTaunting )
@@ -1061,34 +1087,7 @@ bool C_Portal_Player::CreateMove( float flInputSampleTime, CUserCmd *pCmd )
 		}
 	}
 
-	// if we are in coop and not split screen, do PIP if the remote_view button is pressed
-	if ( GameRules()->IsMultiplayer() && !( IsSplitScreenPlayer() || GetSplitScreenPlayers().Count() > 0 ) )
-	{
-		bool bOtherPlayerIsTaunting = false;
-		bool bIsOtherPlayerRemoteViewTaunt = false;
-
-		if ( cl_auto_taunt_pip.GetBool() )
-		{
-			C_Portal_Player *pOtherPlayer = ToPortalPlayer( UTIL_OtherPlayer( this ) );
-			if ( pOtherPlayer )
-			{
-				bOtherPlayerIsTaunting = pOtherPlayer->m_Shared.InCond( PORTAL_COND_TAUNTING );
-				bIsOtherPlayerRemoteViewTaunt = pOtherPlayer->IsRemoteViewTaunt();
-			}
-		}
-
-		bool bRemoteViewPressed = ( pCmd->buttons & IN_REMOTE_VIEW ) != 0;
-
-		bool bUsingPIP = m_nTeamTauntState < TEAM_TAUNT_HAS_PARTNER && 
-						 ( ( bOtherPlayerIsTaunting && !bIsOtherPlayerRemoteViewTaunt ) || ( !bOtherPlayerIsTaunting && bRemoteViewPressed ) );
-		
-		// Hack: Suppress changes of the current system level during this transition (see vgui_int.cpp, VGui_OnSplitScreenStateChanged()).
-		g_bSuppressConfigSystemLevelDueToPIPTransitions = cl_suppress_config_system_level_changes_on_pip_transitions.GetBool();
-				
-		cl_enable_remote_splitscreen.SetValue( bUsingPIP );
-
-		g_bSuppressConfigSystemLevelDueToPIPTransitions = false;
-	}
+	// NOTE: PIP remote view (coop split screen) is not supported on this port.
 
 	static QAngle angMoveAngle( 0.0f, 0.0f, 0.0f );
 
@@ -1145,7 +1144,7 @@ bool C_Portal_Player::CreateMove( float flInputSampleTime, CUserCmd *pCmd )
 	pCmd->player_held_entity = ( m_hUseEntToSend ) ? ( m_hUseEntToSend->entindex() ) : ( 0 );
 	pCmd->held_entity_was_grabbed_through_portal = ( m_hUseEntThroughPortal ) ? ( m_hUseEntThroughPortal->entindex() ) : ( 0 );
 	
-	pCmd->command_acknowledgements_pending = pCmd->command_number - engine->GetLastAcknowledgedCommand();
+	pCmd->command_acknowledgements_pending = 0; // single player: nothing to acknowledge
 	pCmd->predictedPortalTeleportations = 0;
 	for( int i = 0; i != m_PredictedPortalTeleportations.Count(); ++i )
 	{
@@ -1466,7 +1465,7 @@ void C_Portal_Player::MoveHeldObjectOutOfPlayerEyes( void )
 
 	// HACK: This level does some odd toggling of vm mode/physics mode during
 	// a scene where this behavior isn't needed or desired.
-	if ( V_strcmp( "sp_a1_wakeup", engine->GetLevelNameShort() ) == 0 )
+	if ( V_strstr( engine->GetLevelName(), "sp_a1_wakeup" ) != NULL )
 		return;	
 
 	Assert ( player_held_object_collide_with_player.GetBool() == false );
@@ -1740,7 +1739,7 @@ int C_Portal_Player::DrawModel( int flags, const RenderableInstance_t &instance 
 		m_nLastFrameDrawn = gpGlobals->framecount;
 		m_nLastDrawnStudioFlags = flags;
 	}
-	return BaseClass::DrawModel( flags, instance );
+	return C_BaseEntity::DrawModel( flags, instance );
 }
 
 
@@ -1821,7 +1820,7 @@ void C_Portal_Player::PreThink( void )
 	BaseClass::PreThink();
 
 	// Cache the velocity before impact
-	if( engine->HasPaintmap() )
+	if( UTIL_Portal_HasPaintmap() )
 		m_PortalLocal.m_vPreUpdateVelocity = GetAbsVelocity();
 
 	// Update the painted power
@@ -1842,7 +1841,7 @@ void C_Portal_Player::PreThink( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool C_Portal_Player::Simulate( void )
+void C_Portal_Player::Simulate( void )
 {
 	BaseClass::Simulate();
 
@@ -2171,7 +2170,7 @@ void C_Portal_Player::CheckPlayerAboutToTouchPortal( void )
 			{
 				// stop the effect linger effect if it exists
 				m_FlingTrailEffect->SetOwner( NULL );
-				ParticleProp()->StopEmission( m_FlingTrailEffect, false, true, false );
+				ParticleProp()->StopEmission( m_FlingTrailEffect, false, true );
 				m_FlingTrailEffect = NULL;
 				m_bFlingTrailActive = false;
 				m_bFlingTrailPrePortalled = true;
@@ -2485,7 +2484,7 @@ void C_Portal_Player::ManageHeldObject()
 				GetGrabController().DetachEntity( false );
 				m_bForcingDrop = bOldForce;
 			}
-			UTIL_Remove( m_pHeldEntityClone );
+			m_pHeldEntityClone->Remove();
 			m_pHeldEntityClone = NULL;
 		}
 
@@ -2500,7 +2499,7 @@ void C_Portal_Player::ManageHeldObject()
 				GetGrabController().DetachEntity( false );
 				m_bForcingDrop = bOldForce;
 			}
-			UTIL_Remove( m_pHeldEntityThirdpersonClone );
+			m_pHeldEntityThirdpersonClone->Remove();
 			m_pHeldEntityThirdpersonClone = NULL;
 		}
 	}
@@ -2515,7 +2514,7 @@ void C_Portal_Player::ManageHeldObject()
 			{
 				if( !m_pHeldEntityClone->InitClone( pPlayerAttached, this ) )
 				{
-					UTIL_Remove( m_pHeldEntityClone );
+m_pHeldEntityClone->Remove();
 					m_pHeldEntityClone = NULL;
 				}
 			}
@@ -2528,7 +2527,7 @@ void C_Portal_Player::ManageHeldObject()
 			{
 				if( !m_pHeldEntityThirdpersonClone->InitClone( pPlayerAttached, this, false, m_pHeldEntityClone ) )
 				{
-					UTIL_Remove( m_pHeldEntityThirdpersonClone );
+m_pHeldEntityThirdpersonClone->Remove();
 					m_pHeldEntityThirdpersonClone = NULL;
 				}
 			}
@@ -2951,17 +2950,9 @@ void C_Portal_Player::CalcPortalView( Vector &eyeOrigin, QAngle &eyeAngles, floa
 		view->DriftPitch();
 	}
 
-	// TrackIR
-	if ( IsHeadTrackingEnabled() )
-	{
-		VectorCopy( EyePosition() + GetEyeOffset(), eyeOrigin );
-		VectorCopy( EyeAngles() + GetEyeAngleOffset(), eyeAngles );
-	}
-	else
-	{
-		VectorCopy( EyePosition(), eyeOrigin );
-		VectorCopy( EyeAngles(), eyeAngles );
-	}
+	// TrackIR is not available on this port.
+	VectorCopy( EyePosition(), eyeOrigin );
+	VectorCopy( EyeAngles(), eyeAngles );
 
 	Vector vRenderOrigin = GetRenderOrigin();
 
@@ -2980,8 +2971,8 @@ void C_Portal_Player::CalcPortalView( Vector &eyeOrigin, QAngle &eyeAngles, floa
 
 	if ( !prediction->InPrediction() )
 	{
-		GetViewEffects()->CalcShake();
-		GetViewEffects()->ApplyShake( eyeOrigin, eyeAngles, 1.0 );
+		// View-model shakes are driven by the base engine; GetViewEffects()
+		// does not exist on this port.
 	}
 
 	if( !prediction->InPrediction() )
@@ -3066,20 +3057,7 @@ void C_Portal_Player::GetToolRecordingState( KeyValues *msg )
 	BaseClass::GetToolRecordingState( msg );
 
 	if( m_bToolMode_EyeHasPortalled_LastRecord != m_bEyePositionIsTransformedByPortal )
-	{
-		BaseEntityRecordingState_t dummyState;
-		BaseEntityRecordingState_t *pState = (BaseEntityRecordingState_t *)msg->GetPtr( "baseentity", &dummyState );
-		pState->m_fEffects |= EF_NOINTERP; //If we interpolate, we'll be traversing an arbitrary line through the level at an undefined speed. That would be bad
-	}
-
 	m_bToolMode_EyeHasPortalled_LastRecord = m_bEyePositionIsTransformedByPortal;
-
-	//record if the eye is on the opposite side of the portal from the body
-	{
-		CameraRecordingState_t dummyState;
-		CameraRecordingState_t *pState = (CameraRecordingState_t *)msg->GetPtr( "camera", &dummyState );
-		pState->m_bPlayerEyeIsPortalled = m_bEyePositionIsTransformedByPortal;
-	}
 }
 
 void C_Portal_Player::SetAnimation( PLAYER_ANIM playerAnim )
@@ -3884,7 +3862,7 @@ bool C_Portal_Player::RenderScreenSpacePaintEffect( IMatRenderContext *pRenderCo
 		pRenderContext->ClearBuffers( true, false, false );
 		RenderableInstance_t instance;
 		instance.m_nAlpha = 255;
-		m_PaintScreenSpaceEffect->DrawModel( 1, instance );
+		m_PaintScreenSpaceEffect->DrawModel( 1 );
 
 		if( IsGameConsole() )
 		{

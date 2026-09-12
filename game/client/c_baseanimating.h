@@ -257,6 +257,11 @@ public:
 	virtual const Vector&			GetRenderOrigin( void );
 	virtual const QAngle&			GetRenderAngles( void );
 
+	// Portal 2 support: temporary override of the render origin (held objects).
+	void							SetRenderOriginOverride( const Vector &vec );
+	void							DisableRenderOriginOverride( void );
+	bool							IsUsingRenderOriginOverride( void ) { return m_vecRenderOriginOverride != vec3_invalid; }
+
 	virtual bool					GetSoundSpatialization( SpatializationInfo_t& info );
 
 	// Attachments.
@@ -495,6 +500,10 @@ public:
 
 	// Portal 2 support: marks this model as a client-side ragdoll.
 	bool							m_bClientSideRagdoll;
+
+	// Portal 2 support: lets the player temporarily override the render origin
+	// (used to move held objects out of the player's eyes).
+	Vector							m_vecRenderOriginOverride;
 
 	// Texture group to use
 	int								m_nSkin;

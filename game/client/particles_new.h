@@ -77,6 +77,9 @@ public:
 												 const char *pDebugName = NULL );
 	virtual int DrawModel( int flags );
 
+	// Portal 2 support: single player has no splitscreen users.
+	void SetDrawOnlyForSplitScreenUser( int nSlot ) {}
+
 	void DebugDrawBbox ( bool bCulled );
 
 	// CParticleCollection overrides

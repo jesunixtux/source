@@ -32,6 +32,9 @@ enum ParticleAttachment_t
 	MAX_PATTACH_TYPES,
 };
 
+// Portal 2 uses an "eyes" attachment type the base engine lacks.
+#define PATTACH_EYES_FOLLOW PATTACH_POINT_FOLLOW
+
 extern int GetAttachTypeFromString( const char *pszString );
 
 #define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)

@@ -435,6 +435,8 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 
 	m_bFiredWeapon = false;
 
+	m_flTimeLastTouchedGround = 0.0f;
+
 	m_nForceVisionFilterFlags = 0;
 
 	ListenForGameEvent( "base_player_teleported" );
@@ -1959,6 +1961,14 @@ bool C_BasePlayer::ShouldDrawThisPlayer()
 bool C_BasePlayer::IsLocalPlayer( void ) const
 {
 	return ( GetLocalPlayer() == this );
+}
+
+bool C_BasePlayer::IsLocalPlayer( const C_BaseEntity *pEntity )
+{
+	if ( !pEntity || !pEntity->IsPlayer() )
+		return false;
+
+	return static_cast< const C_BasePlayer * >( pEntity )->IsLocalPlayer();
 }
 
 int	C_BasePlayer::GetUserID( void )

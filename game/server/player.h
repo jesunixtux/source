@@ -1078,6 +1078,14 @@ private:
 	float					m_flSwimSoundTime;
 	Vector					m_vecLadderNormal;
 
+	// Portal 2 support: time the player last touched the ground.
+	float					m_flTimeLastTouchedGround;
+
+	float GetAirTime( void )
+	{
+		return m_flTimeLastTouchedGround == 0.0f ? 0.0f : gpGlobals->curtime - m_flTimeLastTouchedGround;
+	}
+
 	float					m_flFlashTime;
 	int						m_nDrownDmgRate;		// Drowning damage in points per second without air.
 

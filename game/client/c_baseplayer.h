@@ -219,6 +219,45 @@ public:
 
 
 	bool						IsLocalPlayer( void ) const;
+	static bool					IsLocalPlayer( const C_BaseEntity *pEntity );
+
+	// Portal 2 support: this port has no split screen.
+	bool						IsSplitScreenPlayer( void ) const { return false; }
+
+	// Portal 2 support: time spent in the air since last touching the ground.
+	float GetAirTime( void )
+	{
+		return m_flTimeLastTouchedGround == 0.0f ? 0.0f : gpGlobals->curtime - m_flTimeLastTouchedGround;
+	}
+
+	// Portal 2 support: splitscreen render suppression / render mode. Single
+	// player collapses to the local player only.
+	virtual bool ShouldSuppressForSplitScreenPlayer( int nSlot )
+	{
+		PlayerRenderMode_t nMode = GetPlayerRenderMode( nSlot );
+		return ( nMode == PLAYER_RENDER_FIRSTPERSON );
+	}
+	virtual PlayerRenderMode_t GetPlayerRenderMode( int nSlot )
+	{
+		C_BasePlayer *pSplitscreenPlayer = C_BasePlayer::GetLocalPlayer( nSlot );
+		if ( !pSplitscreenPlayer )
+			return PLAYER_RENDER_THIRDPERSON;
+
+		if ( pSplitscreenPlayer->IsObserver() )
+		{
+			if ( pSplitscreenPlayer->GetObserverTarget() != (CBaseEntity*)this )
+				return PLAYER_RENDER_THIRDPERSON;
+			if ( pSplitscreenPlayer->GetObserverMode() != OBS_MODE_IN_EYE )
+				return PLAYER_RENDER_THIRDPERSON;
+		}
+		else
+		{
+			if ( pSplitscreenPlayer != this )
+				return PLAYER_RENDER_THIRDPERSON;
+		}
+
+		return PLAYER_RENDER_FIRSTPERSON;
+	}
 
 	// Global/static methods
 	virtual void				ThirdPersonSwitch( bool bThirdperson );
@@ -511,8 +550,6 @@ private:
 	int				m_iBonusProgress;
 	int				m_iBonusChallenge;
 
-	CInterpolatedVar< Vector >	m_iv_vecViewOffset;
-
 	// Not replicated
 	Vector			m_vecWaterJumpVel;
 	float			m_flWaterJumpTime;  // used to be called teleport_time
@@ -520,8 +557,14 @@ private:
 
 	float			m_flSwimSoundTime;
 	Vector			m_vecLadderNormal;
-	
+
+	// Portal 2 support: time the player last touched the ground.
+	float			m_flTimeLastTouchedGround;
+
+protected:
 	QAngle			m_vecOldViewAngles;
+
+	CInterpolatedVar< Vector >	m_iv_vecViewOffset;
 
 	bool			m_bWasFrozen;
 	int				m_flPhysics;
@@ -650,6 +693,9 @@ public:
 	static void RecvProxy_LocalOriginZ( const CRecvProxyData *pData, void *pStruct, void *pOut );
 	static void RecvProxy_NonLocalOriginXY( const CRecvProxyData *pData, void *pStruct, void *pOut );
 	static void RecvProxy_NonLocalOriginZ( const CRecvProxyData *pData, void *pStruct, void *pOut );
+
+	// Splitscreen slot of this player (single player port: always 0).
+	int GetSplitScreenPlayerSlot() const { return 0; }
 
 private:
 	//HACK: always contains the last origin we received through C_BasePlayer::RecvProxy_LocalOriginXY() & C_BasePlayer::RecvProxy_LocalOriginZ(). Intended to fix bug 85693 without as small a scale change as possible

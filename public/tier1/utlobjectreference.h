@@ -65,6 +65,11 @@ public:
 		return m_pObject;
 	}
 
+	FORCEINLINE bool IsValid() const
+	{
+		return m_pObject != NULL;
+	}
+
 	FORCEINLINE operator T*()
 	{
 		return m_pObject;

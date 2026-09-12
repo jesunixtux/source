@@ -678,6 +678,8 @@ C_BaseAnimating::C_BaseAnimating() :
 	m_builtRagdoll = false;
 	m_hitboxBoneCacheHandle = 0;
 	m_nHitboxSet = 0;
+	m_bClientSideRagdoll = false;
+	m_vecRenderOriginOverride = vec3_invalid;
 
 	int i;
 	for ( i = 0; i < ARRAYSIZE( m_flEncodedController ); i++ )
@@ -4347,10 +4349,34 @@ const Vector& C_BaseAnimating::GetRenderOrigin( void )
 	{
 		return m_pRagdoll->GetRagdollOrigin();
 	}
+	else if ( !m_bClientSideRagdoll && m_vecRenderOriginOverride != vec3_invalid )
+	{
+		// Portal 2 allows the player to override the render origin to move held
+		// objects out of the player's eyes.
+		return m_vecRenderOriginOverride;
+	}
 	else
 	{
 		return BaseClass::GetRenderOrigin();	
 	}
+}
+
+void C_BaseAnimating::SetRenderOriginOverride( const Vector &vec )
+{
+	if( m_vecRenderOriginOverride != vec )
+	{
+		InvalidateBoneCache();
+	}
+	m_vecRenderOriginOverride = vec;
+}
+
+void C_BaseAnimating::DisableRenderOriginOverride( void )
+{
+	if( m_vecRenderOriginOverride != vec3_invalid )
+	{
+		InvalidateBoneCache();
+	}
+	m_vecRenderOriginOverride = vec3_invalid;
 }
 
 const QAngle& C_BaseAnimating::GetRenderAngles( void )

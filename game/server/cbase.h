@@ -33,6 +33,7 @@
 #include "tier0/dbg.h"
 #include "tier0/platform.h"
 #include "basetypes.h"
+#include "splitscreen.h"
 
 // tier 1
 #include "tier1/strtools.h"

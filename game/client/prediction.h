@@ -64,6 +64,9 @@ public:
 		return m_flIdealPitch;
 	}
 
+	// Portal 2 support: number of the last command acknowledged by the server.
+	int				GetLastAcknowledgedCommandNumber( void ) const { return m_nServerCommandsAcknowledged; }
+
 	// The engine needs to be able to access a few predicted values
 	virtual void	GetViewOrigin( Vector& org );
 	virtual void	SetViewOrigin( Vector& org );

@@ -575,6 +575,7 @@ CBasePlayer::CBasePlayer( )
 	pl.replay = false;
 	pl.frags = 0;
 	pl.deaths = 0;
+	m_flTimeLastTouchedGround = 0.0f;
 
 	m_szNetname[0] = '\0';
 
@@ -3874,6 +3875,11 @@ void CBasePlayer::PreThink(void)
 	if ( !( GetFlags() & FL_ONGROUND ) )
 	{
 		m_Local.m_flFallVelocity = -GetAbsVelocity().z;
+	}
+
+	if ( GetGroundEntity() )
+	{
+		m_flTimeLastTouchedGround = gpGlobals->curtime;
 	}
 
 	// track where we are in the nav mesh

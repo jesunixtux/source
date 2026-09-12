@@ -24,6 +24,7 @@ struct studiohdr_t;
 #include <utlvector.h>
 
 #include <const.h>
+#include "splitscreen.h"
 
 #include "string_t.h"
 

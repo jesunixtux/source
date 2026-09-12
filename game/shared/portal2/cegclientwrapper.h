@@ -47,14 +47,19 @@ namespace CEG
 #define CEG_GCV_START()			
 #define CEG_GCV_FINISH()		
 
-#define CEG_PROTECT_FUNCTION( _func )					static const int _func##_CEG_PROTECTED = 0
-#define CEG_PROTECT_MEMBER_FUNCTION( _class_method )	static const int _class_method##_CEG_PROTECTED = 0
-#define CEG_PROTECT_STATIC_MEMBER_FUNCTION( _name, _func )	static const int _name##_CEG_PROTECTED = 0
-#define CEG_PROTECT_VIRTUAL_FUNCTION( _name )			static const int _name##_CEG_PROTECTED = 0
+// The port's call sites omit the trailing ';' (the licensed CEG library emits a
+// full statement), so these must expand to nothing rather than to a declaration.
+#define CEG_PROTECT_FUNCTION( _func )
+#define CEG_PROTECT_MEMBER_FUNCTION( _class_method )
+#define CEG_PROTECT_STATIC_MEMBER_FUNCTION( _name, _func )
+#define CEG_PROTECT_VIRTUAL_FUNCTION( _name )
 
 #define CEG_GET_CONSTANT_VALUE( _constant )	( CEG::_constant )
 
 #define RANDOM_CEG_TEST_SECRET()			((void)0)
-#define RANDOM_CEG_TEST_SECRET_PERIOD( _first, _period )	((void)0)
+#define RANDOM_CEG_TEST_SECRET_PERIOD( _first, _period )
+
+// SteamWorks is not linked into this build.
+#define STEAMWORKS_TESTSECRETALWAYS()
 
 #endif // CEGCLIENTWRAPPER_H

@@ -300,6 +300,16 @@ public:
 	virtual bool					IgnoresZBuffer( void ) const;
 	virtual const model_t			*GetModel( void ) const;
 	virtual int						DrawModel( int flags );
+
+	// Portal 2 support: render-instance-aware overload and fast-path render hook.
+	// Deliberately NON-virtual so the IClientRenderable vtable/ABI the engine
+	// uses is left untouched.
+	int							DrawModel( int flags, const RenderableInstance_t &instance );
+	virtual IClientModelRenderable *GetClientModelRenderable();
+
+	// Portal 2 support: VM view-model RTT rendering. This port has no separate
+	// view-model target, so it is a no-op.
+	void						RenderWithViewModels( bool bEnable ) {}
 	virtual void					ComputeFxBlend( void );
 	virtual int						GetFxBlend( void );
 	virtual bool					LODTest() { return true; }   // NOTE: UNUSED
@@ -401,6 +411,10 @@ public:
 	virtual void					OnRestore();
 	// capabilities for save/restore
 	virtual int						ObjectCaps( void );
+
+	// Portal 2 support: server caps are networked down in P2; this port never
+	// sends them, so effectively none are exposed.
+	int							GetServerObjectCaps( void ) { return 0; }
 	// only overload these if you have special data to serialize
 	virtual int						Save( ISave &save );
 	virtual int						Restore( IRestore &restore );

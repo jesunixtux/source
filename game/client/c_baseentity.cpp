@@ -2007,6 +2007,24 @@ int C_BaseEntity::DrawModel( int flags )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Portal 2 render-instance aware overload. Non-virtual, so the
+// IClientRenderable vtable the engine uses is preserved.
+//-----------------------------------------------------------------------------
+int C_BaseEntity::DrawModel( int flags, const RenderableInstance_t &instance )
+{
+	return DrawModel( flags );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fast-path model render hook (Portal 2). The base class builds no
+// fast-path data, so it contributes nothing to the render list.
+//-----------------------------------------------------------------------------
+IClientModelRenderable *C_BaseEntity::GetClientModelRenderable()
+{
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Setup the bones for drawing
 //-----------------------------------------------------------------------------
 bool C_BaseEntity::SetupBones( matrix3x4_t *pBoneToWorldOut, int nMaxBones, int boneMask, float currentTime )
