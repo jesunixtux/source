@@ -792,7 +792,7 @@ int CEngineTrace::GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *p
 			}
 			pBrushSideInfoOut[i].plane.normal = normal;
 			pBrushSideInfoOut[i].plane.dist = dist;
-			pBrushSideInfoOut[i].plane.type = ( i < 3 ) ? i : ( i - 3 + 3 );
+			pBrushSideInfoOut[i].plane.type = i % 3;
 			pBrushSideInfoOut[i].plane.signbits = SignbitsForPlane( &pBrushSideInfoOut[i].plane );
 			pBrushSideInfoOut[i].bevel = 0;
 			pBrushSideInfoOut[i].thin = 0;
