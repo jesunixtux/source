@@ -2795,6 +2795,22 @@ void C_BaseEntity::OnLatchInterpolatedVariables( int flags )
 	}
 }
 
+float CBaseEntity::GetEffectiveInterpolationCurTime( float currentTime )
+{
+	if ( GetPredictable() || IsClientCreated() )
+	{
+		C_BasePlayer *localplayer = C_BasePlayer::GetLocalPlayer();
+		if ( localplayer )
+		{
+			currentTime = localplayer->GetFinalPredictedTime();
+			currentTime -= TICK_INTERVAL;
+			currentTime += ( gpGlobals->interpolation_amount * TICK_INTERVAL );
+		}
+	}
+
+	return currentTime;
+}
+
 int CBaseEntity::BaseInterpolatePart1( float &currentTime, Vector &oldOrigin, QAngle &oldAngles, Vector &oldVel, int &bNoMoreChanges )
 {
 	// Don't mess with the world!!!
