@@ -36,6 +36,13 @@ class CBaseClientRenderTargets : public IClientRenderTargets
 public:
 	// Interface called by engine during material system startup.
 	virtual void InitClientRenderTargets ( IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig, int iWaterTextureSize = 1024, int iCameraTextureSize = 256 );
+
+	// Portal 2 calls this Setup... instead of Init...
+	void SetupClientRenderTargets( IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig, int iWaterTextureSize = 1024, int iCameraTextureSize = 256 )
+	{
+		InitClientRenderTargets( pMaterialSystem, pHardwareConfig, iWaterTextureSize, iCameraTextureSize );
+	}
+
 	// Shutdown all custom render targets here.
 	virtual void ShutdownClientRenderTargets ( void );
 

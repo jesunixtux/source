@@ -53,6 +53,7 @@ class IMatRenderContext;
 class ICallQueue;
 struct MorphWeight_t;
 class IFileList;
+struct ShaderStencilState_t;
 
 
 //-----------------------------------------------------------------------------
@@ -1398,6 +1399,11 @@ public:
 	virtual void SetStencilReferenceValue(int ref) = 0;
 	virtual void SetStencilTestMask(uint32 msk) = 0;
 	virtual void SetStencilWriteMask(uint32 msk) = 0;
+
+	// Portal 2 convenience helper. Implemented as a non-virtual helper so the
+	// material-system vtable is not disturbed; runtime stencil setup will need
+	// to be wired to the individual state calls above for correctness.
+	void SetStencilState( const ShaderStencilState_t &state ) {}
 	virtual void ClearStencilBufferRectangle(int xmin, int ymin, int xmax, int ymax,int value) =0;	
 
 	virtual void SetRenderTargetEx( int nRenderTargetID, ITexture *pTexture ) = 0;

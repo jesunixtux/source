@@ -90,6 +90,9 @@ public:
 		return static_cast< C_Portal_Player* >( C_BasePlayer::GetLocalPlayer( nSlot ) );
 	}
 
+	// Single player port has no attached splitscreen players.
+	bool HasAttachedSplitScreenPlayers( void ) const { return false; }
+
 	virtual Vector GetThirdPersonViewPosition( void );
 	virtual const Vector& GetRenderOrigin( void );
 	virtual const QAngle& GetRenderAngles();

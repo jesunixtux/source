@@ -81,8 +81,8 @@ public:
 
 	void SetCanFirePortal1( bool bCanFire = true );
 	void SetCanFirePortal2( bool bCanFire = true );
-	float CanFirePortal1( void ) { return m_bCanFirePortal1; }
-	float CanFirePortal2( void ) { return m_bCanFirePortal2; }
+	bool CanFirePortal1( void ) const { return m_bCanFirePortal1; }
+	bool CanFirePortal2( void ) const { return m_bCanFirePortal2; }
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -98,6 +98,8 @@ public:
 	void InputChargePortal2( inputdata_t &inputdata );
 	void FirePortal1( inputdata_t &inputdata );
 	void FirePortal2( inputdata_t &inputdata );
+	void FirePortal1( void );
+	void FirePortal2( void );
 	void FirePortalDirection1( inputdata_t &inputdata );
 	void FirePortalDirection2( inputdata_t &inputdata );
 
@@ -114,6 +116,8 @@ public:
 	virtual float GetFireRate( void ) { return 0.7; };
 	void WeaponIdle( void );
 	void UseDeny( void );
+	void ResetRefireTime( void );
+	void PostAttack( void );
 
 	PortalWeaponID GetWeaponID( void ) const { return WEAPON_PORTALGUN; }
 

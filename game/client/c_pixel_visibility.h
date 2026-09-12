@@ -45,6 +45,12 @@ float StandardGlowBlend( const pixelvis_queryparams_t &params, pixelvis_handle_t
 
 void PixelVisibility_ShiftVisibilityViews( int iSourceViewID, int iDestViewID ); //mainly needed by portal mod to avoid a pop in visibility when teleporting the player
 
+// Portal 2 passes an (ignored) splitscreen player slot.
+inline void PixelVisibility_ShiftVisibilityViews( int nPlayerSlot, int iSourceViewID, int iDestViewID )
+{
+	PixelVisibility_ShiftVisibilityViews( iSourceViewID, iDestViewID );
+}
+
 void PixelVisibility_EndCurrentView();
 void PixelVisibility_EndScene();
 float GlowSightDistance( const Vector &glowOrigin, bool bShouldTrace );

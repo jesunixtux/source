@@ -2110,6 +2110,17 @@ typedef enum
 #ifdef PORTAL2
 	// Append target-specific activities so existing activity numbers stay stable.
 	ACT_VM_PICKUP_IDLE,
+
+	// Portal 2 multiplayer/player activities used by the portalgun and player anim state.
+	ACT_MP_RUN_SPEEDPAINT,
+	ACT_MP_RUN_SPEEDPAINT_PRIMARY,
+	ACT_MP_DROWNING_PRIMARY,
+	ACT_MP_LONG_FALL,
+	ACT_MP_LONG_FALL_PRIMARY,
+	ACT_MP_TRACTORBEAM_FLOAT,
+	ACT_MP_TRACTORBEAM_FLOAT_PRIMARY,
+	ACT_MP_DEATH_CRUSH,
+	ACT_MP_DEATH_CRUSH_PRIMARY,
 #endif
 
 	// this is the end of the global activities, private per-monster activities start here.

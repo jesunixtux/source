@@ -401,6 +401,11 @@ public:
 	virtual void MarkAsDrawn() = 0;
 
 	virtual unsigned ComputeMemoryUsed() = 0;
+
+	// Portal 2 cached per-frame mesh helpers. Non-virtual stubs; the engine does
+	// not expose these in this build, so dynamic mesh caching is disabled.
+	ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return NULL; }
+	void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
 };
 
 

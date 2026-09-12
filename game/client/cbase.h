@@ -56,4 +56,10 @@ struct studiohdr_t;
 #include "worldsize.h"
 #include "engine/ivmodelinfo.h"
 
+// Portal 2 material precache macros. Base Source has no equivalent, so they
+// expand to a no-op static function. Materials are still loaded on demand.
+#define PRECACHE_REGISTER_BEGIN( scope, name ) static void name##_PrecacheStub() {
+#define PRECACHE( type, path ) (void)0;
+#define PRECACHE_REGISTER_END() }
+
 #endif // CBASE_H
