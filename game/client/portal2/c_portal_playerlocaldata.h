@@ -46,8 +46,8 @@ public:
 	Vector					m_OldStickNormal;
 	Vector					m_vLocalUp;
 	Vector					m_vStickRotationAxis;
-	int						m_InAirState;
-	int						m_nStickCameraState;
+	InAirState				m_InAirState;
+	StickCameraState		m_nStickCameraState;
 	int						m_nTractorBeamCount;
 	Quaternion				m_qQuaternionPunch;
 	float					m_flAirInputScale;

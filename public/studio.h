@@ -2321,7 +2321,8 @@ struct studiohdr_t
 	int					GetSharedPoseParameter( int iSequence, int iLocalPose ) const;
 
 	int					surfacepropindex;
-	inline char * const pszSurfaceProp( void ) const { return ((char *)this) + surfacepropindex; }
+	inline char * const	pszSurfaceProp( void ) const { return ((char *)this) + surfacepropindex; }
+	inline int			GetSurfaceProp( void ) const { return surfacepropindex; }
 
 	// Key values
 	int					keyvalueindex;

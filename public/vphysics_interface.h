@@ -1085,6 +1085,10 @@ struct convertconvexparams_t
 	float		dragAreaEpsilon;
 	CPhysConvex *pForcedOuterHull;
 
+	// Portal 2 extensions
+	bool		bUseFastApproximateInertiaTensor;
+	bool		bBuildAABBTree;
+
 	void Defaults()
 	{
 		dragAreaEpsilon = 0.25f; // 0.5in x 0.5in square
@@ -1092,6 +1096,8 @@ struct convertconvexparams_t
 		buildDragAxisAreas = false;
 		buildOptimizedTraceTables = false;
 		pForcedOuterHull = NULL;
+		bUseFastApproximateInertiaTensor = false;
+		bBuildAABBTree = false;
 	}
 };
 

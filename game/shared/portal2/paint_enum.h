@@ -9,6 +9,7 @@
 
 enum PaintPowerType
 {
+	INVALID_PAINT_POWER = -1,
 	SPEED_POWER = 0,
 	BOUNCE_POWER,
 	CLEANSER_POWER,

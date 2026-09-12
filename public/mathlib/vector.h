@@ -143,6 +143,17 @@ public:
 				z > -tolerance && z < tolerance);
 	}
 
+	// Return the axis index (0=x, 1=y, 2=z) of the component with largest magnitude.
+	int LargestComponent() const
+	{
+		float ax = fabsf( x );
+		float ay = fabsf( y );
+		float az = fabsf( z );
+		if ( ax >= ay && ax >= az ) return 0;
+		if ( ay >= ax && ay >= az ) return 1;
+		return 2;
+	}
+
 	vec_t	NormalizeInPlace();
 	Vector	Normalized() const;
 	bool	IsLengthGreaterThan( float val ) const;

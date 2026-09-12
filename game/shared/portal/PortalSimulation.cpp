@@ -7,6 +7,7 @@
 
 
 #include "cbase.h"
+#include "portal2/cegclientwrapper.h"
 #include "portalsimulation.h"
 #include "vphysics_interface.h"
 #include "physics.h"

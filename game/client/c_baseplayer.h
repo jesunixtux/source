@@ -117,7 +117,8 @@ public:
 	};
 	unsigned int	m_afPhysicsFlags;
 	bool			HasPhysicsFlag( unsigned int flag ) { return ( m_afPhysicsFlags & flag ) != 0; }
-	Vector			Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
+	Vector				Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
+	Vector				Left( void ) { Vector right; AngleVectors( EyeAngles(), NULL, &right, NULL ); return -right; }
 	float			PredictedServerTime( void ) const { return gpGlobals->curtime; }
 
 	void			ForceButtons( int nButtons ) { m_nButtons |= nButtons; }
@@ -158,6 +159,9 @@ public:
 
 	virtual Vector			Weapon_ShootPosition();
 	virtual void			Weapon_DropPrimary( void ) {}
+
+	// Portal 2: check if an object can be picked up. Client prediction uses a permissive default.
+	static bool				CanPickupObject( CBaseEntity *pObject, float flMassLimit, float flSizeLimit ) { return true; }
 
 	virtual Vector			GetAutoaimVector( float flScale );
 	void					SetSuitUpdate(const char *name, int fgroup, int iNoRepeat);

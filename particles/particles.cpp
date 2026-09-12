@@ -1647,7 +1647,7 @@ bool CParticleCollection::CheckIfOperatorShouldRun(
 //-----------------------------------------------------------------------------
 // Restarts a particle system
 //-----------------------------------------------------------------------------
-void CParticleCollection::Restart()
+void CParticleCollection::Restart( int nFlags )
 {
 	int i;
 	int nEmitterCount = m_pDef->m_Emitters.Count();

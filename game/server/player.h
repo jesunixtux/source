@@ -405,6 +405,7 @@ public:
 
 	bool					HasPhysicsFlag( unsigned int flag ) { return (m_afPhysicsFlags & flag) != 0; }
 	Vector					Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
+	Vector					Left( void ) { Vector right; AngleVectors( EyeAngles(), NULL, &right, NULL ); return -right; }
 
 	// Weapon stuff
 	virtual Vector			Weapon_ShootPosition( );
@@ -595,6 +596,10 @@ public:
 	// say/sayteam allowed?
 	virtual bool		CanHearAndReadChatFrom( CBasePlayer *pPlayer ) { return true; }
 	virtual bool		CanSpeak( void ) { return true; }
+
+	// Portal 2: check if an object can be picked up. Server implementation can
+	// inspect vphysics mass/collision bounds; base version allows pickup.
+	static bool		CanPickupObject( CBaseEntity *pObject, float flMassLimit, float flSizeLimit ) { return true; }
 
 	audioparams_t			&GetAudioParams() { return m_Local.m_audio; }
 

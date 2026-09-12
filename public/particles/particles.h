@@ -1031,8 +1031,15 @@ class CParticleCollection
 public:
 	~CParticleCollection( void );
 
+	// Restart flags
+	enum
+	{
+		RESTART_NORMAL = 0,
+		RESTART_RESET_AND_MAKE_SURE_EMITS_HAPPEN = 1,
+	};
+
 	// Restarts the particle collection, stopping all non-continuous emitters
-	void Restart();
+	void Restart( int nFlags = RESTART_NORMAL );
 
 	// compute bounds from particle list
 	void RecomputeBounds( void );
@@ -2006,6 +2013,9 @@ public:
 	// Is the particle system rendered on the viewmodel?
 	bool IsViewModelEffect() const;
 
+	// Portal 2: whether this effect should be rendered through the leaf system.
+	void SetDrawThroughLeafSystem( bool bDrawThroughLeafSystem ) { m_bDrawThroughLeafSystem = bDrawThroughLeafSystem; }
+
 	// Used to iterate over all particle collections using the same def
 	CParticleCollection *FirstCollection();
 
@@ -2058,6 +2068,7 @@ private:
 	float m_flCullFillCost;
 	int m_nCullControlPoint;
 	int m_nRetireCheckFrame;
+	bool m_bDrawThroughLeafSystem;
 
 	// Default attribute values
 	Color m_ConstantColor;
@@ -2144,6 +2155,7 @@ inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 	m_flCullRadius = 0.0f;
 	m_flCullFillCost = 1.0f;
 	m_nRetireCheckFrame = 0;
+	m_bDrawThroughLeafSystem = true;
 }
 
 inline CParticleSystemDefinition::~CParticleSystemDefinition( void )

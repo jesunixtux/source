@@ -15,6 +15,7 @@
 #include "basehandle.h"
 #include "utlvector.h" //need CUtlVector for IEngineTrace::GetBrushesIn*()
 #include "mathlib/vector4d.h"
+#include "vphysics/virtualmesh.h"
 
 class Vector;
 class IHandleEntity;
@@ -243,6 +244,9 @@ public:
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<int> *pOutput, int iContentsMask = 0xFFFFFFFF ) = 0;
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask = 0xFFFFFFFF, int cmodelIndex = 0 ) = 0;
 
+	// Portal 2: finds brushes within a collideable's bounding box.
+	virtual void GetBrushesInCollideable( ICollideable *pCollideable, CBrushQuery &BrushQuery ) = 0;
+
 	//Creates a CPhysCollide out of all displacements wholly or partially contained in the specified AABB
 	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs ) = 0;
 
@@ -254,6 +258,9 @@ public:
 
 	// Walks bsp to find the leaf containing the specified point
 	virtual int GetLeafContainingPoint( const Vector &ptTest ) = 0;
+
+	// Portal 2: collect displacement mesh lists overlapping an AABB.
+	virtual int GetMeshesFromDisplacementsInAABB( const Vector &vMins, const Vector &vMaxs, virtualmeshlist_t *pMeshes, int nMaxMeshes ) = 0;
 };
 
 

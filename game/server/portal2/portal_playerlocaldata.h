@@ -46,8 +46,8 @@ public:
 	Vector					m_OldStickNormal;			// Surface normal we stuck to before the current one
 	Vector					m_vLocalUp;					// Up locally (absolute world up)
 	Vector					m_vStickRotationAxis;		// Rotation axis for the current stick
-	int						m_InAirState;				// Current state of being in the air
-	int						m_nStickCameraState;		// Current stick camera state
+	InAirState				m_InAirState;				// Current state of being in the air
+	StickCameraState		m_nStickCameraState;		// Current stick camera state
 	int						m_nTractorBeamCount;		// How many tractor beams we're currently in
 	Quaternion				m_qQuaternionPunch;			// View punch applied as a quaternion
 	float					m_flAirInputScale;			// Scaling of air movement input

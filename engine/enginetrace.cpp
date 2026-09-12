@@ -114,6 +114,12 @@ public:
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<int> *pOutput, int iContentsMask = 0xFFFFFFFF );
 	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask = 0xFFFFFFFF, int cmodelIndex = 0 );
 
+	// Portal 2: finds brushes within a collideable's bounding box.
+	virtual void GetBrushesInCollideable( ICollideable *pCollideable, CBrushQuery &BrushQuery );
+
+	// Portal 2: collect displacement mesh lists overlapping an AABB.
+	virtual int GetMeshesFromDisplacementsInAABB( const Vector &vMins, const Vector &vMaxs, virtualmeshlist_t *pMeshes, int nMaxMeshes );
+
 	//Creates a CPhysCollide out of all displacements wholly or partially contained in the specified AABB
 	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs );
 
@@ -640,6 +646,25 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 	BrushQuery.AdoptBrushes( pData, brushIndices.Count(), maxSides );
 }
 
+void CEngineTrace::GetBrushesInCollideable( ICollideable *pCollideable, CBrushQuery &BrushQuery )
+{
+	if ( !pCollideable )
+	{
+		BrushQuery.ReleasePrivateData();
+		return;
+	}
+
+	Vector vMins, vMaxs;
+	pCollideable->WorldSpaceSurroundingBounds( &vMins, &vMaxs );
+
+	// Map collision model index to cmodel index (world is 0).
+	int cmodelIndex = pCollideable->GetCollisionModelIndex() - 1;
+	if ( cmodelIndex < 0 )
+		cmodelIndex = 0;
+
+	GetBrushesInAABB( vMins, vMaxs, BrushQuery, MASK_SOLID_BRUSHONLY | CONTENTS_PLAYERCLIP | CONTENTS_MONSTERCLIP, cmodelIndex );
+}
+
 
 
 CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs )
@@ -752,6 +777,57 @@ CPhysCollide* CEngineTrace::GetCollidableFromDisplacementsInAABB( const Vector& 
 	physcollision->PolysoupDestroy( pDispCollideSoup );
 
 	return pCollide;
+}
+
+int CEngineTrace::GetMeshesFromDisplacementsInAABB( const Vector &vMins, const Vector &vMaxs, virtualmeshlist_t *pMeshes, int nMaxMeshes )
+{
+	if ( !pMeshes || nMaxMeshes <= 0 )
+		return 0;
+
+	CCollisionBSPData *pBSPData = GetCollisionBSPData();
+	if ( !pBSPData || !g_pDispCollTrees )
+		return 0;
+
+	int *pLeafList = (int *)stackalloc( pBSPData->numleafs * sizeof( int ) );
+	int iLeafCount = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pBSPData->numleafs, NULL );
+
+	int iMeshCount = 0;
+	TraceInfo_t *pTraceInfo = BeginTrace();
+
+	for ( int i = 0; i < iLeafCount; ++i )
+	{
+		int iLeaf = pLeafList[i];
+		if ( iLeaf < 0 || iLeaf >= pBSPData->numleafs )
+			continue;
+
+		cleaf_t &curLeaf = pBSPData->map_leafs[iLeaf];
+
+		for ( int k = 0; k < curLeaf.dispCount; ++k )
+		{
+			int dispIndex = pBSPData->map_dispList[curLeaf.dispListStart + k];
+			CDispCollTree *pDispTree = &g_pDispCollTrees[dispIndex];
+
+			int count = 0;
+			uint16 *pCounters = NULL;
+			if ( !pTraceInfo->Visit( pDispTree->m_iCounter, count, pCounters ) )
+				continue;
+
+			if ( !IsBoxIntersectingBox( vMins, vMaxs, pDispTree->m_mins, pDispTree->m_maxs ) )
+				continue;
+
+			if ( iMeshCount >= nMaxMeshes )
+			{
+				EndTrace( pTraceInfo );
+				return iMeshCount;
+			}
+
+			pDispTree->GetVirtualMeshList( &pMeshes[iMeshCount] );
+			++iMeshCount;
+		}
+	}
+
+	EndTrace( pTraceInfo );
+	return iMeshCount;
 }
 
 int CEngineTrace::GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize )

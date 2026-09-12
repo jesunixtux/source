@@ -51,4 +51,7 @@ inline bool VGui_IsSplitScreenPIP()
 #define AddRemoteSplitScreenViewPlayer( entity )
 #define RemoveRemoteSplitScreenViewPlayer( entity )
 
+// This port supports only one local player.
+#define FOR_EACH_VALID_SPLITSCREEN_PLAYER( slot ) for ( int slot = 0; slot < 1; ++slot )
+
 #endif // SPLITSCREEN_H

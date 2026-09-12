@@ -1699,6 +1699,47 @@ inline VMatrix SetupMatrixOrgAngles(const Vector &origin, const QAngle &vAngles)
 	return mRet;
 }
 
+//-----------------------------------------------------------------------------
+// Build a rotation matrix that rotates vFromAxis into vToAxis.
+//-----------------------------------------------------------------------------
+inline VMatrix SetupMatrixAxisToAxisRot( const Vector &vFromAxis, const Vector &vToAxis )
+{
+	Vector vFrom = vFromAxis;
+	Vector vTo = vToAxis;
+	vFrom.NormalizeInPlace();
+	vTo.NormalizeInPlace();
+
+	float flDot = vFrom.Dot( vTo );
+
+	// Axis aligned?
+	if ( flDot >= 1.0f - FLT_EPSILON )
+	{
+		VMatrix mRet;
+		mRet.Identity();
+		return mRet;
+	}
+
+	Vector vAxis;
+	if ( flDot <= -1.0f + FLT_EPSILON )
+	{
+		// 180 degree rotation - pick a perpendicular axis
+		vAxis = vFrom.Cross( Vector( 0.0f, 0.0f, 1.0f ) );
+		if ( vAxis.IsZero( 1e-6f ) )
+		{
+			vAxis = vFrom.Cross( Vector( 0.0f, 1.0f, 0.0f ) );
+		}
+		vAxis.NormalizeInPlace();
+	}
+	else
+	{
+		vAxis = vFrom.Cross( vTo );
+		vAxis.NormalizeInPlace();
+	}
+
+	float flAngle = acosf( flDot );
+	return SetupMatrixAxisRot( vAxis, RAD2DEG( flAngle ) );
+}
+
 #endif // VECTOR_NO_SLOW_OPERATIONS
 
 
