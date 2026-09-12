@@ -23,6 +23,33 @@ struct matrix3x4_t;
 extern void DefaultRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs );
 
 //-----------------------------------------------------------------------------
+// Information needed to draw a model
+//-----------------------------------------------------------------------------
+struct RenderableInstance_t
+{
+	uint8 m_nAlpha;
+};
+
+//-----------------------------------------------------------------------------
+// Indicates the type of translucency of an unmodulated renderable
+//-----------------------------------------------------------------------------
+enum RenderableTranslucencyType_t
+{
+	RENDERABLE_IS_OPAQUE = 0,
+	RENDERABLE_IS_TRANSLUCENT,
+	RENDERABLE_IS_TWO_PASS,
+};
+
+//-----------------------------------------------------------------------------
+// Model renderable data access
+//-----------------------------------------------------------------------------
+abstract_class IClientModelRenderable
+{
+public:
+	virtual bool GetRenderData( void *pData, int nCategory ) = 0;
+};
+
+//-----------------------------------------------------------------------------
 // Handles to a client shadow
 //-----------------------------------------------------------------------------
 typedef unsigned short ClientShadowHandle_t;

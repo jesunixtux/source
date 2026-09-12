@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -17,7 +17,7 @@ extern bool g_bBulletPortalTrace;
 
 #ifdef CLIENT_DLL
 	#include "client_class.h"
-	#include "tier1/interpolatedvar.h"
+	#include "interpolatedvar.h"
 	class CPortalRenderable_FlatBasic;
 	class C_Portal_Base2D;
 	#define CPortal_Base2D C_Portal_Base2D

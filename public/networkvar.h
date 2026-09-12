@@ -18,6 +18,26 @@
 	#include "basehandle.h"
 #endif
 
+// network vars use memcmp when fields are set.  To ensure proper behavior your
+// object's memory should be initialized to zero.  This happens for entities automatically.
+// use this for other classes.
+class CMemZeroOnNew
+{
+public:
+	void *operator new( size_t nSize )
+	{
+		void *pMem = MemAlloc_Alloc( nSize );
+		V_memset( pMem, 0, nSize );
+		return pMem;
+	}
+
+	void* operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
+	{
+		void *pMem = MemAlloc_Alloc( nSize, pFileName, nLine );
+		V_memset( pMem, 0, nSize );
+		return pMem;
+	}
+};
 
 #pragma warning( disable : 4284 ) // warning C4284: return type for 'CNetworkVarT<int>::operator ->' is 'int *' (ie; not a UDT or reference to a UDT.  Will produce errors if applied using infix notation)
 

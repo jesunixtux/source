@@ -67,8 +67,6 @@ public:
 public:
 	#if defined( CLIENT_DLL )
 	
-		virtual IClientModelRenderable*	GetClientModelRenderable();
-		virtual int		DrawModel( int flags, const RenderableInstance_t &instance );
 		virtual bool	ShouldDrawCrosshair( void ) { return true; }
 		virtual bool	ShouldPredict();
 		virtual void	OnDataChanged( DataUpdateType_t type );

@@ -101,6 +101,12 @@ inline T AlignValue( T val, uintptr_t alignment )
 #define MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
 #endif
 
+// Split screen is not supported on this port.  Kept at 1 so that code that
+// iterates the client slots compiles down to a single view.
+#ifndef MAX_SPLITSCREEN_CLIENTS
+#define MAX_SPLITSCREEN_CLIENTS	1
+#endif
+
 #ifdef __cplusplus
 
 // This is the preferred clamp operator. Using the clamp macro can lead to

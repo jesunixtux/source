@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Declares the base class for all paint power users.
 //
@@ -14,6 +14,12 @@
 #include "paint_power_info.h"
 
 extern ConVar sv_enable_paint_power_user_debug;
+
+#if defined( CLIENT_DLL )
+inline bool UTIL_Portal_HasPaintmap( void ) { return false; }
+#else
+inline bool UTIL_Portal_HasPaintmap( void ) { return engine->HasPaintmap(); }
+#endif
 
 //#define PAINT_POWER_USER_DEBUG
 
@@ -197,7 +203,7 @@ private:
 // OMFG HACK: A macro to individually add embedded types from arrays because the current macros don't handle arrays of embedded types properly
 // OMFG TODO: Write a generic macro to work with templatized classes.
 #define DEFINE_EMBEDDED_ARRAY_ELEMENT( elementType, arrayName, arrayIndex )						\
-	{ FIELD_EMBEDDED, #arrayName"["#arrayIndex"]", offsetof(classNameTypedef, arrayName[arrayIndex]), 1, FTYPEDESC_SAVE | FTYPEDESC_KEY, NULL, NULL, NULL, &elementType::m_PredMap }
+	{ FIELD_EMBEDDED, #arrayName"["#arrayIndex"]", { offsetof(classNameTypedef, arrayName[arrayIndex]), 0 }, 1, FTYPEDESC_SAVE | FTYPEDESC_KEY, NULL, NULL, NULL, &elementType::m_PredMap }
 
 
 // OMFG HACK: Define the prediction table. The current macros don't work with templatized classes.
@@ -289,7 +295,7 @@ const PaintPowerInfo_t* PaintPowerUser<BaseEntityType>::FindHighestPriorityActiv
 template< typename BaseEntityType >
 void PaintPowerUser<BaseEntityType>::AddSurfacePaintPowerInfo( const PaintPowerInfo_t& contact, char const* context )
 {
-	if ( !engine->HasPaintmap() )
+	if ( UTIL_Portal_HasPaintmap() == false )
 	{
 		Warning( "MEMORY LEAK: adding surface paint powers in a level with no paintmaps.\n" );
 		return;
@@ -342,7 +348,7 @@ template< typename BaseEntityType >
 void PaintPowerUser<BaseEntityType>::UpdatePaintPowers()
 {
 	// Only update if there's paint in the map
-	if( engine->HasPaintmap() )
+	if( UTIL_Portal_HasPaintmap() )
 	{
 		// Update which powers are active
 		PaintPowerInfoVector activePowers;

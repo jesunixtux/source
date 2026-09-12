@@ -362,8 +362,8 @@ END_RECV_TABLE()
 
 // all players except the local player
 BEGIN_RECV_TABLE_NOBASE( C_Portal_Player, DT_PortalNonLocalPlayerExclusive )
-	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ), 0, C_BasePlayer::RecvProxy_NonLocalCellOriginXY ),
-	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ), 0, C_BasePlayer::RecvProxy_NonLocalCellOriginZ ),
+	RecvPropVectorXY( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ), 0 ),
+	RecvPropFloat( RECVINFO_NAME( m_vecNetworkOrigin[2], m_vecOrigin[2] ), 0 ),
 	RecvPropFloat( RECVINFO( m_vecViewOffset[0] ) ),
 	RecvPropFloat( RECVINFO( m_vecViewOffset[1] ) ),
 	RecvPropFloat( RECVINFO( m_vecViewOffset[2] ) ),
@@ -372,6 +372,13 @@ END_RECV_TABLE()
 
 BEGIN_RECV_TABLE_NOBASE( CPortalPlayerShared, DT_PortalPlayerShared )
 	RecvPropInt( RECVINFO( m_nPlayerCond ) ),
+END_RECV_TABLE()
+
+BEGIN_RECV_TABLE_NOBASE( PortalPlayerStatistics_t, DT_PortalPlayerStatistics )
+	RecvPropInt( RECVINFO( iNumPortalsPlaced ), 16, SPROP_UNSIGNED ),
+	RecvPropInt( RECVINFO( iNumStepsTaken ), 16, SPROP_UNSIGNED ),
+	RecvPropFloat( RECVINFO( fNumSecondsTaken ), 16, SPROP_NOSCALE ),
+	RecvPropFloat( RECVINFO( fDistanceTaken ), 16, SPROP_NOSCALE ),
 END_RECV_TABLE()
 
 IMPLEMENT_CLIENTCLASS_DT(C_Portal_Player, DT_Portal_Player, CPortal_Player)

@@ -32,6 +32,43 @@ class CMeshBuilder;
 class IMaterialVar;
 typedef uint64 VertexFormat_t;
 
+//-----------------------------------------------------------------------------
+// Stencil state used to draw a mesh.  Kept minimal for the macOS port: the
+// reference value and write mask are sufficient for portal rendering.
+//-----------------------------------------------------------------------------
+struct ShaderStencilState_t
+{
+	int	m_nReferenceValue;
+	int	m_nWriteMask;
+	uint8 m_bEnable : 1;
+	uint8 m_bTestStencil : 1;
+	uint8 m_nCompareFunc : 4;
+	uint8 m_nPassOp : 4;
+	uint8 m_nFailOp : 4;
+	uint8 m_nZFailOp : 4;
+
+	ShaderStencilState_t()
+	{
+		m_nReferenceValue = 0;
+		m_nWriteMask = 0;
+		m_bEnable = 0;
+		m_bTestStencil = 0;
+		m_nCompareFunc = 0;
+		m_nPassOp = 0;
+		m_nFailOp = 0;
+		m_nZFailOp = 0;
+	}
+};
+
+//-----------------------------------------------------------------------------
+// Interface to per-frame mesh data which can be cached across frames
+//-----------------------------------------------------------------------------
+abstract_class ICachedPerFrameMeshData
+{
+public:
+	virtual void Free() = 0;
+};
+
 
 //-----------------------------------------------------------------------------
 // Define this to find write-combine problems
