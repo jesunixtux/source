@@ -2981,6 +2981,48 @@ void CMatRenderContext::SetScissorRect( const int nLeft, const int nTop, const i
 	g_pShaderAPI->SetScissorRect( nLeft, nTop, nRight, nBottom, bEnableScissor );
 }
 
+void CMatRenderContext::PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom )
+{
+	ScissorRect_t rect;
+	rect.left = nLeft;
+	rect.top = nTop;
+	rect.right = nRight;
+	rect.bottom = nBottom;
+
+	if ( m_ScissorRectStack.Count() > 0 )
+	{
+		const ScissorRect_t &current = m_ScissorRectStack.Tail();
+		rect.left = MAX( rect.left, current.left );
+		rect.top = MAX( rect.top, current.top );
+		rect.right = MIN( rect.right, current.right );
+		rect.bottom = MIN( rect.bottom, current.bottom );
+	}
+
+	m_ScissorRectStack.AddToTail( rect );
+
+	const bool bEnable = ( rect.left < rect.right && rect.top < rect.bottom );
+	g_pShaderAPI->SetScissorRect( rect.left, rect.top, rect.right, rect.bottom, bEnable );
+}
+
+void CMatRenderContext::PopScissorRect( void )
+{
+	if ( m_ScissorRectStack.Count() == 0 )
+		return;
+
+	m_ScissorRectStack.RemoveMultipleFromTail( 1 );
+
+	if ( m_ScissorRectStack.Count() == 0 )
+	{
+		g_pShaderAPI->SetScissorRect( 0, 0, 0, 0, false );
+	}
+	else
+	{
+		const ScissorRect_t &rect = m_ScissorRectStack.Tail();
+		const bool bEnable = ( rect.left < rect.right && rect.top < rect.bottom );
+		g_pShaderAPI->SetScissorRect( rect.left, rect.top, rect.right, rect.bottom, bEnable );
+	}
+}
+
 void CMatRenderContext::SetToneMappingScaleLinear( const Vector &scale )
 {
 	g_pShaderAPI->SetToneMappingScaleLinear( scale );

@@ -848,7 +848,7 @@ void CShaderAPIDx10::ForceDepthFuncEquals( bool bEnable )
 }
 
 // Forces Z buffering on or off
-void CShaderAPIDx10::OverrideDepthEnable( bool bEnable, bool bDepthEnable )
+void CShaderAPIDx10::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable )
 {
 }
 

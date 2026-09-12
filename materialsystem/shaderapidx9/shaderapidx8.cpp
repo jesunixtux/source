@@ -731,7 +731,7 @@ public:
 	void ForceDepthFuncEquals( bool bEnable );
 
 	// Turns off Z buffering
-	void OverrideDepthEnable( bool bEnable, bool bDepthEnable );
+	void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable );
 
 	void OverrideAlphaWriteEnable( bool bOverrideEnable, bool bAlphaWriteEnable );
 	void OverrideColorWriteEnable( bool bOverrideEnable, bool bColorWriteEnable );
@@ -5343,12 +5343,12 @@ void CShaderAPIDx8::ForceDepthFuncEquals( bool bEnable )
 	}
 }
 
-void CShaderAPIDx8::OverrideDepthEnable( bool bEnable, bool bDepthEnable )
+void CShaderAPIDx8::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable )
 {
 	LOCK_SHADERAPI();
 	if ( !g_pShaderDeviceDx8->IsDeactivated() )
 	{
-		m_TransitionTable.OverrideDepthEnable( bEnable, bDepthEnable );
+		m_TransitionTable.OverrideDepthEnable( bEnable, bDepthWriteEnable, bDepthTestEnable );
 	}
 }
 

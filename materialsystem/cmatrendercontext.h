@@ -9,6 +9,7 @@
 
 #include "tier1/delegates.h"
 #include "tier1/utlstack.h"
+#include "tier1/utlvector.h"
 #include "bitvec.h"
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"
@@ -342,7 +343,7 @@ public:
 	void									ForceSyncMatrix( MaterialMatrixMode_t );
 
 	// Allows us to override the depth buffer setting of a material
-	DELEGATE_TO_OBJECT_2V(					OverrideDepthEnable, bool, bool, g_pShaderAPI );
+	DELEGATE_TO_OBJECT_3V(					OverrideDepthEnable, bool, bool, bool, g_pShaderAPI );
 	DELEGATE_TO_OBJECT_2V(					OverrideAlphaWriteEnable, bool, bool, g_pShaderAPI );
 	DELEGATE_TO_OBJECT_2V(					OverrideColorWriteEnable, bool, bool, g_pShaderAPI );
 
@@ -441,7 +442,10 @@ public:
 	void									SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture );
 	void									SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture );
 
-	void									SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor );
+	void								SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor );
+	void								PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom );
+	void								PopScissorRect( void );
+
 
 	// Creates/destroys morph data associated w/ a particular material
 	IMorph *								CreateMorph( MorphFormat_t format, const char *pDebugName );
@@ -615,6 +619,13 @@ protected:
 	virtual void OnRenderDataUnreferenced();
 
 	const CMatLightmaps *GetLightmaps() const;
+
+	// Portal 2 scissor rectangle stack.
+	struct ScissorRect_t
+	{
+		int left, top, right, bottom;
+	};
+	CUtlVector< ScissorRect_t >	m_ScissorRectStack;
 	CMatLightmaps *GetLightmaps();
 
 	CUtlVector<PlaneStackElement>		m_CustomClipPlanes; //implemented as a vector so we can remove in special ways

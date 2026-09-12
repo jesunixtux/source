@@ -1016,7 +1016,7 @@ public:
 	}
 	
 	// Allows us to override the depth buffer setting of a material
-	virtual void	OverrideDepthEnable( bool bEnable, bool bEnableValue )
+	virtual void	OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable )
 	{
 	}
 
@@ -1637,6 +1637,14 @@ public:
 	}
 
 	virtual void SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor )
+	{
+	}
+
+	virtual void PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom )
+	{
+	}
+
+	virtual void PopScissorRect( void )
 	{
 	}
 

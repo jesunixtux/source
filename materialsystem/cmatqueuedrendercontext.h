@@ -242,7 +242,7 @@ public:
 	DEFINE_QUEUED_CALL_0(					PopSelectionName, IMatRenderContext, m_pHardwareContext );
 	DEFINE_QUEUED_CALL_3(					ClearColor3ub, unsigned char, unsigned char, unsigned char, IMatRenderContext, m_pHardwareContext );
 	DEFINE_QUEUED_CALL_4(					ClearColor4ub, unsigned char, unsigned char, unsigned char, unsigned char, IMatRenderContext, m_pHardwareContext );
-	DEFINE_QUEUED_CALL_2(					OverrideDepthEnable, bool, bool, IMatRenderContext, m_pHardwareContext );
+	DEFINE_QUEUED_CALL_3(					OverrideDepthEnable, bool, bool, bool, IMatRenderContext, m_pHardwareContext );
 	DEFINE_QUEUED_CALL_2(					OverrideAlphaWriteEnable, bool, bool, IMatRenderContext, m_pHardwareContext );
 	DEFINE_QUEUED_CALL_2(					OverrideColorWriteEnable, bool, bool, IMatRenderContext, m_pHardwareContext );
 	DEFINE_QUEUED_CALL_1(					DrawScreenSpaceQuad, IMaterial *, IMatRenderContext, m_pHardwareContext );
@@ -376,6 +376,16 @@ public:
 	void SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor )
 	{
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::SetScissorRect, nLeft, nTop, nRight, nBottom, bEnableScissor );
+	}
+
+	void PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom )
+	{
+		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::PushScissorRect, nLeft, nTop, nRight, nBottom );
+	}
+
+	void PopScissorRect( void )
+	{
+		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::PopScissorRect );
 	}
 
 	virtual void PushDeformation( const DeformationBase_t *pDef )

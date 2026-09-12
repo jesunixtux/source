@@ -374,6 +374,7 @@ enum StencilComparisonFunction_t
 //-----------------------------------------------------------------------------
 // Enumeration for the various fields capable of being morphed
 //-----------------------------------------------------------------------------
+
 enum MorphFormatFlags_t
 {
 	MORPH_POSITION	= 0x0001,	// 3D
@@ -1281,7 +1282,7 @@ public:
 	virtual void		ClearColor4ub( unsigned char r, unsigned char g, unsigned char b, unsigned char a ) = 0;
 
 	// Allows us to override the depth buffer setting of a material
-	virtual void	OverrideDepthEnable( bool bEnable, bool bDepthEnable ) = 0;
+	virtual void	OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable = true ) = 0;
 
 	// FIXME: This is a hack required for NVidia/XBox, can they fix in drivers?
 	virtual void	DrawScreenSpaceQuad( IMaterial* pMaterial ) = 0;
@@ -1574,6 +1575,10 @@ void SetStencilState( const ShaderStencilState_t &state )
 
 	// Set scissor rect for rendering
 	virtual void				SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor ) = 0;
+
+	// Portal 2 scissor rectangle stack. Pushed rectangles are intersected with the current scissor region.
+	virtual void				PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom ) = 0;
+	virtual void				PopScissorRect( void ) = 0;
 
 	// Methods used to build the morph accumulator that is read from when HW morph<ing is enabled.
 	virtual void				BeginMorphAccumulation() = 0;

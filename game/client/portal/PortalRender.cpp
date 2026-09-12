@@ -31,6 +31,9 @@
 #include "c_portal_player.h"
 #endif
 
+// Portal 2: global counter used to suppress refract texture updates while rendering a portal view.
+int g_nCurrentPortalRender = 0;
+
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePortalDrawingMaterials )
 PRECACHE( MATERIAL, "shadertest/wireframe" )
 PRECACHE( MATERIAL, "engine/writez_model" )

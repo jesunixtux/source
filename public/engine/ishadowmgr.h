@@ -183,6 +183,11 @@ public:
 	virtual const FlashlightState_t &GetFlashlightState( ShadowHandle_t handle ) = 0;
 
 	virtual void SetFlashlightRenderState( ShadowHandle_t handle ) = 0;
+
+	// Portal 2: push/pop the current flashlight's scissor rectangle so recursive portal views
+	// can intersect their clip region with the flashlight bounds.
+	virtual void PushFlashlightScissorBounds( void ) = 0;
+	virtual void PopFlashlightScissorBounds( void ) = 0;
 };
 
 

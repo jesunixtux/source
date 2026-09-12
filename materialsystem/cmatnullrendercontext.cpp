@@ -261,7 +261,7 @@ public:
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
 
-	void OverrideDepthEnable(bool,bool)
+	void OverrideDepthEnable(bool,bool,bool)
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
 	}
@@ -336,6 +336,14 @@ public:
 	void SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor  )
 	{
 		AssertMsg( 0, "CMatNullRenderContext only provides base features, not a stub (right now)" );
+	}
+
+	void PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom )
+	{
+	}
+
+	void PopScissorRect( void )
+	{
 	}
 
 	virtual void PushDeformation( DeformationBase_t const *Deformation )

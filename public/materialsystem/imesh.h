@@ -3276,6 +3276,9 @@ public:
 	// Fast Index! No need to call advance index, and no random access allowed
 	void FastIndex( unsigned short index );
 
+	// Emits a quad's worth of indices (6 indices) starting at startVert.
+	void FastQuad( int startVert );
+
 	// Fast Vertex! No need to call advance vertex, and no random access allowed. 
 	// WARNING - these are low level functions that are intended only for use
 	// in the software vertex skinner.
@@ -3842,6 +3845,19 @@ FORCEINLINE void CMeshBuilder::FastIndex( unsigned short idx )
 FORCEINLINE void CMeshBuilder::FastIndex2( unsigned short nIndex1, unsigned short nIndex2 )
 {
 	m_IndexBuilder.FastIndex2( nIndex1, nIndex2 );
+}
+
+//-----------------------------------------------------------------------------
+// Fast Quad! Emits 6 indices for a quad starting at startVert.
+//-----------------------------------------------------------------------------
+FORCEINLINE void CMeshBuilder::FastQuad( int startVert )
+{
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 0 ) );
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 1 ) );
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 2 ) );
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 0 ) );
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 2 ) );
+	m_IndexBuilder.FastIndex( (unsigned short)( startVert + 3 ) );
 }
 
 //-----------------------------------------------------------------------------

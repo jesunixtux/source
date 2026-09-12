@@ -1719,6 +1719,8 @@ void CTransitionTable::UseDefaultState( )
 
 	// Disable z overrides...
 	m_CurrentState.m_bOverrideDepthEnable = false;
+	m_CurrentState.m_bOverrideDepthWriteEnable = false;
+	m_CurrentState.m_bOverrideDepthTestEnable = false;
 	m_CurrentState.m_bOverrideAlphaWriteEnable = false;
 	m_CurrentState.m_bOverrideColorWriteEnable = false;
 	m_CurrentState.m_ForceDepthFuncEquals = false;
@@ -1763,17 +1765,25 @@ void CTransitionTable::ForceDepthFuncEquals( bool bEnable )
 	}
 }
 
-void CTransitionTable::OverrideDepthEnable( bool bEnable, bool bDepthEnable )
+void CTransitionTable::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable )
 {
-	if ( bEnable != m_CurrentState.m_bOverrideDepthEnable )
+	bool bWriteChanged = ( bEnable != m_CurrentState.m_bOverrideDepthEnable ) ||
+		( bEnable && ( bDepthWriteEnable != m_CurrentState.m_bOverrideDepthWriteEnable ) );
+	bool bTestChanged = ( bEnable != m_CurrentState.m_bOverrideDepthEnable ) ||
+		( bEnable && ( bDepthTestEnable != m_CurrentState.m_bOverrideDepthTestEnable ) );
+
+	if ( bWriteChanged || bTestChanged )
 	{
 		ShaderAPI()->FlushBufferedPrimitives();
 		m_CurrentState.m_bOverrideDepthEnable = bEnable;
-		m_CurrentState.m_OverrideZWriteEnable = bDepthEnable ? D3DZB_TRUE : D3DZB_FALSE;
+		m_CurrentState.m_bOverrideDepthWriteEnable = bDepthWriteEnable;
+		m_CurrentState.m_OverrideZWriteEnable = bDepthWriteEnable ? D3DZB_TRUE : D3DZB_FALSE;
+		m_CurrentState.m_bOverrideDepthTestEnable = bDepthTestEnable;
+		m_CurrentState.m_OverrideZEnable = bDepthTestEnable ? D3DZB_TRUE : D3DZB_FALSE;
 
 		if ( m_CurrentState.m_bOverrideDepthEnable )
 		{
-			SetZEnable( D3DZB_TRUE );
+			SetZEnable( m_CurrentState.m_OverrideZEnable );
 			SetRenderStateConstMacro( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable );
 #if defined( _X360 )
 			//SetRenderStateConstMacro( D3DRS_HIZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );
@@ -1893,7 +1903,7 @@ void CTransitionTable::PerformShadowStateOverrides( )
 
 	if ( m_CurrentState.m_bOverrideDepthEnable )
 	{
-		SetZEnable( D3DZB_TRUE );
+		SetZEnable( m_CurrentState.m_OverrideZEnable );
 		SetRenderStateConstMacro( D3DRS_ZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable );
 #if defined( _X360 )
 		//SetRenderStateConstMacro( D3DRS_HIZWRITEENABLE, m_CurrentState.m_OverrideZWriteEnable ? D3DHIZ_AUTOMATIC : D3DHIZ_DISABLE );

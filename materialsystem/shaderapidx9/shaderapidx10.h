@@ -443,7 +443,7 @@ private:
 	void ForceDepthFuncEquals( bool bEnable );
 
 	// Forces Z buffering on or off
-	void OverrideDepthEnable( bool bEnable, bool bDepthEnable );
+	void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable );
 	// Forces alpha writes on or off
 	void OverrideAlphaWriteEnable( bool bOverrideEnable, bool bAlphaWriteEnable );
 	//forces color writes on or off

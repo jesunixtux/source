@@ -131,7 +131,10 @@ public:
 
 		bool				m_ForceDepthFuncEquals;
 		bool				m_bOverrideDepthEnable;
+		bool				m_bOverrideDepthWriteEnable;
 		D3DZBUFFERTYPE		m_OverrideZWriteEnable;
+		bool				m_bOverrideDepthTestEnable;
+		D3DZBUFFERTYPE		m_OverrideZEnable;
 
 		bool				m_bOverrideAlphaWriteEnable;
 		bool				m_bOverriddenAlphaWriteValue;
@@ -181,7 +184,7 @@ public:
 
 	// Snapshotted state overrides
 	void ForceDepthFuncEquals( bool bEnable );
-	void OverrideDepthEnable( bool bEnable, bool bDepthEnable );
+	void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable );
 	void OverrideAlphaWriteEnable( bool bOverrideEnable, bool bAlphaWriteEnable );
 	void OverrideColorWriteEnable( bool bOverrideEnable, bool bColorWriteEnable );
 	void EnableLinearColorSpaceFrameBuffer( bool bEnable );

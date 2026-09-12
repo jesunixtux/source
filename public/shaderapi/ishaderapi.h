@@ -232,7 +232,8 @@ public:
 	virtual void ForceDepthFuncEquals( bool bEnable ) = 0;
 
 	// Forces Z buffering to be on or off
-	virtual void OverrideDepthEnable( bool bEnable, bool bDepthEnable ) = 0;
+	// Allows us to override the depth buffer setting of a material
+	virtual void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable = true ) = 0;
 
 	virtual void SetHeightClipZ( float z ) = 0; 
 	virtual void SetHeightClipMode( enum MaterialHeightClipMode_t heightClipMode ) = 0; 

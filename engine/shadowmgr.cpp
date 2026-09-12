@@ -155,6 +155,8 @@ public:
 	virtual void RemoveAllShadowsFromModel( ModelInstanceHandle_t handle );
  	virtual const ShadowInfo_t& GetInfo( ShadowHandle_t handle );
 	virtual void SetFlashlightRenderState( ShadowHandle_t handle );
+	virtual void PushFlashlightScissorBounds( void );
+	virtual void PopFlashlightScissorBounds( void );
 
 	// Methods inherited from IShadowMgrInternal
 	virtual void LevelInit( int nSurfCount );
@@ -201,6 +203,11 @@ public:
 	virtual bool ModelHasShadows( ModelInstanceHandle_t instance );
 
 private:
+	// Portal 2: track the flashlight currently being rendered and a stack of
+	// whether each pushed level actually had a valid scissor rectangle.
+	ShadowHandle_t m_hCurrentFlashlight;
+	CUtlVector< bool > m_FlashlightScissorStack;
+
 	enum
 	{
 		SHADOW_DISABLED = (SHADOW_LAST_FLAG << 1),
@@ -533,6 +540,8 @@ CShadowMgr::CShadowMgr()
 	m_NumWorldMaterialBuckets = 0;
 	m_pSurfaceBounds = NULL;
 	m_bInitialized = false;
+	m_hCurrentFlashlight = SHADOW_HANDLE_INVALID;
+	m_FlashlightScissorStack.Purge();
 	ClearShadowRenderList();
 
 	//=============================================================================
@@ -3373,6 +3382,8 @@ void CShadowMgr::EnableStencilAndScissorMasking( IMatRenderContext *pRenderConte
 //---------------------------------------------------------------------------------------
 void CShadowMgr::SetFlashlightRenderState( ShadowHandle_t handle )
 {
+	m_hCurrentFlashlight = handle;
+
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	if ( handle == SHADOW_HANDLE_INVALID )
 	{
@@ -3384,6 +3395,48 @@ void CShadowMgr::SetFlashlightRenderState( ShadowHandle_t handle )
 	pRenderContext->SetFlashlightMode( true );
 	const FlashlightInfo_t &flashlightInfo = m_FlashlightStates[ shadow.m_FlashlightHandle ];
 	pRenderContext->SetFlashlightStateEx( flashlightInfo.m_FlashlightState, shadow.m_WorldToShadow, shadow.m_pFlashlightDepthTexture );
+}
+
+//---------------------------------------------------------------------------------------
+// Purpose: Push the current flashlight's scissor rectangle onto the render-context stack.
+//---------------------------------------------------------------------------------------
+void CShadowMgr::PushFlashlightScissorBounds( void )
+{
+	bool bHadScissor = false;
+
+	if ( m_hCurrentFlashlight != SHADOW_HANDLE_INVALID )
+	{
+		const Shadow_t &shadow = m_Shadows[m_hCurrentFlashlight];
+		const FlashlightInfo_t &flashlightInfo = m_FlashlightStates[shadow.m_FlashlightHandle];
+		const FlashlightState_t &state = flashlightInfo.m_FlashlightState;
+
+		if ( state.m_bScissor )
+		{
+			CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
+			pRenderContext->PushScissorRect( state.m_nLeft, state.m_nTop, state.m_nRight, state.m_nBottom );
+			bHadScissor = true;
+		}
+	}
+
+	m_FlashlightScissorStack.AddToTail( bHadScissor );
+}
+
+//---------------------------------------------------------------------------------------
+// Purpose: Pop the flashlight scissor rectangle pushed last.
+//---------------------------------------------------------------------------------------
+void CShadowMgr::PopFlashlightScissorBounds( void )
+{
+	if ( m_FlashlightScissorStack.Count() == 0 )
+		return;
+
+	bool bHadScissor = m_FlashlightScissorStack.Tail();
+	m_FlashlightScissorStack.RemoveMultipleFromTail( 1 );
+
+	if ( bHadScissor )
+	{
+		CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
+		pRenderContext->PopScissorRect();
+	}
 }
 
 

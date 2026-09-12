@@ -619,7 +619,7 @@ public:
 	void ForceDepthFuncEquals( bool bEnable );
 
 	// Forces Z buffering on or off
-	void OverrideDepthEnable( bool bEnable, bool bDepthEnable );
+	void OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable );
 	void OverrideAlphaWriteEnable( bool bOverrideEnable, bool bAlphaWriteEnable );
 	void OverrideColorWriteEnable( bool bOverrideEnable, bool bColorWriteEnable );
 
@@ -2293,7 +2293,7 @@ void CShaderAPIEmpty::ForceDepthFuncEquals( bool bEnable )
 }
 
 // Forces Z buffering on or off
-void CShaderAPIEmpty::OverrideDepthEnable( bool bEnable, bool bDepthEnable )
+void CShaderAPIEmpty::OverrideDepthEnable( bool bEnable, bool bDepthWriteEnable, bool bDepthTestEnable )
 {
 }
 
