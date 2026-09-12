@@ -51,7 +51,7 @@ public:
 	virtual void			Spawn( void );
 	virtual void			Activate( void );
 
-	virtual bool			Simulate();
+	virtual void			Simulate();
 
 	virtual void			UpdateOnRemove( void );
 	virtual bool			IsActive( void ) const { return m_bActivated; }

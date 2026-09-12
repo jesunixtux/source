@@ -1861,7 +1861,7 @@ bool C_Portal_Player::Simulate( void )
 			int iAttachment = LookupAttachment( "anim_attachment_RH" );
 
 			if ( iAttachment < 0 )
-				return true;
+				return;
 
 			Vector vecOrigin;
 			QAngle eyeAngles = m_angEyeAngles;
@@ -1881,8 +1881,6 @@ bool C_Portal_Player::Simulate( void )
 	{
 		ManageHeldObject();
 	}
-
-	return true;
 }
 
 ShadowType_t C_Portal_Player::ShadowCastType( void ) 

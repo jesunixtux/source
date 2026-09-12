@@ -289,6 +289,18 @@ public:
 	bool							IsRagdoll() const;
 	bool							IsAboutToRagdoll() const;
 	virtual C_BaseAnimating			*BecomeRagdollOnClient();
+
+	// Portal 2 support: copies the sequence transitioner queue from another animating entity.
+	void CopySequenceTransitions( C_BaseAnimating *pCopyFrom )
+	{
+		m_SequenceTransitioner.m_animationQueue.RemoveAll();
+		int count = pCopyFrom->m_SequenceTransitioner.m_animationQueue.Count();
+		m_SequenceTransitioner.m_animationQueue.EnsureCount( count );
+		for ( int i = 0; i < count; i++ )
+		{
+			m_SequenceTransitioner.m_animationQueue[i] = pCopyFrom->m_SequenceTransitioner.m_animationQueue[i];
+		}
+	}
 	C_BaseAnimating					*CreateRagdollCopy();
 	bool							InitAsClientRagdoll( const matrix3x4_t *pDeltaBones0, const matrix3x4_t *pDeltaBones1, const matrix3x4_t *pCurrentBonePosition, float boneDt, bool bFixedConstraints=false );
 	void							IgniteRagdoll( C_BaseAnimating *pSource );
@@ -480,6 +492,9 @@ private:
 
 public:
 	CRagdoll						*m_pRagdoll;
+
+	// Portal 2 support: marks this model as a client-side ragdoll.
+	bool							m_bClientSideRagdoll;
 
 	// Texture group to use
 	int								m_nSkin;

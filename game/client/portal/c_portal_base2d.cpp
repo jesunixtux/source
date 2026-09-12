@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -146,7 +146,7 @@ void C_Portal_Base2D::Activate( void )
 }
 
 ConVar cl_portal_ghost_use_render_bound("cl_portal_ghost_use_render_bound", "1");
-bool C_Portal_Base2D::Simulate()
+void C_Portal_Base2D::Simulate()
 {
 	BaseClass::Simulate();
 
@@ -182,7 +182,7 @@ bool C_Portal_Base2D::Simulate()
 		
 		m_GhostRenderables.RemoveAll();
 
-		return true;
+		return;
 	}
 
 
@@ -327,7 +327,6 @@ bool C_Portal_Base2D::Simulate()
 	m_fGhostRenderablesClipForPlayer[1] = pLinkedPortal->m_plane_Origin.normal.y;
 	m_fGhostRenderablesClipForPlayer[2] = pLinkedPortal->m_plane_Origin.normal.z;
 	m_fGhostRenderablesClipForPlayer[3] = pLinkedPortal->m_plane_Origin.dist + flClipPlaneFudgeOffset;
-	return true;
 }
 
 C_PortalGhostRenderable *C_Portal_Base2D::GetGhostRenderableForEntity( C_BaseEntity *pEntity )

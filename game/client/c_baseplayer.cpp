@@ -1826,6 +1826,13 @@ C_BasePlayer *C_BasePlayer::GetLocalPlayer( void )
 	return s_pLocalPlayer;
 }
 
+C_BasePlayer *C_BasePlayer::GetLocalPlayer( int nSlot )
+{
+	// Split screen is not supported on this port; the individual slot variant
+	// returns the lone local player so Portal 2 slot-aware code compiles.
+	return s_pLocalPlayer;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : bThirdperson - 
@@ -2484,6 +2491,35 @@ void RecvProxy_LocalVelocityZ( const CRecvProxyData *pData, void *pStruct, void 
 		vecVelocity.z = flNewVel_z;
 		pPlayer->SetLocalVelocity( vecVelocity );
 	}
+}
+
+void C_BasePlayer::RecvProxy_LocalOriginXY( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	C_BasePlayer *player = (C_BasePlayer *) pStruct;
+	player->m_vecHack_RecvProxy_LocalPlayerOrigin.x = pData->m_Value.m_Vector[0];
+	player->m_vecHack_RecvProxy_LocalPlayerOrigin.y = pData->m_Value.m_Vector[1];
+
+	((float*)pOut)[0] = pData->m_Value.m_Vector[0];
+	((float*)pOut)[1] = pData->m_Value.m_Vector[1];
+}
+
+void C_BasePlayer::RecvProxy_LocalOriginZ( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	C_BasePlayer *player = (C_BasePlayer *) pStruct;
+	player->m_vecHack_RecvProxy_LocalPlayerOrigin.z = pData->m_Value.m_Float;
+
+	*((float*)pOut) = pData->m_Value.m_Float;
+}
+
+void C_BasePlayer::RecvProxy_NonLocalOriginXY( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	((float*)pOut)[0] = pData->m_Value.m_Vector[0];
+	((float*)pOut)[1] = pData->m_Value.m_Vector[1];
+}
+
+void C_BasePlayer::RecvProxy_NonLocalOriginZ( const CRecvProxyData *pData, void *pStruct, void *pOut )
+{
+	*((float*)pOut) = pData->m_Value.m_Float;
 }
 
 void RecvProxy_ObserverTarget( const CRecvProxyData *pData, void *pStruct, void *pOut )

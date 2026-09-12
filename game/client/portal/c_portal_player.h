@@ -22,6 +22,12 @@
 #include "portal2/portal_grabcontroller_shared.h"
 #include "portal_shareddefs.h"
 
+// On the client, CTrigger_TractorBeam is the server's class name.  The client
+// class is C_Trigger_TractorBeam (defined in c_trigger_tractorbeam.h), so we
+// forward-declare the shared name here to keep the method signatures intact.
+class C_Trigger_TractorBeam;
+#define CTrigger_TractorBeam C_Trigger_TractorBeam
+
 #if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	#include "portal2_item_inventory.h"
 #endif
@@ -97,7 +103,7 @@ public:
 	bool ShouldSkipRenderingViewpointPlayerForThisView( void );
 	virtual const char *GetPlayerModelName( void );
 	virtual int DrawModel( int flags, const RenderableInstance_t &instance );
-	virtual bool Simulate( void );
+	virtual void Simulate( void );
 	virtual IClientModelRenderable	*GetClientModelRenderable();
 
 	QAngle GetAnimEyeAngles( void ) { return m_angEyeAngles; }
