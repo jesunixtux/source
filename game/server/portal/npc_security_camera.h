@@ -18,6 +18,7 @@
 #include "npcevent.h"
 #include "soundenvelope.h"
 #include "props.h"
+#include "npc_turret_floor.h"
 
 #define	SECURITY_CAMERA_MODEL		"models/props/security_camera.mdl"
 #define SECURITY_CAMERA_BC_YAW		"aim_yaw"
@@ -52,15 +53,7 @@
 #define SECURITY_CAMERA_TOTAL_TO_KNOCK_DOWN 33
 
 //Turret states
-enum turretState_e
-{
-	TURRET_SEARCHING,
-	TURRET_AUTO_SEARCHING,
-	TURRET_ACTIVE,
-	TURRET_DEPLOYING,
-	TURRET_RETIRING,
-	TURRET_DEAD,
-};
+#define TURRET_DEAD TURRET_STATE_TOTAL
 
 // Forces glados actor to play reaction scenes when player dismounts camera.
 void PlayDismountSounds( void );

@@ -6,6 +6,7 @@
 #include "props.h"
 #include "particle_system.h"
 #include "player_pickup.h"
+#include "prop_weightedcube.h"
 
 #define	CUBE_MODEL			"models/props/metal_box.mdl"
 #define	REFLECTION_MODEL	"models/props/reflection_cube.mdl"
@@ -13,15 +14,6 @@
 #define	ANTIQUE_MODEL		"models/props_underground/underground_weighted_cube.mdl"
 
 #define FIZZLE_SOUND		"Prop.Fizzled"
-
-enum CubeType
-{
-	Standard = 0,
-	Companion = 1,
-	Reflective,
-	Sphere,
-	Antique,
-};
 
 enum SkinOld
 {
@@ -46,55 +38,6 @@ enum PaintPower
 	Speed,
 	Portal,
 	None,
-};
-
-class CPropWeightedCube : public CPhysicsProp
-{
-public:
-	DECLARE_CLASS(CPropWeightedCube, CPhysicsProp);
-	DECLARE_DATADESC();
-
-	CPropWeightedCube()
-	{
-	}
-
-	void Spawn(void);
-	void Precache(void);
-
-	//Use
-	void Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
-	int ObjectCaps();
-
-	bool Dissolve(const char* materialName, float flStartTime, bool bNPCOnly, int nDissolveType, Vector vDissolverOrigin, int magnitude);
-
-	void InputDissolve(inputdata_t &data);
-	void InputSilentDissolve(inputdata_t &data);
-	void InputPreDissolveJoke(inputdata_t &data);
-	void InputExitDisabledState(inputdata_t &data);
-
-	//Pickup
-	//void Pickup(void);
-	void OnPhysGunPickup(CBasePlayer *pPhysGunUser, PhysGunPickup_t reason);
-	void OnPhysGunDrop(CBasePlayer *pPhysGunUser, PhysGunDrop_t reason);
-private:
-	int	m_cubeType;
-	int m_skinType;
-	int m_paintPower;
-	bool m_useNewSkins;
-	bool m_allowFunnel;
-	//int m_oldSkin;
-
-	CHandle<CBasePlayer> m_hPhysicsAttacker;
-
-	COutputEvent m_OnOrangePickup;
-	COutputEvent m_OnBluePickup;
-	COutputEvent m_OnPlayerPickup;
-
-	COutputEvent m_OnPainted;
-
-	COutputEvent m_OnPhysGunDrop;
-
-	COutputEvent m_OnFizzled;
 };
 
 LINK_ENTITY_TO_CLASS(prop_weighted_cube, CPropWeightedCube);
@@ -169,7 +112,7 @@ void CPropWeightedCube::Spawn(void)
 		m_nSkin = 0;
 		switch (m_cubeType) 
 		{
-		case Standard:
+		case CUBE_STANDARD:
 			SetModel(CUBE_MODEL);
 			if (m_skinType == Rusted)
 				m_nSkin = 3;
@@ -178,7 +121,7 @@ void CPropWeightedCube::Spawn(void)
 			if (m_paintPower == Speed)
 				m_nSkin = 9;
 			break;
-		case Companion:
+		case CUBE_COMPANION:
 			SetModel(CUBE_MODEL);
 			m_nSkin = 1;
 			if (m_paintPower == Stick)
@@ -186,7 +129,7 @@ void CPropWeightedCube::Spawn(void)
 			if (m_paintPower == Speed)
 				m_nSkin = 11;
 			break;
-		case Reflective:
+		case CUBE_REFLECTIVE:
 			SetModel(REFLECTION_MODEL);
 			if (m_skinType == Rusted)
 				m_nSkin = 1;
@@ -195,10 +138,10 @@ void CPropWeightedCube::Spawn(void)
 			if (m_paintPower == Speed)
 				m_nSkin = 3;
 			break;
-		case Sphere:
+		case CUBE_SPHERE:
 			SetModel(SPHERE_MODEL);
 			break;
-		case Antique:
+		case CUBE_ANTIQUE:
 			SetModel(ANTIQUE_MODEL);
 			if (m_paintPower == Stick)
 				m_nSkin = 1;
@@ -297,4 +240,30 @@ void CPropWeightedCube::OnPhysGunPickup(CBasePlayer *pPhysGunUser, PhysGunPickup
 void CPropWeightedCube::OnPhysGunDrop(CBasePlayer *pPhysGunUser, PhysGunDrop_t reason)
 {
 	m_OnPhysGunDrop.FireOutput(pPhysGunUser, this);
+}
+
+void CPropWeightedCube::ExitDisabledState( void )
+{
+}
+
+void CPropWeightedCube::OnExitedTractorBeam( void )
+{
+}
+
+bool UTIL_IsReflectiveCube( CBaseEntity *pEntity )
+{
+	if ( pEntity == NULL || !FClassnameIs( pEntity, "prop_weighted_cube" ) )
+		return false;
+
+	CPropWeightedCube *pCube = assert_cast<CPropWeightedCube*>( pEntity );
+	return ( pCube && pCube->GetCubeType() == CUBE_REFLECTIVE );
+}
+
+bool UTIL_IsSchrodinger( CBaseEntity *pEntity )
+{
+	if ( pEntity == NULL || !FClassnameIs( pEntity, "prop_weighted_cube" ) )
+		return false;
+
+	CPropWeightedCube *pCube = assert_cast<CPropWeightedCube*>( pEntity );
+	return ( pCube && pCube->GetCubeType() == CUBE_SCHRODINGER );
 }

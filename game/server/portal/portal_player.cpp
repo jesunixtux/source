@@ -264,8 +264,8 @@ extern void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const 
 // specific to the local player
 BEGIN_SEND_TABLE_NOBASE( CPortal_Player, DT_PortalLocalPlayerExclusive )
 	// send a hi-res origin and view offset to the local player for use in prediction
-	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY, SENDPROP_LOCALPLAYER_ORIGINXY_PRIORITY ),
-	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ, SENDPROP_LOCALPLAYER_ORIGINZ_PRIORITY ),
+	SendPropVectorXY(SENDINFO(m_vecOrigin),               -1, SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY),
+	SendPropFloat   (SENDINFO_VECTORELEM(m_vecOrigin, 2), -1, SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ),
 	SendPropVector	(SENDINFO(m_vecViewOffset), -1, SPROP_NOSCALE, 0.0f, HIGH_DEFAULT ),
 
 	SendPropQAngles( SENDINFO( m_vecCarriedObjectAngles ) ),
@@ -280,11 +280,30 @@ END_SEND_TABLE()
 BEGIN_SEND_TABLE_NOBASE( CPortal_Player, DT_PortalNonLocalPlayerExclusive )
 	// send a lo-res origin and view offset to other players
 	// send a lo-res origin to other players
-	SendPropVectorXY( SENDINFO( m_vecOrigin ), 				 CELL_BASEENTITY_ORIGIN_CELL_BITS, SPROP_CELL_COORD_LOWPRECISION, 0.0f, HIGH_DEFAULT, CBaseEntity::SendProxy_CellOriginXY, SENDPROP_NONLOCALPLAYER_ORIGINXY_PRIORITY ),
-	SendPropFloat   ( SENDINFO_VECTORELEM( m_vecOrigin, 2 ), CELL_BASEENTITY_ORIGIN_CELL_BITS, SPROP_CELL_COORD_LOWPRECISION, 0.0f, HIGH_DEFAULT, CBaseEntity::SendProxy_CellOriginZ, SENDPROP_NONLOCALPLAYER_ORIGINZ_PRIORITY ),
+	SendPropVectorXY( SENDINFO( m_vecOrigin ), -1,  SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginXY),
+	SendPropFloat   ( SENDINFO_VECTORELEM( m_vecOrigin, 2 ), -1,  SPROP_NOSCALE, 0.0f, HIGH_DEFAULT, SendProxy_OriginZ),
 	SendPropFloat	(SENDINFO_VECTORELEM(m_vecViewOffset, 0), 10, SPROP_CHANGES_OFTEN, -128.0, 128.0f),
 	SendPropFloat	(SENDINFO_VECTORELEM(m_vecViewOffset, 1), 10, SPROP_CHANGES_OFTEN, -128.0, 128.0f),
 	SendPropFloat	(SENDINFO_VECTORELEM(m_vecViewOffset, 2), 10, SPROP_CHANGES_OFTEN, -128.0, 128.0f),
+END_SEND_TABLE()
+
+// The cell-origin system (CELL_BASEENTITY_ORIGIN_CELL_BITS, SendProxy_CellOrigin*) is not
+// part of this port's baseentity/engine; the nonlocal origin is sent unpredicted at full
+// precision instead. The client's DT_PortalNonLocalPlayerExclusive recv table mirrors this.
+
+void* SendProxy_SendNonLocalDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID )
+{
+	pRecipients->SetAllRecipients();
+	pRecipients->ClearRecipient( objectID - 1 );
+	return ( void * )pVarData;
+}
+REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalDataTable );
+
+BEGIN_SEND_TABLE_NOBASE( PortalPlayerStatistics_t, DT_PortalPlayerStatistics )
+	SendPropInt( SENDINFO( iNumPortalsPlaced ), 16, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( iNumStepsTaken ), 16, SPROP_UNSIGNED ),
+	SendPropFloat( SENDINFO( fNumSecondsTaken ), 16, SPROP_NOSCALE ),
+	SendPropFloat( SENDINFO( fDistanceTaken ), 16, SPROP_NOSCALE ),
 END_SEND_TABLE()
 
 BEGIN_SEND_TABLE_NOBASE( CPortalPlayerShared, DT_PortalPlayerShared )
@@ -453,53 +472,6 @@ const char* g_pszBallBotAnimations = "models/ballbot_animations.mdl";
 const char* g_pszEggBotAnimations = "models/eggbot_animations.mdl";
 
 
-class CPortalPlayerModelPrecacher : public CBaseResourcePrecacher
-{
-public:
-	CPortalPlayerModelPrecacher() : CBaseResourcePrecacher( GLOBAL, "CPortalPlayerModelPrecacher" ) {}
-
-	virtual void Cache( IPrecacheHandler *pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals )
-	{
-		bool bIsMultiplayer;
-		if( bPrecache )
-		{
-			bIsMultiplayer = g_pGameRules ? g_pGameRules->IsMultiplayer() : (Q_strnicmp( gpGlobals->mapname.ToCStr(), "mp", 2 ) == 0); //either gamerules says it's multiplayer, or the map name implies it
-			m_bPreCacheWasMultiplayer = bIsMultiplayer;
-		}
-		else
-		{
-			bIsMultiplayer = m_bPreCacheWasMultiplayer;
-		}
-
-		if( bIsMultiplayer || bIgnoreConditionals )
-		{
-			int iModelIndex;
-			pPrecacheHandler->CacheResource( MODEL, GetBallBotModel(), bPrecache, hResourceList, &iModelIndex );
-			pPrecacheHandler->CacheResource( MODEL, g_pszBallBotAnimations, bPrecache, hResourceList, NULL );
-			PrecacheGibsForModel( iModelIndex );
-
-			pPrecacheHandler->CacheResource( MODEL, GetEggBotModel(), bPrecache, hResourceList, &iModelIndex );
-			pPrecacheHandler->CacheResource( MODEL, g_pszEggBotAnimations, bPrecache, hResourceList, NULL );
-			PrecacheGibsForModel( iModelIndex );
-
-			pPrecacheHandler->CacheResource( MODEL, g_pszBallBotHelmetModel, bPrecache, hResourceList, NULL );
-			pPrecacheHandler->CacheResource( MODEL, g_pszEggBotHelmetModel, bPrecache, hResourceList, NULL );
-			pPrecacheHandler->CacheResource( MODEL, g_pszBallBotAntennaModel, bPrecache, hResourceList, NULL );
-			pPrecacheHandler->CacheResource( MODEL, g_pszEggBotAntennaModel, bPrecache, hResourceList, NULL );
-		}
-
-		if( !bIsMultiplayer || bIgnoreConditionals )
-		{
-			pPrecacheHandler->CacheResource( MODEL, g_pszPlayerModel, bPrecache, hResourceList, NULL );
-			pPrecacheHandler->CacheResource( MODEL, g_pszPlayerAnimations, bPrecache, hResourceList, NULL );
-		}
-	}
-
-	bool m_bPreCacheWasMultiplayer; //just being a little paranoid that precaches and uncaches sync up consistently
-};
-CPortalPlayerModelPrecacher s_PortalModelPrecacher;
-
-
 #define MAX_COMBINE_MODELS 4
 #define MODEL_CHANGE_INTERVAL 5.0f
 #define TEAM_CHANGE_INTERVAL 5.0f
@@ -540,7 +512,6 @@ CPortal_Player::CPortal_Player()
 	m_flPredictedJumpTime( 0.f ),
 	m_flUsePostTeleportationBoxTime( 0.0f ),
 	m_bJumpWasPressedWhenForced( false ),
-	m_bWantsToSwapGuns( false ),
 	m_bSendSwapProximityFailEvent( false ),
 	m_PlayerGunType( PLAYER_NO_GUN ),
 	m_bSpawnFromDeath( false ),
@@ -551,11 +522,12 @@ CPortal_Player::CPortal_Player()
 	m_pGrabSound( NULL ),
 	m_nAirTauntCount( 0 ),
 	m_nWheatleyMonitorDestructionCount( 0 ),
-	m_bPotatos( true ),
-	m_flMotionBlurAmount( -1.0f ),
 	m_bIsBendy( false )
 {
 	// Taunt code
+	m_bWantsToSwapGuns = false;
+	m_bPotatos = true;
+	m_flMotionBlurAmount = -1.0f;
 	m_Shared.Init( this );
 	m_Shared.m_flTauntRemoveTime = 0.0f;
 

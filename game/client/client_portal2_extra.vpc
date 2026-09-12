@@ -14,4 +14,5 @@ $Project "Portal 2 extensions"
     {
         $File "portal2\portal2_pausemenu.cpp"
     }
+    $File "portal\c_weapon_paintgun.cpp"
 }

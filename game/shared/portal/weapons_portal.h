@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -40,6 +40,9 @@ typedef enum
 
 	//Hat
 	WEAPON_WEARABLE,
+
+	//Portal 2 paint gun
+	WEAPON_PAINTGUN,
 
 	WEAPON_MAX,		// number of weapons weapon index
 

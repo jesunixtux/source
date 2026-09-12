@@ -49,6 +49,8 @@ namespace CEG
 
 #define CEG_PROTECT_FUNCTION( _func )					((void)0)
 #define CEG_PROTECT_MEMBER_FUNCTION( _class_method )	((void)0)
+#define CEG_PROTECT_STATIC_MEMBER_FUNCTION( _name, _func )	((void)0)
+#define CEG_PROTECT_VIRTUAL_FUNCTION( _name )			((void)0)
 
 #define CEG_GET_CONSTANT_VALUE( _constant )	( CEG::_constant )
 

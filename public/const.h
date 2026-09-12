@@ -294,7 +294,10 @@ enum
 										// the parent is not in the PVS.
 	EF_ITEM_BLINK			= 0x100,	// blink an item so that the user notices it.
 	EF_PARENT_ANIMATES		= 0x200,	// always assume that the parent entity is animating
-	EF_MAX_BITS = 10
+	EF_MARKED_FOR_FAST_REFLECTION	= 0x400,	// marks an entity for reflection rendering when using $reflectonlymarkedentities material variable
+	EF_NOSHADOWDEPTH		= 0x800,	// Indicates this entity does not render into the shadow depthmap
+	EF_SHADOWDEPTH_NOCACHE	= 0x1000,	// Indicates this entity cannot be cached in shadow depthmap and should render every frame
+	EF_MAX_BITS = 14
 };
 
 #define EF_PARITY_BITS	3

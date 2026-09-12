@@ -625,6 +625,7 @@ private: // PAINT SPECIFIC
 	float m_LastGroundBouncePlaneDistance;
 	float m_flLastSuppressedBounceTime;
 	float m_flTimeSinceLastTouchedPower[3];
+	float m_flTimeLastTouchedGround;
 	int m_nPortalsEnteredInAirFlags;
 	int m_nAirTauntCount;
 
