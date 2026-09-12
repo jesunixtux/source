@@ -656,7 +656,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 	Vector vFinalPosition;
 	QAngle qFinalAngles;
 
-	PortalPlacedByType ePlacedBy = ( bPlayer ) ? ( PORTAL_PLACED_BY_PLAYER ) : ( PORTAL_PLACED_BY_PEDESTAL );
+	PortalPlacedBy_t ePlacedBy = ( bPlayer ) ? ( PORTAL_PLACED_BY_PLAYER ) : ( PORTAL_PLACED_BY_PEDESTAL );
 
 	trace_t tr;
 	float fPlacementSuccess = TraceFirePortal( bPortal2, vTraceStart, vDirection, tr, vFinalPosition, qFinalAngles, ePlacedBy, bTest );

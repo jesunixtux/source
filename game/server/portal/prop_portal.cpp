@@ -23,7 +23,7 @@
 #include "PhysicsCloneArea.h"
 #include "portal_gamestats.h"
 #include "weapon_portalgun.h"
-#include "portal_placement.h"
+#include "../../shared/portal/portal_placement.h"
 #include "physicsshadowclone.h"
 #include "particle_parse.h"
 #include "rumble_shared.h"
@@ -86,7 +86,7 @@ CProp_Portal::CProp_Portal( void )
 	{
 		ms_DefaultPortalSizeInitialized = true; // for CEG protection
 		CEG_GCV_PRE();
-		ms_DefaultPortalHalfHeight = CEG_GET_CONSTANT_VALUE( DefaultPortalHalfHeight ); // only protecting one to reduce the cost of first-portal check
+		ms_DefaultPortalHalfHeight = DEFAULT_PORTAL_HALF_HEIGHT * 0.25f; // compatibility fallback
 		CEG_GCV_POST();
 	}
 	m_FizzleEffect = PORTAL_FIZZLE_KILLED;
@@ -201,11 +201,7 @@ void CProp_Portal::Spawn( void )
 	BaseClass::Spawn();
 
 	static bool s_bPortalLocatorForClientRegistered;
-	if ( !s_bPortalLocatorForClientRegistered && g_pMatchFramework )
-	{
-		s_bPortalLocatorForClientRegistered = true;
-		g_pMatchFramework->GetMatchExtensions()->RegisterExtensionInterface( IEXTPROPPORTALLOCATOR_INTERFACE_NAME, &s_PortalServerDllPropPortalLocator );
-	}
+	(void)s_bPortalLocatorForClientRegistered;
 }
 
 void CProp_Portal::OnRestore()
@@ -463,10 +459,7 @@ void CProp_Portal::CreatePortalEffect( CBasePlayer* pPlayer, int iEffect, Vector
 
 	// remove the player who shot it because we handle this in 
 	// the client code and don't need to send a message
-	if ( pPlayer->m_bPredictionEnabled )
-	{
-		filter.RemoveRecipient( pPlayer );
-	}
+	filter.RemoveRecipient( pPlayer );
 
 	UserMessageBegin( filter, "PortalFX_Surface" );
 	WRITE_SHORT( entindex() );
@@ -527,18 +520,22 @@ void CProp_Portal::Activate( void )
 //-----------------------------------------------------------------------------
 void CProp_Portal::UpdatePortalDetectorsOnPortalMoved( void )
 {
+	#if 0
 	for ( CFuncPortalDetector *pDetector = GetPortalDetectorList(); pDetector != NULL; pDetector = pDetector->m_pNext )
 	{
 		pDetector->UpdateOnPortalMoved( this );
 	}
+	#endif
 }
 
 void CProp_Portal::UpdatePortalDetectorsOnPortalActivated( void )
 {
+	#if 0
 	for ( CFuncPortalDetector *pDetector = GetPortalDetectorList(); pDetector != NULL; pDetector = pDetector->m_pNext )
 	{
 		pDetector->UpdateOnPortalActivated( this );
 	}
+	#endif
 }
 
 void CProp_Portal::UpdatePortalLinkage( void )
@@ -628,7 +625,7 @@ void CProp_Portal::DispatchPortalPlacementParticles( bool bIsSecondaryPortal )
 	{
 		CSingleUserRecipientFilter localFilter( pFiringPlayer );
 		localFilter.MakeReliable();
-		DispatchParticleEffect( ( ( bIsSecondaryPortal ) ? ( "portal_2_edge" ) : ( "portal_1_edge" ) ), PATTACH_POINT_FOLLOW, this, "particles", true, -1, &localFilter );
+		DispatchParticleEffect( ( ( bIsSecondaryPortal ) ? ( "portal_2_edge" ) : ( "portal_1_edge" ) ), PATTACH_POINT_FOLLOW, this, "particles", true );
 	}
 }
 

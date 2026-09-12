@@ -220,6 +220,7 @@ public:
 	void FinishMove( CMoveData *move );
 
 	bool	IsHoldingSomething( void ) const { return m_bIsHoldingSomething; }
+	bool	IsSuppressingCrosshair( void ) const { return IsHoldingSomething(); }
 
 	virtual void ApplyTransformToInterpolators( const VMatrix &matTransform, float fUpToTime, bool bIsRevertingPreviousTransform, bool bDuckForced );
 

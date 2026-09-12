@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2003, Valve Corporation, All rights reserved. =======
+//====== Copyright Â© 1996-2003, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -153,7 +153,8 @@ Activity CPortalPlayerAnimState::TranslateActivity( Activity actDesired )
 
 	if ( GetPortalPlayer()->GetActiveWeapon() )
 	{
-		translateActivity = GetPortalPlayer()->GetActiveWeapon()->ActivityOverride( translateActivity, false );
+		bool bActivityRequired = false;
+		translateActivity = GetPortalPlayer()->GetActiveWeapon()->ActivityOverride( translateActivity, &bActivityRequired );
 	}
 
 	return translateActivity;
@@ -375,7 +376,7 @@ bool CPortalPlayerAnimState::HandleMoving( Activity &idealActivity )
 		bool bHasSpeedPower = pPortalPlayer->GetPaintPower( CEG_SPEED_POWER ).m_State == ACTIVE_PAINT_POWER;
 
 #ifdef CLIENT_DLL
-		if ( engine->HasPaintmap() && !bHasSpeedPower && !pPortalPlayer->IsLocalPlayer() )
+		if ( UTIL_Portal_HasPaintmap() && !bHasSpeedPower && !pPortalPlayer->IsLocalPlayer() )
 		{
 			// FIXME: Is this doing extra work in splitscreen?
 			// Non-local players don't update paint powers on the client because this has to happen in gamemovement!

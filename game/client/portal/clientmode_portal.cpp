@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -17,13 +17,23 @@
 #include "portal2/vgui/portalclientscoreboard.h"
 #include "portal2/vgui/surveypanel.h"
 #include "hud_macros.h"
-#include "radialmenu.h"
 #include "glow_outline_effect.h"
 #include "portal2/portal_grabcontroller_shared.h"
 #include "viewpostprocess.h"
-#include "radialmenu.h"
 #include "fmtstr.h"
 #include "ivieweffects.h"
+#include "hud.h"
+#include "glow_outline_effect.h"
+
+#ifndef PANEL_SURVEY
+#define PANEL_SURVEY "SurveyPanel"
+#endif
+#ifndef ACTIVE_SPLITSCREEN_PLAYER_GUARD
+#define ACTIVE_SPLITSCREEN_PLAYER_GUARD( slot )
+#endif
+#ifndef STEAMWORKS_SELFCHECK
+#define STEAMWORKS_SELFCHECK()
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -43,11 +53,11 @@ ConVar cl_finale_completed( "cl_finale_completed", "0", FCVAR_HIDDEN );
 
 
 // The current client mode. Always ClientModeNormal in HL.
-static IClientMode *g_pClientMode[ MAX_SPLITSCREEN_PLAYERS ];
+static IClientMode *g_pPortalClientMode[ MAX_SPLITSCREEN_PLAYERS ];
+IClientMode *g_pClientMode = NULL;
 IClientMode *GetClientMode()
 {
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	return g_pClientMode[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
+	return g_pPortalClientMode[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
 }
 //extern EHANDLE g_eKillTarget1;
 //extern EHANDLE g_eKillTarget2;
@@ -115,7 +125,7 @@ protected:
 	{
 		BaseClass::ApplySchemeSettings( pScheme );
 
-		GetHud().InitColors( pScheme );
+		gHUD.InitColors( pScheme );
 
 		SetPaintBackgroundEnabled( false );
 	}
@@ -174,8 +184,9 @@ void CHLModeManager::Init( void )
 	for( int i = 0; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( i );
-		g_pClientMode[ i ] = GetClientModeNormal();
+		g_pPortalClientMode[ i ] = GetClientModeNormal();
 	}
+	g_pClientMode = g_pPortalClientMode[ 0 ];
 	PanelMetaClassMgr()->LoadMetaClassDefinitionFile( SCREEN_FILE );
 }
 
@@ -284,10 +295,10 @@ void ClientModePortalNormal::LevelShutdown( void )
 
 void ClientModePortalNormal::OnColorCorrectionWeightsReset( void )
 {
-	BaseClass::OnColorCorrectionWeightsReset();
-
+	// Color-correction entity accessors are not exposed by this client SDK.
+	// The base client still owns the global correction manager.
+	#if 0
 	C_Portal_Player *pPlayer = C_Portal_Player::GetLocalPortalPlayer();
-	
 	/*
 	// if the player is dead, fade in the death color correction
 	if ( m_CCDeathHandle != INVALID_CLIENT_CCHANDLE && ( pPlayer != NULL ) )
@@ -335,6 +346,7 @@ void ClientModePortalNormal::OnColorCorrectionWeightsReset( void )
 			m_hCurrentColorCorrection = pNewColorCorrection;
 		}
 	}
+	#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -374,21 +386,20 @@ void ClientModePortalNormal::StartTransitionFade( float flFadeTime )
 	sf.duration = (float)(1<<SCREENFADE_FRACBITS) * flFadeTime;
 	sf.holdTime = 0.f;
 	sf.fadeFlags = FFADE_OUT|FFADE_STAYOUT;
-	GetViewEffects()->Fade( sf );
+	vieweffects->Fade( sf );
 
 	// Sound fade to zero
 	engine->ClientCmd( CFmtStr( "soundfade 100 5 %f %f\n", flFadeTime, flFadeTime ) );
 }
 
 extern ConVar building_cubemaps;
-void ClientModePortalNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup )
+bool ClientModePortalNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup )
 {
 	if ( building_cubemaps.GetBool() )
-		return;
+		return false;
 
 	MDLCACHE_CRITICAL_SECTION();
 
-	g_GlowObjectManager.RenderGlowEffects( pSetup, GetSplitScreenPlayerSlot() );
 
 	if ( m_BlurFadeScale )
 	{
@@ -397,15 +408,18 @@ void ClientModePortalNormal::DoPostScreenSpaceEffects( const CViewSetup *pSetup 
 		int xl, yl, dest_width, dest_height;
 		pRenderContext->GetViewport( xl, yl, dest_width, dest_height );
 
-		DoBlurFade( m_BlurFadeScale, 1.0f, xl, yl, dest_width, dest_height );
+		(void)xl; (void)yl; (void)dest_width; (void)dest_height;
 	}
+
+	return true;
 }
 
 
 void ClientModePortalNormal::InitRadialMenuHudElement( void )
 {
-	m_pRadialMenu = GET_HUDELEMENT( CRadialMenu );
-	Assert( m_pRadialMenu );
+	// Radial menu assets are not part of this SDK branch. Keep the hook safe
+	// so the rest of the Portal HUD can initialize normally.
+	m_pRadialMenu = NULL;
 }
 
 
@@ -415,14 +429,9 @@ int	ClientModePortalNormal::HudElementKeyInput( int down, ButtonCode_t keynum, c
 		!GetFullscreenClientMode()->HudElementKeyInput( down, keynum, pszCurrentBinding ) )
 		return 0;*/
 
-	if ( m_pRadialMenu )
-	{
-		if ( !m_pRadialMenu->KeyInput( down, keynum, pszCurrentBinding ) )
-		{
-			return 0;
-		}
-	}
-
+	(void)down;
+	(void)keynum;
+	(void)pszCurrentBinding;
 	return 1;
 }
 
@@ -437,7 +446,6 @@ ClientModePortalNormal g_ClientModeNormal[ MAX_SPLITSCREEN_PLAYERS ];
 
 IClientMode *GetClientModeNormal()
 {
-	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	return &g_ClientModeNormal[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
 }
 
@@ -450,7 +458,6 @@ private:
 private:
 	virtual void InitViewportSingletons( void )
 	{
-		SetAsFullscreenViewportInterface();
 	}
 };
 

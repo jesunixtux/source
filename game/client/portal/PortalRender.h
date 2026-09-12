@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -194,6 +194,8 @@ public:
 	int ShouldForceCheaperWaterLevel() const;
 
 	bool ShouldObeyStencilForClears() const;
+	void DrawPortalsToTextures( CViewRender *pViewRender, const CViewSetup &viewSetup ) { (void)pViewRender; (void)viewSetup; }
+	bool ShouldUseStencilsToRenderPortals() const { return true; }
 
 #ifdef _PS3
 	void ReloadZcullMemory();

@@ -973,6 +973,7 @@ public:
 
 	void					SetGroundEntity( C_BaseEntity *ground );
 	C_BaseEntity			*GetGroundEntity( void );
+	C_BaseEntity			*GetGroundEntity( void ) const { return const_cast<C_BaseEntity *>( this )->GetGroundEntity(); }
 
 	void					PhysicsPushEntity( const Vector& push, trace_t *pTrace );
 	void					PhysicsCheckWaterTransition( void );
@@ -1073,6 +1074,7 @@ public:
 	// in the other space, so setting the abs velocity will also set the local vel
 	void				SetLocalVelocity( const Vector &vecVelocity );
 	void				SetAbsVelocity( const Vector &vecVelocity );
+	void				Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity );
 	const Vector&		GetLocalVelocity() const;
 	const Vector&		GetAbsVelocity( ) const;
 
@@ -2218,5 +2220,12 @@ inline bool C_BaseEntity::ShouldRecordInTools() const
 }
 
 C_BaseEntity *CreateEntityByName( const char *className );
+
+inline void C_BaseEntity::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity )
+{
+	if ( newPosition ) SetAbsOrigin( *newPosition );
+	if ( newAngles ) SetAbsAngles( *newAngles );
+	if ( newVelocity ) SetAbsVelocity( *newVelocity );
+}
 
 #endif // C_BASEENTITY_H

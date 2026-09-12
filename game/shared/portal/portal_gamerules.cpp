@@ -14,7 +14,9 @@
 #include "weapon_portalgun_shared.h"
 
 #ifndef CLIENT_DLL
+#if 0
 #include "player_voice_listener.h"
+#endif
 #endif // CLIENT_DLL
 
 #ifdef CLIENT_DLL

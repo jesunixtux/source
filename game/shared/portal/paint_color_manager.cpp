@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Implements the paint color manager class.
 //
@@ -88,18 +88,25 @@ Color MapPowerToColor( int paintPowerType )
 	AssertMsg( paintPowerType < PAINT_POWER_TYPE_COUNT_PLUS_NO_POWER, "Index out of bounds." );
 	paintPowerType = MIN( paintPowerType, static_cast<int>( NO_POWER ) );
 
+	auto ReadColor = []( const ConVar &var )
+	{
+		int r = 0, g = 0, b = 0, a = 255;
+		sscanf( var.GetString(), "%d %d %d %d", &r, &g, &b, &a );
+		return Color( r, g, b, a );
+	};
+
 	switch ( paintPowerType )
 	{
 	case BOUNCE_POWER:
-		return bounce_paint_color.GetColor();
+		return ReadColor( bounce_paint_color );
 	case SPEED_POWER:
-		return speed_paint_color.GetColor();
+		return ReadColor( speed_paint_color );
 	case REFLECT_POWER:
-		return speed_paint_color.GetColor();// FIXME: Bring this back for DLC2 reflect_paint_color.GetColor();
+		return ReadColor( speed_paint_color );// FIXME: Bring this back for DLC2 reflect_paint_color.GetColor();
 	case PORTAL_POWER:
-		return portal_paint_color.GetColor();
+		return ReadColor( portal_paint_color );
 	default:
-		return erase_color.GetColor();
+		return ReadColor( erase_color );
 	}
 }
 
@@ -107,7 +114,9 @@ Color MapPowerToVisualColor( int paintPowerType )
 {
 	if( paintPowerType == NO_POWER )
 	{
-		return erase_visual_color.GetColor();
+		int r = 0, g = 0, b = 0, a = 255;
+		sscanf( erase_visual_color.GetString(), "%d %d %d %d", &r, &g, &b, &a );
+		return Color( r, g, b, a );
 	}
 	else
 	{

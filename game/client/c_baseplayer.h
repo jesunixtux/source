@@ -117,7 +117,7 @@ public:
 	};
 	unsigned int	m_afPhysicsFlags;
 	bool			HasPhysicsFlag( unsigned int flag ) { return ( m_afPhysicsFlags & flag ) != 0; }
-	Vector				Forward( void ) { Vector v; AngleVectors( EyeAngles(), &v ); return v; }
+	Vector				Forward( void ) const { Vector v; AngleVectors( const_cast<C_BasePlayer *>( this )->EyeAngles(), &v ); return v; }
 	Vector				Left( void ) { Vector right; AngleVectors( EyeAngles(), NULL, &right, NULL ); return -right; }
 	float			PredictedServerTime( void ) const { return gpGlobals->curtime; }
 

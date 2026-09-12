@@ -340,6 +340,18 @@ $Project "Server (Portal)"
 			$File	"$SRCDIR\game\shared\portal\portal_weapon_parse.cpp"
 			$File	"portal\portal_radio.cpp"
 
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_color_manager.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_power_info.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_power_user_interface.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\portal_base2d_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\portal_placement.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\projectedwallentity_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\weapon_paintgun_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal2\\portal_grabcontroller_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_blobs_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_sprayer_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_stream_shared.cpp"
+
 			$Folder	"Weapons"
 			{
 				$File	"$SRCDIR\game\server\portal\weapon_physcannon.cpp"

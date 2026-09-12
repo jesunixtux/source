@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -41,7 +41,7 @@ bool CPortalStaticProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 	if ( !Q_stricmp( pszResultVar, "$alpha" ) )
 	{
-		pMaterial->SetMaterialVarFlag( MATERIAL_VAR_ALPHA_MODIFIED_BY_PROXY, true );
+	pMaterial->SetMaterialVarFlag( MATERIAL_VAR_VERTEXALPHA, true );
 	}
 
 	return true;

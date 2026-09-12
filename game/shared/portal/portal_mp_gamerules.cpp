@@ -15,7 +15,6 @@
 #include "hl2_shareddefs.h"
 #include "portal_shareddefs.h"
 #include "matchmaking/imatchframework.h"
-#include "matchmaking/mm_helpers.h"
 #include "achievement_stubs.h"
 
 #ifndef CLIENT_DLL
@@ -26,9 +25,15 @@
 
 	#include "c_portal_player.h"
 	#include "c_user_message_register.h"
+	#if 0
 	#include "c_keyvalue_saver.h"
+	#endif
+	#if 0
 	#include "radialmenu_taunt.h"
+	#endif
+	#if 0
 	#include "c_portal_mp_stats.h"
+	#endif
 
 #else
 

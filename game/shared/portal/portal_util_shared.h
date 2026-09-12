@@ -30,7 +30,7 @@ inline void UTIL_ClearTrace( trace_t &tr )
 	class C_BasePlayer;
 	typedef C_BasePlayer CBasePlayer;
 #else
-	class CPortal_Base2D;
+class CPortal_Base2D;
 	class CBasePlayer;
 #endif
 
@@ -55,6 +55,8 @@ CPortal_Base2D* UTIL_Portal_FirstAlongRay( const Ray_t &ray, float &fMustBeClose
 
 bool UTIL_Portal_TraceRay_Bullets( const CPortal_Base2D *pPortal, const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace, bool bTraceHolyWall = true );
 CPortal_Base2D* UTIL_Portal_TraceRay_Beam( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, float *pfFraction );
+bool UTIL_Portal_Trace_Beam( void *pBeam, const Vector &start, const Vector &end,
+	Vector &extra1, Vector &extra2, ITraceFilter *pTraceFilter );
 
 void UTIL_Portal_TraceRay_With( const CPortal_Base2D *pPortal, const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace, bool bTraceHolyWall = true );
 CPortal_Base2D* UTIL_Portal_TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace, bool bTraceHolyWall = true ); //traces a ray normally, then sees if portals have anything to say about it

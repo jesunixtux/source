@@ -599,7 +599,6 @@ public:
 
 	// Portal 2: check if an object can be picked up. Server implementation can
 	// inspect vphysics mass/collision bounds; base version allows pickup.
-	static bool		CanPickupObject( CBaseEntity *pObject, float flMassLimit, float flSizeLimit ) { return true; }
 
 	audioparams_t			&GetAudioParams() { return m_Local.m_audio; }
 

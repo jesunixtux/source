@@ -57,7 +57,6 @@ extern IViewEffects *GetViewEffects();
 #include "util.h"
 #include "eventqueue.h"
 #include "physics_bone_follower.h"
-#include "prop_testchamber_door.h"
 #include "iservervehicle.h"
 #include "trains.h"
 #include "world.h"
@@ -303,7 +302,7 @@ void CPortal_Player::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, 
 
 	// Play the paint step sound if applicable
 	bool shouldPlayPaintStepSound = false;
-	if( engine->HasPaintmap() )
+	if( UTIL_Portal_HasPaintmap() )
 	{
 		CBaseEntity const* pGroundEntity = GetGroundEntity();
 		for( unsigned i = 0; i < PAINT_POWER_TYPE_COUNT; ++i )
@@ -324,7 +323,7 @@ void CPortal_Player::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, 
 
 		if( pPaintedSurface )
 		{
-			unsigned short const paintStepSoundIndex = side != 0 ? pPaintedSurface->sounds.runStepLeft : pPaintedSurface->sounds.runStepRight;
+			unsigned short const paintStepSoundIndex = side != 0 ? pPaintedSurface->sounds.stepleft : pPaintedSurface->sounds.stepright;
 			CSoundParameters soundParams;
 			if( paintStepSoundIndex != 0 &&
 				GetParametersForSound( physprops->GetString( paintStepSoundIndex ), soundParams, NULL ) )
@@ -508,11 +507,13 @@ void CPortal_Player::ForceDuckThisFrame( void )
 }
 
 
+#ifndef GAME_DLL
 const CPortalPlayerLocalData& CPortal_Player::GetPortalPlayerLocalData() const
 {
 	return m_PortalLocal;
 }
 
+#endif
 
 #if 0
 
@@ -1505,7 +1506,7 @@ float CPortal_Player::PredictedBounce( void )
 {
 	float fSeconds = 0.0f;
 
-	if ( m_PortalLocal.m_hTractorBeam.Get() || GetAirTime() < 1.0f )
+	if ( m_PortalLocal.m_hTractorBeam.Get() || true )
 	{
 		// We haven't been falling long enough
 		m_PlayerAnimState->m_fPrevBouncePredict = 4.0f;
@@ -1863,7 +1864,7 @@ void CPortal_Player::Paint( PaintPowerType type, const Vector& worldContactPt )
 			// Restart paint screen space effect
 			if( m_PaintScreenSpaceEffect.IsValid() )
 			{
-				m_PaintScreenSpaceEffect->Restart( RESTART_RESET_AND_MAKE_SURE_EMITS_HAPPEN );
+				m_PaintScreenSpaceEffect->Restart( CParticleCollection::RESTART_RESET_AND_MAKE_SURE_EMITS_HAPPEN );
 			}
 
 			// commenting out the 3rd person drop effect
@@ -2758,13 +2759,13 @@ float CPortal_Player::SpeedPaintAcceleration( float flDefaultMaxSpeed,
 
 bool CPortal_Player::IsPressingJumpKey() const
 {
-	return ( m_afButtonForced & IN_JUMP ) ? m_bJumpWasPressedWhenForced : ( m_afButtonPressed & IN_JUMP ) != 0;
+	return ( 0 & IN_JUMP ) ? m_bJumpWasPressedWhenForced : ( m_afButtonPressed & IN_JUMP ) != 0;
 }
 
 
 bool CPortal_Player::IsHoldingJumpKey() const
 {
-	return ( m_afButtonForced & IN_JUMP ) ? m_bJumpWasPressedWhenForced : ( m_nButtons & IN_JUMP ) != 0;
+	return ( 0 & IN_JUMP ) ? m_bJumpWasPressedWhenForced : ( m_nButtons & IN_JUMP ) != 0;
 }
 
 
@@ -3271,7 +3272,7 @@ float CPortal_Player::GetReorientationProgress() const
 
 bool CPortal_Player::IsDoneReorienting() const
 {
-	const QAngle& qPunch = m_PortalLocal.m_qQuaternionPunch;
+	const Quaternion& qPunch = m_PortalLocal.m_qQuaternionPunch;
 
 	// To be considered done reorienting we have to not be pitching,
 	// not be rotating our up vector, be fully reoriented, and not have any
@@ -3279,7 +3280,7 @@ bool CPortal_Player::IsDoneReorienting() const
 	return m_PortalLocal.m_bDoneCorrectPitch &&
 		m_PortalLocal.m_bDoneStickInterp &&
 		CloseEnough( GetReorientationProgress(), 1.f ) &&
-		qPunch.LengthSqr() == 0.f;
+		DotProduct( qPunch.Base(), qPunch.Base() ) == 0.f;
 }
 
 float AngleBetween(Vector up, Vector forward)
@@ -3364,13 +3365,15 @@ void CPortal_Player::Reorient( QAngle& viewAngles )
 			engine->Con_NPrintf( 1, "%f, %f, %f", XYZ(vUp) );
 			engine->Con_NPrintf( 2, "%f, %f, %f", XYZ( Vector(m_PortalLocal.m_vEyeOffset) ) );
 			engine->Con_NPrintf( 3, "%f, %f, %f", XYZ( GetLocalOrigin() ) );
-			QAngle quatAngles = m_PortalLocal.m_qQuaternionPunch;
+			QAngle quatAngles;
+			QuaternionAngles( m_PortalLocal.m_qQuaternionPunch, quatAngles );
 			engine->Con_NPrintf( 4, "%f, %f, %f", quatAngles.x, quatAngles.y, quatAngles.z );
 	#else
 			engine->Con_NPrintf( 6, "%f, %f, %f", XYZ(vUp) );
 			engine->Con_NPrintf( 7, "%f, %f, %f", XYZ( Vector(m_PortalLocal.m_vEyeOffset) ) );
 			engine->Con_NPrintf( 8, "%f, %f, %f", XYZ( GetLocalOrigin() ) );
-			QAngle quatAngles = m_PortalLocal.m_qQuaternionPunch;
+			QAngle quatAngles;
+			QuaternionAngles( m_PortalLocal.m_qQuaternionPunch, quatAngles );
 			engine->Con_NPrintf( 9, "%f, %f, %f", quatAngles.x, quatAngles.y, quatAngles.z );
 	#endif
 #endif
@@ -3395,7 +3398,7 @@ void CPortal_Player::SetQuaternionPunch( const Quaternion& qPunch )
 	qTempAngle.y = anglemod( qTempAngle.y );
 	qTempAngle.z = anglemod( qTempAngle.z );
 
-	m_PortalLocal.m_qQuaternionPunch = qTempAngle;
+	AngleQuaternion( qTempAngle, m_PortalLocal.m_qQuaternionPunch );
 }
 
 void CPortal_Player::DecayQuaternionPunch()
@@ -3424,7 +3427,7 @@ void CPortal_Player::DecayQuaternionPunch()
 	anglesOut.z = anglemod( anglesOut.z );
 	
 	// Store it
-	m_PortalLocal.m_qQuaternionPunch = anglesOut;
+	AngleQuaternion( anglesOut, m_PortalLocal.m_qQuaternionPunch );
 }
 
 
@@ -3971,6 +3974,168 @@ void BrushContact::Initialize( const fltx4& contactPt,
 
 typedef CUtlVector<Vector4D> PlaneVector;
 
+static inline fltx4 PortalSIMDIdentity( int axis )
+{
+	return SetComponentSIMD( Four_Zeros, axis, 1.0f );
+}
+
+static inline fltx4 PortalCrossProductSIMD( const fltx4 &a, const fltx4 &b )
+{
+	Vector va( SubFloat( a, 0 ), SubFloat( a, 1 ), SubFloat( a, 2 ) );
+	Vector vb( SubFloat( b, 0 ), SubFloat( b, 1 ), SubFloat( b, 2 ) );
+	Vector cross = CrossProduct( va, vb );
+	return SetWSIMD( LoadUnalignedSIMD( cross.Base() ), Four_Zeros );
+}
+
+static inline fltx4 PortalSetWFromXSIMD( const fltx4 &a, const fltx4 &b ) { return SetWSIMD( a, SplatXSIMD( b ) ); }
+static inline fltx4 PortalSetWFromYSIMD( const fltx4 &a, const fltx4 &b ) { return SetWSIMD( a, SplatYSIMD( b ) ); }
+static inline fltx4 PortalSetWFromZSIMD( const fltx4 &a, const fltx4 &b ) { return SetWSIMD( a, SplatZSIMD( b ) ); }
+
+struct PortalSIMDIdentityStorage_t
+{
+	fltx4 values[3];
+	PortalSIMDIdentityStorage_t()
+	{
+		values[0] = PortalSIMDIdentity( 0 );
+		values[1] = PortalSIMDIdentity( 1 );
+		values[2] = PortalSIMDIdentity( 2 );
+	}
+};
+static PortalSIMDIdentityStorage_t s_PortalSIMDIdentity;
+#define g_SIMD_Identity s_PortalSIMDIdentity.values
+#define CrossProductSIMD PortalCrossProductSIMD
+#define SetWFromXSIMD PortalSetWFromXSIMD
+#define SetWFromYSIMD PortalSetWFromYSIMD
+#define SetWFromZSIMD PortalSetWFromZSIMD
+
+template <typename PlaneIndexType>
+static void HullFromPlanesImpl( CMesh *pMesh, CUtlVector<PlaneIndexType> *pPlaneIndices, const Vector4D *pPlanes, int nPlanes )
+{
+	if ( !pMesh || !pPlaneIndices || nPlanes < 4 )
+		return;
+	pMesh->Clear();
+	pPlaneIndices->RemoveAll();
+
+	const float epsilon = 0.01f;
+	for ( int i = 0; i < nPlanes - 2; ++i )
+	{
+		const Vector ni( pPlanes[i].x, pPlanes[i].y, pPlanes[i].z );
+		for ( int j = i + 1; j < nPlanes - 1; ++j )
+		{
+			const Vector nj( pPlanes[j].x, pPlanes[j].y, pPlanes[j].z );
+			for ( int k = j + 1; k < nPlanes; ++k )
+			{
+				const Vector nk( pPlanes[k].x, pPlanes[k].y, pPlanes[k].z );
+				const float det = DotProduct( ni, CrossProduct( nj, nk ) );
+				if ( fabsf( det ) < 1e-6f )
+					continue;
+
+				const Vector point = ( pPlanes[i].w * CrossProduct( nj, nk ) +
+					pPlanes[j].w * CrossProduct( nk, ni ) +
+					pPlanes[k].w * CrossProduct( ni, nj ) ) / det;
+
+				bool inside = true;
+				for ( int p = 0; p < nPlanes; ++p )
+				{
+					const Vector normal( pPlanes[p].x, pPlanes[p].y, pPlanes[p].z );
+					if ( DotProduct( normal, point ) - pPlanes[p].w > epsilon )
+					{
+						inside = false;
+						break;
+					}
+				}
+				if ( !inside )
+					continue;
+
+				bool duplicate = false;
+				for ( int v = 0; v < pMesh->m_Vertices.Count(); ++v )
+				{
+					const Vector4D &existing = pMesh->m_Vertices[v];
+					const float dx = existing.x - point.x;
+					const float dy = existing.y - point.y;
+					const float dz = existing.z - point.z;
+					if ( dx * dx + dy * dy + dz * dz < epsilon * epsilon )
+					{
+						duplicate = true;
+						break;
+					}
+				}
+				if ( !duplicate )
+					pMesh->m_Vertices.AddToTail( Vector4D( point.x, point.y, point.z, 0.0f ) );
+			}
+		}
+	}
+
+	// Triangulate each supporting plane. The vertices on a plane form a
+	// convex polygon; ordering them around the plane normal gives a stable fan.
+	for ( int p = 0; p < nPlanes; ++p )
+	{
+		const Vector normal( pPlanes[p].x, pPlanes[p].y, pPlanes[p].z );
+		CUtlVector<int> face;
+		for ( int v = 0; v < pMesh->m_Vertices.Count(); ++v )
+		{
+			const Vector point( pMesh->m_Vertices[v].x, pMesh->m_Vertices[v].y, pMesh->m_Vertices[v].z );
+			if ( fabsf( DotProduct( normal, point ) - pPlanes[p].w ) < epsilon )
+				face.AddToTail( v );
+		}
+		if ( face.Count() < 3 )
+			continue;
+
+		Vector center( 0, 0, 0 );
+		for ( int n = 0; n < face.Count(); ++n )
+			center += Vector( pMesh->m_Vertices[face[n]].x, pMesh->m_Vertices[face[n]].y, pMesh->m_Vertices[face[n]].z );
+		center /= (float)face.Count();
+
+		Vector axis = fabsf( normal.z ) < 0.9f ? Vector( 0, 0, 1 ) : Vector( 0, 1, 0 );
+		Vector u = CrossProduct( axis, normal );
+		u.NormalizeInPlace();
+		Vector v = CrossProduct( normal, u );
+		for ( int a = 1; a < face.Count(); ++a )
+		{
+			int value = face[a];
+			Vector point( pMesh->m_Vertices[value].x, pMesh->m_Vertices[value].y, pMesh->m_Vertices[value].z );
+			float valueAngle = atan2f( DotProduct( point - center, v ), DotProduct( point - center, u ) );
+			int b = a - 1;
+			while ( b >= 0 )
+			{
+				Vector previous( pMesh->m_Vertices[face[b]].x, pMesh->m_Vertices[face[b]].y, pMesh->m_Vertices[face[b]].z );
+				if ( atan2f( DotProduct( previous - center, v ), DotProduct( previous - center, u ) ) <= valueAngle )
+					break;
+				face[b + 1] = face[b--];
+			}
+			face[b + 1] = value;
+		}
+
+		for ( int n = 1; n + 1 < face.Count(); ++n )
+		{
+			pMesh->m_Indices.AddToTail( (unsigned short)face[0] );
+			pMesh->m_Indices.AddToTail( (unsigned short)face[n] );
+			pMesh->m_Indices.AddToTail( (unsigned short)face[n + 1] );
+			pPlaneIndices->AddToTail( (PlaneIndexType)p );
+		}
+	}
+
+	pMesh->m_nVertexCount = pMesh->m_Vertices.Count();
+	pMesh->m_nIndexCount = pMesh->m_Indices.Count();
+	pMesh->m_pIndices = pMesh->m_Indices.Base();
+}
+
+static void HullFromPlanes( CMesh *pMesh, CUtlVector<uint32> *pPlaneIndices, const float *pPlanes, int nPlanes, int stride )
+{
+	CUtlVector<Vector4D> planes;
+	for ( int i = 0; i < nPlanes; ++i )
+		planes.AddToTail( Vector4D( pPlanes[i * stride + 0], pPlanes[i * stride + 1], pPlanes[i * stride + 2], pPlanes[i * stride + 3] ) );
+	HullFromPlanesImpl( pMesh, pPlaneIndices, planes.Base(), planes.Count() );
+}
+
+static void HullFromPlanes_SIMD( CMesh *pMesh, CUtlVector<uint16> *pPlaneIndices, const fltx4 *pPlanes, int nPlanes )
+{
+	CUtlVector<Vector4D> planes;
+	for ( int i = 0; i < nPlanes; ++i )
+		planes.AddToTail( Vector4D( SubFloat( pPlanes[i], 0 ), SubFloat( pPlanes[i], 1 ), SubFloat( pPlanes[i], 2 ), SubFloat( pPlanes[i], 3 ) ) );
+	HullFromPlanesImpl( pMesh, pPlaneIndices, planes.Base(), planes.Count() );
+}
+
 void AddBboxToPlaneList( Vector4D *pListInsertPosition, const Vector &vMins, const Vector &vMaxs )
 {
 	pListInsertPosition[0] = Vector4D(1, 0, 0, vMaxs.x);
@@ -4336,7 +4501,7 @@ void ComputeAABBContactsWithBrushEntity_SIMD( ContactVector& contacts, const cpl
 	//PlaneVector planes;
 	const int NUMBER_OF_FLTX4 = brushQuery.MaxBrushSides() + 6 /*bbox*/ + iClipPlaneCount;
 	fltx4 *planes = (fltx4 *)stackalloc( sizeof( fltx4 ) * ( NUMBER_OF_FLTX4 + 1 ) );		// +1 for VMX alignment
-	planes = (fltx4*)ALIGN_VALUE( (int)planes, sizeof(fltx4) );
+	planes = (fltx4*)ALIGN_VALUE( (uintptr_t)planes, sizeof(fltx4) );
 
 	fltx4 f4BoxMin = LoadUnalignedSIMD( &boxMin.x );
 	fltx4 f4BoxMax = LoadUnalignedSIMD( &boxMax.x );
@@ -4611,7 +4776,7 @@ void CPortal_Player::ItemPostFrame()
 	BaseClass::ItemPostFrame();
 
 	CBaseCombatWeapon* pActiveWeapon = GetActiveWeapon();
-	if( m_hUseEntity != NULL &&
+	if( GetUseEntity() != NULL &&
 		paintgun_ammo_type != PAINT_AMMO_NONE &&
 		pActiveWeapon != NULL &&
 		FClassnameIs( pActiveWeapon, "weapon_paintgun" ) )

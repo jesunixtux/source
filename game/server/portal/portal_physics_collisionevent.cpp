@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -6,6 +6,7 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "tier1/utlstack.h"
 #include "portal_physics_collisionevent.h"
 #include "physicsshadowclone.h"
 #include "prop_combine_ball.h"

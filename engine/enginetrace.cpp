@@ -807,8 +807,8 @@ int CEngineTrace::GetMeshesFromDisplacementsInAABB( const Vector &vMins, const V
 			int dispIndex = pBSPData->map_dispList[curLeaf.dispListStart + k];
 			CDispCollTree *pDispTree = &g_pDispCollTrees[dispIndex];
 
-			int count = 0;
-			uint16 *pCounters = NULL;
+			TraceCounter_t count = pTraceInfo->GetCount();
+			TraceCounter_t *pCounters = pTraceInfo->GetDispCounters();
 			if ( !pTraceInfo->Visit( pDispTree->m_iCounter, count, pCounters ) )
 				continue;
 

@@ -8,6 +8,7 @@
 #include "achievementmgr.h"
 #include "icommandline.h"
 #ifdef CLIENT_DLL
+#include "clientsteamcontext.h"
 #include "tier3/tier3.h"
 #include "vgui/ILocalize.h"
 #include "achievement_notification_panel.h"

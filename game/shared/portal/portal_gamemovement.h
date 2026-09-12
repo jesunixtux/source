@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Special handling for Portal usable ladders
 //
@@ -8,6 +8,7 @@
 
 #include "cbase.h"
 #include "hl_gamemovement.h"
+#include "gametrace.h"
 
 #if defined( CLIENT_DLL )
 	#include "c_portal_player.h"
@@ -28,6 +29,7 @@ public:
 	CPortalGameMovement();
 
 	bool	m_bInPortalEnv;
+	CTraceListData *m_pTraceListData;
 // Overrides
 	virtual void ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove );
 	virtual Vector	GetPlayerMins( bool ducked ) const;

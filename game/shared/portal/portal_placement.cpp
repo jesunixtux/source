@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -19,7 +19,6 @@
 #include "physicsshadowclone.h"
 #include "trigger_portal_cleanser.h"
 #else
-#include "c_triggers.h"
 #include "c_func_noportal_volume.h"
 #include "c_func_portal_bumper.h"
 #include "c_trigger_portal_cleanser.h"

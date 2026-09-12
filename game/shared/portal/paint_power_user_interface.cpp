@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Implements the interface class for all paint power users.
 //
@@ -82,12 +82,14 @@ void MapSurfaceToPower( PaintPowerInfo_t& info )
 
 					if( pBoneOwner )
 					{
-						info.m_PaintPowerType = MapColorToPower( pBoneOwner->GetRenderColor() );
+						const color32 c = pBoneOwner->GetRenderColor();
+						info.m_PaintPowerType = MapColorToPower( Color( c.r, c.g, c.b, c.a ) );
 					}
 				}
 				else //Use the render color of this entity
 				{
-					info.m_PaintPowerType = MapColorToPower( pEnt->GetRenderColor() );
+					const color32 c = pEnt->GetRenderColor();
+					info.m_PaintPowerType = MapColorToPower( Color( c.r, c.g, c.b, c.a ) );
 				}
 
 				if( sv_enable_paint_power_user_debug.GetBool() )

@@ -37,8 +37,11 @@ public:
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 
-	// Bring in the base 1-arg DrawModel so derived weapons can still call it.
+	// Client-only renderables need the base overload; the server CBaseEntity
+	// does not expose DrawModel in this branch.
+	#if defined( CLIENT_DLL )
 	using CBaseEntity::DrawModel;
+	#endif
 
 	CWeaponPortalBase();
 

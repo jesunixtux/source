@@ -43,7 +43,7 @@ public:
 
 	// Portal 2: compute linear/angular force applied to an entity this frame.
 	// Stub implementation leaves outputs zero.
-	virtual void CalculateFrameMovement( CBaseEntity *pEntity, CBaseEntity *pPlayer, float flDeltaTime, Vector &vLinear, QAngle &angAngular ) { vLinear.Init(); angAngular.Init(); }
+	virtual void CalculateFrameMovement( CBaseEntity *pEntity, CBaseEntity *pPlayer, float flDeltaTime, Vector &vLinear, AngularImpulse &angAngular ) { vLinear.Init(); angAngular.Init(); }
 };
 
 #define CTrigger_TractorBeam C_Trigger_TractorBeam

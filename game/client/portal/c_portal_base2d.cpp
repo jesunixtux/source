@@ -1,4 +1,4 @@
-//===== Copyright � 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -25,7 +25,6 @@
 #include "materialsystem/imaterialvar.h"
 #include "c_baseprojectedentity.h"
 #include "c_basetempentity.h"
-#include "c_combatweaponworldclone.h"
 #include "C_Portal_Player.h"
 #include "prediction.h"
 #include "tier1/callqueue.h"
@@ -80,7 +79,7 @@ BEGIN_PREDICTION_DATA( C_Portal_Base2D )
 	DEFINE_FIELD( m_vForward, FIELD_VECTOR ),
 	DEFINE_FIELD( m_vRight, FIELD_VECTOR ),
 	DEFINE_FIELD( m_vUp, FIELD_VECTOR ),
-	DEFINE_FIELD( m_plane_Origin, FIELD_VECTOR4D ),
+	DEFINE_FIELD( m_plane_Origin, FIELD_VECTOR ),
 	DEFINE_FIELD( m_matrixThisToLinked, FIELD_VMATRIX ),
 END_PREDICTION_DATA()
 
@@ -120,7 +119,7 @@ C_Portal_Base2D::~C_Portal_Base2D( void )
 
 	for( int i = m_GhostRenderables.Count(); --i >= 0; )
 	{
-		UTIL_Remove( m_GhostRenderables[i] );
+		m_GhostRenderables[i]->Release();
 	}
 	m_GhostRenderables.RemoveAll();
 
@@ -134,7 +133,6 @@ C_Portal_Base2D::~C_Portal_Base2D( void )
 void C_Portal_Base2D::Spawn( void )
 {
 	// disable the fast path for these entities so our custom DrawModel() function gets called
-	m_bCanUseFastPath = false;
 
 	m_matrixThisToLinked.Identity(); //don't accidentally teleport objects to zero space
 	BaseClass::Spawn();
@@ -177,7 +175,7 @@ void C_Portal_Base2D::Simulate()
 		//remove all ghost renderables
 		for( int i = m_GhostRenderables.Count(); --i >= 0; )
 		{
-			UTIL_Remove( m_GhostRenderables[i] );
+			m_GhostRenderables[i]->Release();
 		}
 		
 		m_GhostRenderables.RemoveAll();
@@ -197,7 +195,7 @@ void C_Portal_Base2D::Simulate()
 
 	Vector vExtents = MAX( GetHalfHeight(), GetHalfWidth() ) * Vector(1,1,1);
 	Vector vOrigin = portal_ghost_use_network_origin.GetBool() ? GetNetworkOrigin() : GetAbsOrigin();
-	int iEntsNearPortal = ( cl_portal_ghost_use_render_bound.GetBool() ) ? UTIL_RenderablesInBox( pEntsNearPortal, 1024, vOrigin - vExtents, vOrigin + vExtents ) : UTIL_EntitiesInSphere( pEntsNearPortal, 1024, vOrigin, MAX( GetHalfHeight(), GetHalfWidth() ), 0, PARTITION_CLIENT_NON_STATIC_EDICTS );
+	int iEntsNearPortal = UTIL_EntitiesInSphere( pEntsNearPortal, 1024, vOrigin, MAX( GetHalfHeight(), GetHalfWidth() ), 0, PARTITION_CLIENT_GAME_EDICTS );
 
 	if( iEntsNearPortal != 0 )
 	{
@@ -246,7 +244,7 @@ void C_Portal_Base2D::Simulate()
 			if ( j >= 0 )
 				continue;
 			
-			GetSimulateCallQueue()->QueueCall( C_PortalGhostRenderable::CreateGhostRenderable, pRenderable, this );
+			C_PortalGhostRenderable::CreateGhostRenderable( pRenderable, this );
 		}
 
 		for( int i = m_GhostRenderables.Count(); --i >= 0; )
@@ -304,7 +302,7 @@ void C_Portal_Base2D::Simulate()
 				}
 			}
 
-			UTIL_Remove( pGhost );
+			pGhost->Release();
 			m_GhostRenderables.FastRemove( i );
 		}
 	}
@@ -525,7 +523,7 @@ void C_Portal_Base2D::HandlePredictionError( bool bErrorInThisEntity )
 		HandleNetworkChanges();
 	}
 
-	BaseClass::HandlePredictionError( bErrorInThisEntity );
+	(void)bErrorInThisEntity;
 }
 
 void C_Portal_Base2D::UpdateGhostRenderables( void )
@@ -703,7 +701,7 @@ void C_Portal_Base2D::UpdatePartitionListEntry()
 {
 	::partition->RemoveAndInsert( 
 		PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS,  // remove
-		PARTITION_CLIENT_TRIGGER_ENTITIES,  // add
+		PARTITION_CLIENT_GAME_EDICTS,  // add
 		CollisionProp()->GetPartitionHandle() );
 }
 
@@ -846,8 +844,8 @@ void EntityPortalledMessageHandler( C_BaseEntity *pEntity, C_Portal_Base2D *pPor
 
 	VMatrix matTransform = pPortal->MatrixThisToLinked();
 
-	CDiscontinuousInterpolatedVar< QAngle > &rotInterp = pEntity->GetRotationInterpolator();
-	CDiscontinuousInterpolatedVar< Vector > &posInterp = pEntity->GetOriginInterpolator();
+	CInterpolatedVar< QAngle > &rotInterp = pEntity->GetRotationInterpolator();
+	CInterpolatedVar< Vector > &posInterp = pEntity->GetOriginInterpolator();
 
 
 	if( cl_portal_teleportation_interpolation_fixup_method.GetInt() == 0 )

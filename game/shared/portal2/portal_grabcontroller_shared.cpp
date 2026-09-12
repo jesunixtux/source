@@ -1,4 +1,4 @@
-//===== Copyright � Valve Corporation, All rights reserved. ======//
+//===== Copyright ï¿½ Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -10,6 +10,10 @@
 #include "portal_player_shared.h"
 #include "vphysics/friction.h"
 #include "collisionutils.h"
+
+#ifndef COLLISION_GROUP_PLAYER_HELD
+#define COLLISION_GROUP_PLAYER_HELD COLLISION_GROUP_PLAYER
+#endif
 
 #if defined ( CLIENT_DLL )
 #include "c_portal_player.h"

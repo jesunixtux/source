@@ -15,10 +15,10 @@ BEGIN_RECV_TABLE_NOBASE( C_PortalPlayerLocalData, DT_PortalLocal )
 	RecvPropBool( RECVINFO( m_bSlowingTime ) ),
 	RecvPropBool( RECVINFO( m_bShowingViewFinder ) ),
 	RecvPropBool( RECVINFO( m_bZoomedIn ) ),
-	RecvPropFloat( RECVINFO( m_flAirControlSupressionTime ), 32, SPROP_NOSCALE ),
+	RecvPropFloat( RECVINFO( m_flAirControlSupressionTime ), SPROP_NOSCALE ),
 	RecvPropVector( RECVINFO( m_vPreUpdateVelocity ) ),
 	RecvPropEHandle( RECVINFO( m_hTractorBeam ) ),
-	RecvPropInt( RECVINFO( m_PaintedPowerType ), 8, SPROP_UNSIGNED ),
+	RecvPropInt( RECVINFO( m_PaintedPowerType ), SPROP_UNSIGNED ),
 END_RECV_TABLE()
 
 //-----------------------------------------------------------------------------

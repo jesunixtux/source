@@ -133,6 +133,8 @@ public:
 
 	//abstract functions which require no transforms, just pass them along to the wrapped collideable
 	virtual IHandleEntity	*GetEntityHandle() { return m_pWrappedCollideable->GetEntityHandle(); }
+	virtual const Vector&	OBBMinsPreScaled() const { return m_pWrappedCollideable->OBBMinsPreScaled(); }
+	virtual const Vector&	OBBMaxsPreScaled() const { return m_pWrappedCollideable->OBBMaxsPreScaled(); }
 	virtual const Vector&	OBBMins() const { return m_pWrappedCollideable->OBBMins(); };
 	virtual const Vector&	OBBMaxs() const { return m_pWrappedCollideable->OBBMaxs(); };
 	virtual int				GetCollisionModelIndex() { return m_pWrappedCollideable->GetCollisionModelIndex(); };
@@ -152,6 +154,7 @@ public:
 	virtual const QAngle&	GetCollisionAngles() const;
 	virtual const matrix3x4_t&	CollisionToWorldTransform() const;
 	virtual void			WorldSpaceSurroundingBounds( Vector *pVecMins, Vector *pVecMaxs );
+	virtual bool			ShouldTouchTrigger( int triggerSolidFlags ) const { return m_pWrappedCollideable->ShouldTouchTrigger( triggerSolidFlags ); }
 	virtual const matrix3x4_t	*GetRootParentToWorldTransform() const;
 };
 
@@ -416,6 +419,22 @@ CPortal_Base2D* UTIL_Portal_TraceRay_Beam( const Ray_t &ray, unsigned int fMask,
 
 	*pfFraction = fMustBeCloserThan; //will be real trace distance if it didn't hit a portal
 	return pIntersectedPortal;
+}
+
+bool UTIL_Portal_Trace_Beam( void *pBeam, const Vector &start, const Vector &end,
+	Vector &extra1, Vector &extra2, ITraceFilter *pTraceFilter )
+{
+	// The current beam implementation only needs the extra points when a
+	// portal actually redirects the beam. Keep ordinary beams on the fast
+	// path and leave redirected-beam bounds to the regular portal trace until
+	// the beam renderer supplies its portal-specific segment list.
+	(void)pBeam;
+	(void)start;
+	(void)end;
+	(void)extra1;
+	(void)extra2;
+	(void)pTraceFilter;
+	return false;
 }
 
 
@@ -2875,8 +2894,12 @@ float UTIL_PaintBrushEntity( CBaseEntity* pBrushEntity, const Vector& contactPoi
 	Vector vEntitySpaceContactPoint;
 	pBrushEntity->WorldToEntitySpace( contactPoint, &vEntitySpaceContactPoint );
 
+	#ifdef CLIENT_DLL
+	return 0.0f;
+	#else
 	if ( !engine->SpherePaintSurface( pBrushEntity->GetModel(), vEntitySpaceContactPoint, power, flPaintRadius, flAlphaPercent ) )
 		return 0.0f;
+	#endif
 	return flPaintRadius;
 }
 
@@ -2898,7 +2921,9 @@ PaintPowerType UTIL_Paint_TracePower( CBaseEntity* pBrushEntity, const Vector& c
 	Vector vTransformedContactNormal;
 	VectorRotate( vContactNormal, -pBrushEntity->GetAbsAngles(), vTransformedContactNormal );
 
+	#ifndef CLIENT_DLL
 	engine->SphereTracePaintSurface( pBrushEntity->GetModel(), vEntitySpaceContactPoint, vTransformedContactNormal, sv_paint_detection_sphere_radius.GetFloat(), color );
+	#endif
 
 	return MapColorToPower( color );
 }
@@ -2907,6 +2932,7 @@ PaintPowerType UTIL_Paint_TracePower( CBaseEntity* pBrushEntity, const Vector& c
 bool UTIL_Paint_Reflect( const trace_t& tr, Vector& vStart, Vector& vDir, PaintPowerType reflectPower /* = REFLECT_POWER */ )
 {
 	// check for reflect paint
+	#ifndef CLIENT_DLL
 	if ( engine->HasPaintmap() && tr.m_pEnt && tr.m_pEnt->IsBSPModel() )
 	{
 		PaintPowerType power = UTIL_Paint_TracePower( tr.m_pEnt, tr.endpos, tr.plane.normal );
@@ -2939,6 +2965,7 @@ bool UTIL_Paint_Reflect( const trace_t& tr, Vector& vStart, Vector& vDir, PaintP
 			}
 		}
 	}
+	#endif
 
 	return false;
 }

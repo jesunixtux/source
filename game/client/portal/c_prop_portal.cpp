@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -26,6 +26,7 @@
 #include "materialsystem/imaterialvar.h"
 #include "portal_mp_gamerules.h"
 #include "c_weapon_portalgun.h"
+#define CWeaponPortalgun C_WeaponPortalgun
 #include "prediction.h"
 #include "particle_parse.h"
 #include "c_user_message_register.h"
@@ -188,7 +189,7 @@ C_Prop_Portal::C_Prop_Portal( void )
 		ms_DefaultPortalSizeInitialized = true; // for CEG protection
 
 		CEG_GCV_PRE();
-		ms_DefaultPortalHalfHeight = CEG_GET_CONSTANT_VALUE( DefaultPortalHalfHeight ); // only protecting one to reduce the cost of first-portal check
+		ms_DefaultPortalHalfHeight = DEFAULT_PORTAL_HALF_HEIGHT; // only protecting one to reduce the cost of first-portal check
 		CEG_GCV_POST();
 	}
 	m_bIsPropPortal = true;	// Member of CPortalRenderable
@@ -242,7 +243,7 @@ void C_Prop_Portal::ClientThink( void )
 
 	if( m_fOpenAmount < 1.0f )
 	{
-		float flSlowdown = GameTimescale()->GetCurrentTimescale();
+		float flSlowdown = GameTimescale().GetCurrentTimescale();
 		m_fOpenAmount += ( gpGlobals->frametime * ( 2.0f / flSlowdown ) );
 		if( m_fOpenAmount > 1.0f ) 
 			m_fOpenAmount = 1.0f;
@@ -343,7 +344,7 @@ void C_Prop_Portal::CreateFizzleEffect( C_BaseEntity *pOwner, int iEffect, Vecto
 	vColor.y = color.g();
 	vColor.z = color.b();
 
-	CUtlReference<CNewParticleEffect> pEffect;
+	CSmartPtr<CNewParticleEffect> pEffect;
 	if ( !pOwner )
 		return;
 
@@ -353,25 +354,25 @@ void C_Prop_Portal::CreateFizzleEffect( C_BaseEntity *pOwner, int iEffect, Vecto
 	{
 	case PORTAL_FIZZLE_SUCCESS:
 		{
-			pEffect = CNewParticleEffect::CreateOrAggregate( NULL, "portal_success", vecOrigin, NULL );
+			pEffect = CNewParticleEffect::Create( NULL, "portal_success" );
 			bCreated = true;
 		}
 		break;
 
 	case PORTAL_FIZZLE_BAD_SURFACE:
 		{
-			pEffect = CNewParticleEffect::CreateOrAggregate( NULL, "portal_badsurface", vecOrigin, NULL );
+			pEffect = CNewParticleEffect::Create( NULL, "portal_badsurface" );
 		}
 		break;
 
 	case PORTAL_FIZZLE_CLOSE:
 		{
-			pEffect = CNewParticleEffect::CreateOrAggregate( NULL, "portal_close", vecOrigin, NULL );
+			pEffect = CNewParticleEffect::Create( NULL, "portal_close" );
 		}
 		break;
 	}
 
-	if ( pEffect )
+	if ( pEffect.IsValid() )
 	{
 		pEffect->SetControlPoint( 0, vecOrigin );
 
@@ -538,7 +539,7 @@ void C_Prop_Portal::DestroyAttachedParticles( void )
 	// Shut down our effect if we have it
 	if ( m_hEffect && m_hEffect.IsValid() )
 	{
-		ParticleProp()->StopEmission( m_hEffect, false, true, false, true );
+		ParticleProp()->StopEmission( m_hEffect, false, true );
 		m_hEffect = NULL;
 	}
 }
@@ -1261,6 +1262,7 @@ void C_Prop_Portal::GetToolRecordingState( KeyValues *msg )
 		pState->m_portalType = "Prop_Portal";
 	}
 
+	#if 0
 	{
 		KeyValues *pKV = CIFM_EntityKeyValuesHandler_AutoRegister::FindOrCreateNonConformantKeyValues( msg );
 		pKV->SetString( CIFM_EntityKeyValuesHandler_AutoRegister::GetHandlerIDKeyString(), "C_Prop_Portal" );
@@ -1268,8 +1270,10 @@ void C_Prop_Portal::GetToolRecordingState( KeyValues *msg )
 		pKV->SetInt( "entIndex", index );
 		pKV->SetInt( "teamNumber", GetTeamNumber() );
 	}
+	#endif
 }
 
+#if 0
 class C_Prop_Portal_EntityKeyValuesHandler : public CIFM_EntityKeyValuesHandler_AutoRegister
 {
 public:
@@ -1341,6 +1345,7 @@ public:
 };
 
 static C_Prop_Portal_EntityKeyValuesHandler s_ProjectedWallEntityIFMHandler;
+#endif
 
 void C_Prop_Portal::HandlePortalPlaybackMessage( KeyValues *pKeyValues )
 {
@@ -1352,14 +1357,6 @@ void C_Prop_Portal::HandlePortalPlaybackMessage( KeyValues *pKeyValues )
 	UpdateTeleportMatrix();
 
 	
-	int iEntIndexint = pKeyValues->GetInt( "portalId" );
-	for( int i = 0; i != s_ProjectedWallEntityIFMHandler.m_PlaybackPortals.Count(); ++i )
-	{
-		if( iEntIndexint == s_ProjectedWallEntityIFMHandler.m_PlaybackPortals[i].iEntIndex )
-		{
-			m_iTeamNum = s_ProjectedWallEntityIFMHandler.m_PlaybackPortals[i].iTeamNumber;
-		}
-	}
 }
 
 

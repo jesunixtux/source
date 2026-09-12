@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -16,6 +16,7 @@
 
 class CHudViewport;
 class CRadialMenu;
+class C_ColorCorrection;
 
 namespace vgui
 {
@@ -44,7 +45,7 @@ public:
 	virtual float	GetColorCorrectionScale( void ) const { return 1.0f; }
 	virtual void	InitWeaponSelectionHudElement( void ) { return; } // don't init this hud
 	virtual bool	ShouldDrawCrosshair( void );
-	virtual void	DoPostScreenSpaceEffects( const CViewSetup *pSetup );
+	virtual bool	DoPostScreenSpaceEffects( const CViewSetup *pSetup );
 
 	virtual int		HudElementKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
 	void InitRadialMenuHudElement( void );

@@ -1,4 +1,4 @@
-//===== Copyright � 1996-2009, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ======//
 //
 //===========================================================================//
 #include "cbase.h"
@@ -21,6 +21,16 @@ extern void WallPainted( int colorIndex, int nSegment, CBaseEntity *pWall );
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+#ifndef STEAMWORKS_SELFCHECK
+#define STEAMWORKS_SELFCHECK()
+#endif
+#ifndef WALL_PROJECTOR_THICKNESS
+#define WALL_PROJECTOR_THICKNESS 4.0f
+#endif
+#ifndef WALL_PROJECTOR_HEIGHT
+#define WALL_PROJECTOR_HEIGHT 3.0f
+#endif
+
 
 #if defined( GAME_DLL )
 ConVar wall_debug_time("wall_debug_time", "5.f");
@@ -30,11 +40,57 @@ ConVar wall_debug("wall_debug", "0");
 ConVar debug_paintable_projected_wall("debug_paintable_projected_wall", "0", FCVAR_REPLICATED);
 ConVar sv_thinnerprojectedwalls( "sv_thinnerprojectedwalls", "0", FCVAR_CHEAT | FCVAR_REPLICATED );
 
+#if defined( GAME_DLL )
+IMPLEMENT_AUTO_LIST( IProjectedWallEntityAutoList );
+
+LINK_ENTITY_TO_CLASS( projected_wall_entity, CProjectedWallEntity );
+
+BEGIN_DATADESC( CProjectedWallEntity )
+END_DATADESC()
+
+IMPLEMENT_SERVERCLASS_ST( CProjectedWallEntity, DT_ProjectedWallEntity )
+END_SEND_TABLE()
+#else
+IMPLEMENT_CLIENTCLASS_DT( C_ProjectedWallEntity, DT_ProjectedWallEntity, CProjectedWallEntity )
+END_RECV_TABLE()
+#endif
+
+#ifdef CLIENT_DLL
+#define CProjectedWallEntity C_ProjectedWallEntity
+#endif
+
+CProjectedWallEntity::CProjectedWallEntity()
+	: m_nNumSegments( 1 ),
+	  m_flLength( 1.0f ),
+	  m_flSegmentLength( 1.0f ),
+	  m_flWidth( 32.0f ),
+	  m_flHeight( 32.0f ),
+	  m_bIsHorizontal( false )
+{
+	m_vecStartPoint.Init();
+	m_vecEndPoint.Init( 1.0f, 0.0f, 0.0f );
+	m_vWorldSpace_WallMins.Init();
+	m_vWorldSpace_WallMaxs.Init();
+	m_PaintPowers.SetCount( 1 );
+	m_PaintPowers[0] = NO_POWER;
+}
+
+Vector CProjectedWallEntity::Up() const
+{
+	Vector vUp;
+#if defined( GAME_DLL )
+	AngleVectors( GetLocalAngles(), NULL, NULL, &vUp );
+#else
+	AngleVectors( GetNetworkAngles(), NULL, NULL, &vUp );
+#endif
+	return vUp;
+}
+
 void CProjectedWallEntity::Touch( CBaseEntity* pOther )
 {
 	//Check if the touched entity is a paint power user
 	IPaintPowerUser* pPowerUser = dynamic_cast< IPaintPowerUser* >( pOther );
-	if( engine->HasPaintmap() && pPowerUser )
+	if( UTIL_Portal_HasPaintmap() && pPowerUser )
 	{
 		//Get the up vector of the wall
 		Vector vecWallUp;
@@ -205,7 +261,7 @@ void CProjectedWallEntity::DisplaceObstructingEntity( CBaseEntity *pEntity, bool
 	GetExtents( vWallSweptBoxMins, vWallSweptBoxMaxs );
 	ray.Init( vOrigin, vOrigin + vWallForward*vLength.Length(), vWallSweptBoxMins, vWallSweptBoxMaxs );
 
-	CTraceFilterOnlyHitThis filter( pEntity );
+	CTraceFilterSimple filter( pEntity, COLLISION_GROUP_NONE );
 	trace_t tr;
 	UTIL_TraceRay( ray, MASK_ALL, &filter, &tr );
 

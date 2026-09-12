@@ -21,6 +21,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+static const char *s_pDelayedPlacementContext = "PortalDelayedPlacement";
+
 static char *g_pszPortalNonCleansable[] = 
 { 
 	"func_door", 
@@ -124,7 +126,7 @@ void CTriggerPortalCleanser::Touch( CBaseEntity *pOther )
 				{
 					CProp_Portal *pPortal = CProp_Portal::FindPortal( pPortalgun->m_iPortalLinkageGroupID, false );
 
-					if ( pPortal && pPortal->m_bActivated )
+					if ( pPortal && pPortal->IsActive() )
 					{
 						pPortal->DoFizzleEffect( PORTAL_FIZZLE_KILLED, false );
 						pPortal->Fizzle();
@@ -147,7 +149,7 @@ void CTriggerPortalCleanser::Touch( CBaseEntity *pOther )
 				{
 					CProp_Portal *pPortal = CProp_Portal::FindPortal( pPortalgun->m_iPortalLinkageGroupID, true );
 
-					if ( pPortal && pPortal->m_bActivated )
+					if ( pPortal && pPortal->IsActive() )
 					{
 						pPortal->DoFizzleEffect( PORTAL_FIZZLE_KILLED, false );
 						pPortal->Fizzle();

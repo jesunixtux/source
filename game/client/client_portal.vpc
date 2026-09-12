@@ -171,11 +171,22 @@ $Project "Client (Portal)"
 			$File	"portal\PortalRender.cpp"
 			$File	"portal\PortalRender.h"
 			$File	"portal\c_portal_radio.cpp"
+			$File	"portal\c_portal_base2d.cpp"
+			$File	"portal\portal_placement_compat.cpp"
+			$File	"portal2\portal_mp_gamerules_compat.cpp"
+			$File	"portal2\portal_grabcontroller_compat.cpp"
+			$File	"portal2\c_portal_playerlocaldata.cpp"
 			$File	"portal\portalrenderable_flatbasic.cpp"
 			$File	"portal\portalrenderable_flatbasic.h"
 			$File	"portal\vgui_portal_stats_display_screen.cpp"
 			$File	"portal\vgui_neurotoxin_countdown_screen.cpp"
 			$File	"$SRCDIR\game\shared\portal\portal_weapon_parse.cpp"
+
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_color_manager.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_power_info.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\paint_power_user_interface.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\portal_base2d_shared.cpp"
+			$File	"$SRCDIR\\game\\shared\\portal\\projectedwallentity_shared.cpp"
 
 			$Folder	"Weapons"
 			{
@@ -193,4 +204,3 @@ $Project "Client (Portal)"
 		}
 	}
 }
-

@@ -1,39 +1,24 @@
-#ifndef C_PROJECTEDWALLENTITY_H
-#define C_PROJECTEDWALLENTITY_H
+#ifndef PROJECTEDWALLENTITY_H
+#define PROJECTEDWALLENTITY_H
 #ifdef _WIN32
 #pragma once
 #endif
 
-// Client half of Portal 2's projected wall / bridge entity. The original
-// game kept the geometry and displacement code in a shared translation unit.
-#include "c_baseentity.h"
+#include "cbase.h"
 #include "paintable_entity.h"
 #include "util_shared.h"
 
-abstract_class IProjectedWallEntityAutoList
-{
-public:
-	static CUtlVector< IProjectedWallEntityAutoList* >& MutableAutoList()
-	{
-		static CUtlVector< IProjectedWallEntityAutoList* > s_AutoList;
-		return s_AutoList;
-	}
-	static const CUtlVector< IProjectedWallEntityAutoList* >& AutoList()
-	{
-		return MutableAutoList();
-	}
-	IProjectedWallEntityAutoList() { MutableAutoList().AddToTail( this ); }
-	virtual ~IProjectedWallEntityAutoList() { MutableAutoList().FindAndFastRemove( this ); }
-};
+DECLARE_AUTO_LIST( IProjectedWallEntityAutoList );
 
-class C_ProjectedWallEntity : public C_BaseEntity, public IPaintableEntity, public IProjectedWallEntityAutoList
+class CProjectedWallEntity : public CBaseEntity, public IPaintableEntity, public IProjectedWallEntityAutoList
 {
-	DECLARE_CLASS( C_ProjectedWallEntity, C_BaseEntity );
-	DECLARE_CLIENTCLASS();
+	DECLARE_CLASS( CProjectedWallEntity, CBaseEntity );
+	DECLARE_SERVERCLASS();
+	DECLARE_DATADESC();
 
 public:
-	C_ProjectedWallEntity();
-	virtual ~C_ProjectedWallEntity() {}
+	CProjectedWallEntity();
+	virtual ~CProjectedWallEntity() {}
 	virtual void Touch( CBaseEntity *pOther );
 	virtual PaintPowerType GetPaintPowerAtPoint( const Vector &worldContactPt ) const;
 	virtual void Paint( PaintPowerType type, const Vector &worldContactPt );
@@ -62,6 +47,4 @@ public:
 	bool m_bIsHorizontal;
 };
 
-typedef C_ProjectedWallEntity CProjectedWallEntity;
-
-#endif // C_PROJECTEDWALLENTITY_H
+#endif // PROJECTEDWALLENTITY_H

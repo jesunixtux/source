@@ -1243,7 +1243,7 @@ static void DestroyCollideable( CPhysCollide **ppCollide )
 	if ( *ppCollide )
 	{
 #if defined( GAME_DLL )
-		physenv->DestroyCollideOnDeadObjectFlush( *ppCollide );
+		physcollision->DestroyCollide( *ppCollide );
 #else
 		physcollision->DestroyCollide( *ppCollide );
 #endif
@@ -4913,7 +4913,7 @@ bool CPSCollisionEntity::IsPortalSimulatorCollisionEntity( const CBaseEntity *pE
 void CPSCollisionEntity::UpdatePartitionListEntry() //make this trigger touchable on the client
 {
 	partition->RemoveAndInsert( 
-		PARTITION_CLIENT_RESPONSIVE_EDICTS | PARTITION_CLIENT_NON_STATIC_EDICTS | PARTITION_CLIENT_TRIGGER_ENTITIES | PARTITION_CLIENT_IK_ATTACHMENT,  // remove
+		PARTITION_CLIENT_GAME_EDICTS,  // remove
 		PARTITION_CLIENT_SOLID_EDICTS | PARTITION_CLIENT_STATIC_PROPS,  // add
 		CollisionProp()->GetPartitionHandle() );
 }

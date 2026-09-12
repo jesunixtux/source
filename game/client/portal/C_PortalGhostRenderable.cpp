@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -11,14 +11,15 @@
 #include "c_portal_player.h"
 #include "model_types.h"
 #include "c_basecombatweapon.h"
-#include "c_combatweaponworldclone.h"
+#include "c_baseviewmodel.h"
+#include "portal2/portal_grabcontroller_shared.h"
 #include "toolframework_client.h"
 
 ConVar portal_ghosts_disable( "portal_ghosts_disable", "0", 0, "Disables rendering of ghosted objects in portal environments" );
 
 inline float GhostedRenderableOriginTime( C_BaseEntity *pGhostedRenderable, float fCurTime )
 {
-	return pGhostedRenderable->GetOriginInterpolator().GetInterpolatedTime( pGhostedRenderable->GetEffectiveInterpolationCurTime( fCurTime ) );
+	return pGhostedRenderable->GetOriginInterpolator().GetInterpolatedTime( fCurTime );
 }
 
 #define GHOST_RENDERABLE_TEN_TON_HAMMER 0
@@ -99,13 +100,15 @@ C_PortalGhostRenderable::C_PortalGhostRenderable( C_Portal_Base2D *pOwningPortal
 
 	m_bSourceIsBaseAnimating = (dynamic_cast<C_BaseAnimating *>(pGhostSource) != NULL);
 
-	RenderWithViewModels( pGhostSource->IsRenderingWithViewModels() );
+	RenderWithViewModels( false );
 	SetModelName( m_hGhostedRenderable->GetModelName() );
 
 	m_bCombatWeapon = (dynamic_cast<C_BaseCombatWeapon *>(pGhostSource) != NULL);
 	SetModelIndex( m_bCombatWeapon ? ((C_BaseCombatWeapon *)pGhostSource)->GetWorldModelIndex() : pGhostSource->GetModelIndex() );
 
-	m_bCombatWeaponWorldClone = ( dynamic_cast< C_CombatWeaponClone* >( pGhostSource ) != NULL );
+	// Portal 2's separate combat-weapon clone class is not part of this SDK;
+	// held-object clones still use the shared clone implementation below.
+	m_bCombatWeaponWorldClone = false;
 
 	m_bPlayerHeldClone = ( dynamic_cast< C_PlayerHeldObjectClone* >( pGhostSource ) != NULL );
 
@@ -143,8 +146,8 @@ void C_PortalGhostRenderable::PerFrameUpdate( void )
 		C_BaseAnimating *pSource = (C_BaseAnimating *)pGhostedRenderable;
 		SetCycle( pSource->GetCycle() );
 		SetSequence( pSource->GetSequence() );
-		SetBody( pSource->GetBody() );
-		SetSkin( pSource->GetSkin() );
+		m_nBody = pSource->GetBody();
+		m_nSkin = pSource->GetSkin();
 	}
 
 	SetSize( pGhostedRenderable->CollisionProp()->OBBMins(), pGhostedRenderable->CollisionProp()->OBBMaxs() );
@@ -240,7 +243,7 @@ bool C_PortalGhostRenderable::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMa
 			nBoneCount = MIN( nMaxBones, nBoneCount );
 			for( int i = 0; i != nBoneCount; ++i )
 			{
-				ConcatTransforms_Aligned( matGhostTransform, pBoneToWorldOut[i], pBoneToWorldOut[i] );
+				ConcatTransforms( matGhostTransform, pBoneToWorldOut[i], pBoneToWorldOut[i] );
 			}
 		}
 
@@ -505,7 +508,7 @@ int C_PortalGhostRenderable::DrawModel( int flags, const RenderableInstance_t &i
 
 	if ( m_bSourceIsBaseAnimating )
 	{
-		return C_BaseAnimating::DrawModel( flags, instance );
+		return C_BaseAnimating::DrawModel( flags );
 	}
 	else
 	{
@@ -549,7 +552,7 @@ RenderableTranslucencyType_t C_PortalGhostRenderable::ComputeTranslucencyType( v
 	if ( m_hGhostedRenderable == NULL )
 		return RENDERABLE_IS_OPAQUE;
 
-	return m_hGhostedRenderable->ComputeTranslucencyType();
+	return RENDERABLE_IS_OPAQUE;
 }
 
 int C_PortalGhostRenderable::GetRenderFlags()
@@ -557,7 +560,7 @@ int C_PortalGhostRenderable::GetRenderFlags()
 	if( m_hGhostedRenderable == NULL )
 		return false;
 
-	return m_hGhostedRenderable->GetRenderFlags();
+	return 0;
 }
 
 /*const model_t* C_PortalGhostRenderable::GetModel( ) const
@@ -643,7 +646,6 @@ float *C_PortalGhostRenderable::GetRenderClipPlane( void )
 //-----------------------------------------------------------------------------
 void C_PortalGhostRenderable::GetToolRecordingState( KeyValues *msg )
 {
-	VPROF_BUDGET( "C_PortalGhostRenderable::GetToolRecordingState", VPROF_BUDGETGROUP_TOOLS );
 	BaseClass::GetToolRecordingState( msg );
 
 	C_Portal_Player *pViewPlayer = ToPortalPlayer( GetSplitScreenViewPlayer() );
@@ -688,15 +690,15 @@ bool C_PortalGhostRenderable::ShouldCloneEntity( C_BaseEntity *pEntity, C_Portal
 
 	Assert( dynamic_cast<C_Portal_Base2D *>(pEntity) == NULL ); //should have been killed with (pEntity->GetMoveType() == MOVETYPE_NONE) check. Infinite recursion is infinitely bad.
 
-	if( ToBaseViewModel(pEntity) )
+	if( dynamic_cast<C_BaseViewModel *>(pEntity) )
 		return false; //avoid ghosting view models
 
-	if( pEntity->IsRenderingWithViewModels() )
+	if( false )
 		return false; //avoid ghosting anything that draws with viewmodels 
 
 	bool bActivePlayerWeapon = false;
 
-	C_BaseCombatWeapon *pWeapon = ToBaseCombatWeapon( pEntity );
+	C_BaseCombatWeapon *pWeapon = dynamic_cast<C_BaseCombatWeapon *>( pEntity );
 	if ( pWeapon )
 	{
 		C_Portal_Player *pPortalPlayer = ToPortalPlayer( pWeapon->GetOwner() );
@@ -803,7 +805,7 @@ C_PortalGhostRenderable *C_PortalGhostRenderable::CreateGhostRenderable( C_BaseE
 	}
 	else
 	{
-		C_BaseCombatWeapon *pWeapon = ToBaseCombatWeapon( pEntity );
+		C_BaseCombatWeapon *pWeapon = dynamic_cast<C_BaseCombatWeapon *>( pEntity );
 		if ( pWeapon )
 		{
 			C_Portal_Player *pOwningPlayer = ToPortalPlayer( pWeapon->GetOwner() );
@@ -842,7 +844,7 @@ C_PortalGhostRenderable *C_PortalGhostRenderable::CreateGhostRenderable( C_BaseE
 																		bRenderableIsPlayer ? pPortal->m_fGhostRenderablesClipForPlayer : pPortal->m_fGhostRenderablesClip,
 																		pPlayerOwner );
 
-	if( !pNewGhost->InitializeAsClientEntity( pEntity->GetModelName(), false ) )
+	if( !pNewGhost->InitializeAsClientEntity( pEntity->GetModelName(), RENDER_GROUP_OPAQUE_ENTITY ) )
 	{
 		pNewGhost->Release();
 		return NULL;
@@ -878,7 +880,6 @@ C_PortalGhostRenderable *C_PortalGhostRenderable::CreateGhostRenderable( C_BaseE
 		}
 	}
 
-	g_pClientLeafSystem->DisableCachedRenderBounds( pNewGhost->RenderHandle(), true );
 	pNewGhost->PerFrameUpdate();
 
 	return pNewGhost;
@@ -919,7 +920,7 @@ C_PortalGhostRenderable *C_PortalGhostRenderable::CreateInversion( C_PortalGhost
 		pNewGhost = new C_PortalGhostRenderable( pRemotePortal, pSrc->m_hGhostedRenderable, pRemotePortal->m_matrixThisToLinked, 
 			pSrc->m_pSharedRenderClipPlane == pSourcePortal->m_fGhostRenderablesClipForPlayer ? pRemotePortal->m_fGhostRenderablesClipForPlayer : pRemotePortal->m_fGhostRenderablesClip, pSrc->m_hHoldingPlayer );
 
-		if( !pNewGhost->InitializeAsClientEntity( pRootEntity->GetModelName(), false ) )
+	if( !pNewGhost->InitializeAsClientEntity( pRootEntity->GetModelName(), RENDER_GROUP_OPAQUE_ENTITY ) )
 		{
 			pNewGhost->Release();
 			return NULL;
@@ -969,7 +970,6 @@ C_PortalGhostRenderable *C_PortalGhostRenderable::CreateInversion( C_PortalGhost
 	pSrc->m_fDisablePositionChecksUntilTime = fTime + (TICK_INTERVAL * 2.0f) + pSrc->m_hGhostedRenderable->GetOriginInterpolator().GetInterpolationAmount();
 	pNewGhost->m_fDisablePositionChecksUntilTime = pSrc->m_fDisablePositionChecksUntilTime;
 
-	g_pClientLeafSystem->DisableCachedRenderBounds( pNewGhost->RenderHandle(), true );
 	pNewGhost->PerFrameUpdate();
 
 	return pNewGhost;

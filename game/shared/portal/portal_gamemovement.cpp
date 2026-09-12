@@ -24,6 +24,7 @@
 	#include "prediction.h"
 	#include "c_weapon_portalgun.h"
 	#include "c_projectedwallentity.h"
+	#include "c_trigger_tractorbeam.h"
 	#define CRecipientFilter C_RecipientFilter
 #else
 	#include "portal_player.h"
@@ -39,6 +40,8 @@
 #endif
 
 #include "coordsize.h" // for DIST_EPSILON
+
+#define ITraceListData CTraceListData
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -103,6 +106,19 @@ class CReservePlayerSpot;
 #define CRITICAL_SLOPE 0.7f
 #define PLAYER_FLING_HELPER_MIN_SPEED 200.0f
 
+#define TIME_TO_DUCK_MSECS TIME_TO_DUCK_MS
+#define TIME_TO_UNDUCK_MSECS TIME_TO_UNDUCK_MS
+#define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS GAMEMOVEMENT_TIME_TO_UNDUCK
+#define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV GAMEMOVEMENT_TIME_TO_UNDUCK_INV
+static inline float FractionDucked( int milliseconds )
+{
+	return clamp( (float)milliseconds / (float)TIME_TO_DUCK_MSECS, 0.0f, 1.0f );
+}
+static inline float FractionUnDucked( int milliseconds )
+{
+	return clamp( (float)milliseconds / (float)TIME_TO_UNDUCK_MSECS, 0.0f, 1.0f );
+}
+
 const float COS_PI_OVER_SIX = 0.86602540378443864676372317075294f; // cos( 30 degrees ) in radians
 
 extern bool g_bMovementOptimizations;
@@ -119,9 +135,9 @@ namespace
 	{
 		++*counter;
 
-		if ( pTraceListData && pTraceListData->CanTraceRay(ray) )
+		if ( pTraceListData )
 		{
-			enginetrace->TraceRayAgainstLeafAndEntityList( ray, pTraceListData, fMask, filter, ptr );
+			enginetrace->TraceRayAgainstLeafAndEntityList( ray, *pTraceListData, fMask, filter, ptr );
 		}
 		else
 		{
@@ -274,6 +290,7 @@ void CPortalGameMovement::ClientVerticalElevatorFixes( CBasePlayer *pPlayer, CMo
 	bool bAdjustedRootZ = false;
 	if( pRootMoveParent && !pRootMoveParent->IsWorld() )
 	{
+		#if 0
 		C_BaseToggle *pPredictableGroundEntity = dynamic_cast<C_BaseToggle *>(pRootMoveParent);
 		if( pPredictableGroundEntity && (pPredictableGroundEntity->m_movementType == MOVE_TOGGLE_LINEAR) )
 		{
@@ -301,6 +318,7 @@ void CPortalGameMovement::ClientVerticalElevatorFixes( CBasePlayer *pPlayer, CMo
 				}
 			}
 		}
+		#endif
 	}
 
 	//re-seat player on vertical elevators
@@ -360,7 +378,7 @@ void CPortalGameMovement::ClientVerticalElevatorFixes( CBasePlayer *pPlayer, CMo
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CPortalGameMovement::CPortalGameMovement()
+CPortalGameMovement::CPortalGameMovement() : m_pTraceListData( NULL )
 {
 }
 
@@ -717,7 +735,7 @@ void CPortalGameMovement::AirMove( void )
 	{
 		// Disregard the player's air movement if they're in a phys controller
 		CBasePlayer *pPlayer = GetPortalPlayer();
-		if ( pPlayer->HasPhysicsFlag( PFLAG_VPHYSICS_MOTIONCONTROLLER ) )
+		if ( pPlayer->HasPhysicsFlag( C_BaseHLPlayer::PFLAG_VPHYSICS_MOTIONCONTROLLER ) )
 		{
 			fmove = 0;
 			smove = 0;
@@ -3044,7 +3062,7 @@ void CPortalGameMovement::SetupMovementBounds( CMoveData *move )
 	}
 	else
 	{
-		m_pTraceListData = enginetrace->AllocTraceListData();
+		m_pTraceListData = new CTraceListData;
 	}
 	if ( !move->m_nPlayerHandle.IsValid() )
 	{
@@ -3069,7 +3087,7 @@ void CPortalGameMovement::SetupMovementBounds( CMoveData *move )
 	AddPointToBounds( start + boxMaxs + bloat, moveMins, moveMaxs );
 	AddPointToBounds( start + boxMins - bloat, moveMins, moveMaxs );
 	// now build an optimized trace within these bounds
-	enginetrace->SetupLeafAndEntityListBox( moveMins, moveMaxs, m_pTraceListData );
+	enginetrace->SetupLeafAndEntityListBox( moveMins, moveMaxs, *m_pTraceListData );
 }
 
 
@@ -3299,7 +3317,7 @@ void CPortalGameMovement::CheckWallImpact( Vector& primal_velocity )
 		Activity impactActivity = ACT_INVALID;
 		if ( flLostVerticalSpeed > flImpactThreshold )
 		{
-			impactActivity = ACT_MP_JUMP_IMPACT_TOP;
+			impactActivity = ACT_MP_JUMP_LAND;
 		}
 		else if ( flLostHorizontalSpeed > flImpactThreshold )
 		{
@@ -3313,22 +3331,22 @@ void CPortalGameMovement::CheckWallImpact( Vector& primal_velocity )
 			if ( flImpactDot < -flDot45Degree )
 			{
 				// Back impact
-				impactActivity = ACT_MP_JUMP_IMPACT_S;
+				impactActivity = ACT_MP_JUMP_LAND;
 			}
 			else if ( flImpactDot > flDot45Degree )
 			{
 				// Head-on impact
-				impactActivity = ACT_MP_JUMP_IMPACT_N;
+				impactActivity = ACT_MP_JUMP_LAND;
 			}
 			else if ( flOrthoDot > 0.0f )
 			{
 				// Right impact
-				impactActivity = ACT_MP_JUMP_IMPACT_E;
+				impactActivity = ACT_MP_JUMP_LAND;
 			}
 			else
 			{
 				// Left impact
-				impactActivity = ACT_MP_JUMP_IMPACT_W;
+				impactActivity = ACT_MP_JUMP_LAND;
 			}
 		}
 
@@ -3438,7 +3456,7 @@ void CPortalGameMovement::Friction()
 		// Bleed off some speed, but if we have less than the bleed
 		//  threshold, bleed the threshold amount.
 
-		if ( IsCrossPlayPlatformAConsole( player->GetCrossPlayPlatform() ) )
+		if ( false )
 		{
 			if( player->m_Local.m_bDucked )
 			{
@@ -3738,7 +3756,7 @@ void CPortalGameMovement::WalkMove()
 		wishVelShoveDampenFactor = 0.25f;
 		shoveVector = player->GetAbsOrigin() - pOldGround->GetAbsOrigin();
 		shoveVector.z = 0.0f;
-		if( shoveVector.IsZeroFast() )
+		if( shoveVector.LengthSqr() <= 1e-12f )
 			shoveVector = player->Forward();
 
 		shoveVector.NormalizeInPlace();

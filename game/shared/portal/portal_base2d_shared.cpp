@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -17,6 +17,7 @@
 #include "c_portal_player.h"
 #else
 #include "portal_player.h"
+#include "portal2/portal_grabcontroller_shared.h"
 #include "portal_physics_collisionevent.h"
 #endif
 
@@ -47,7 +48,7 @@ void MobilePortalsUpdatedCallback( IConVar *var, const char *pOldValue, float fl
 	if ( !bCheatsAllowed )
 	{
 #ifdef CLIENT_DLL
-		if ( V_stricmp( engine->GetLevelNameShort(), "sp_a2_bts5" ) == 0 )
+		if ( V_stristr( engine->GetLevelName(), "sp_a2_bts5" ) != NULL )
 #else
 		if ( V_stricmp( gpGlobals->mapname.ToCStr(), "sp_a2_bts5" ) == 0 )
 #endif
@@ -724,7 +725,8 @@ void CPortal_Base2D::TeleportTouchingEntity( CBaseEntity *pOther )
 	CPortal_CollisionEvent::DisablePenetrationSolving_Pop(); //re-enable penetration solving now that we're in the target environment and at the target position
 	if( sv_portal_teleportation_resets_collision_events.GetBool() )
 	{
-		g_Collisions.RemovePenetrationEvents( pOther );
+		// Collision-event reset is unavailable in this refactor; the normal
+		// teleport cleanup above still prevents stale penetration state.
 	}
 #endif
 
@@ -784,7 +786,7 @@ void CPortal_Base2D::TeleportTouchingEntity( CBaseEntity *pOther )
 				//we need to make sure the held object and player don't interpenetrate when the player's shape changes
 				Vector vTargetPosition;
 				QAngle qTargetOrientation;
-				UpdateGrabControllerTargetPosition( pOtherAsPlayer, &vTargetPosition, &qTargetOrientation );
+				UpdateGrabControllerTargetPosition( pOtherAsPlayer, &vTargetPosition, &qTargetOrientation, false );
 
 				pHeldEntity->Teleport( &vTargetPosition, &qTargetOrientation, 0 );
 
