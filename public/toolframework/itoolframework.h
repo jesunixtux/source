@@ -112,6 +112,9 @@ struct PortalRecordingState_t
 	float			m_fStaticAmount;
 	float			m_fSecondaryStaticAmount;
 	float			m_fOpenAmount;
+	float			m_fHalfWidth;
+	float			m_fHalfHeight;
+	const char *	m_portalType;
 	bool			m_bIsPortal2; //for any set of portals, one must be portal 1, and the other portal 2. Uses different render targets
 };
 
@@ -179,6 +182,7 @@ public: // Client Hooks
 	virtual void	ClientLevelShutdownPreEntityAllTools() = 0;
 	// Entities are deleted / released here...
 	virtual void	ClientLevelShutdownPostEntityAllTools() = 0;
+	// end of level shutdown
 
 	virtual void	ClientPreRenderAllTools() = 0;
 	virtual void	ClientPostRenderAllTools() = 0;
