@@ -29,6 +29,7 @@ public:
 	void RemoveAllPaintBlobs();
 	unsigned int GetBlobsCount() const;
 	CPaintBlob *GetBlob( int id );
+	const PaintBlobVector_t &GetBlobList() const { return m_blobs; }
 	void AddPaintBlob( CPaintBlob *blob ) { if ( blob ) m_blobs.AddToTail( blob ); }
 	void RemoveDeadBlobs();
 	void PreUpdateBlobs();

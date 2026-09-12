@@ -3616,6 +3616,7 @@ static void Portal_ClearTrace( const Vector &vecRayStart, const Vector &vecRayDe
 	pTrace->contents = 0;
 }
 
+#ifndef GAME_DLL
 bool IntersectRayWithAACylinder( const Ray_t &ray, const Vector &center, float radius, float height, CBaseTrace *pTrace )
 {
 	Assert( ray.m_IsRay );
@@ -3679,3 +3680,4 @@ bool IntersectRayWithAACylinder( const Ray_t &ray, const Vector &center, float r
 
 	return true;
 }
+#endif

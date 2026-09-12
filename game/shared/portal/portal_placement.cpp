@@ -17,7 +17,7 @@
 #include "triggers.h"
 #include "func_portal_bumper.h"
 #include "physicsshadowclone.h"
-#include "trigger_portal_cleanser.h"
+#include "portal/trigger_portal_cleanser.h"
 #else
 #include "c_func_noportal_volume.h"
 #include "c_func_portal_bumper.h"
@@ -100,7 +100,8 @@ CEG_NOINLINE bool IsOnPortalPaint( const trace_t &tr )
 		{
 			if( FClassnameIs( tr.m_pEnt, "func_brush" ) )
 			{
-				paintPower = MapColorToPower( tr.m_pEnt->GetRenderColor() );
+				const color32 renderColor = tr.m_pEnt->GetRenderColor();
+				paintPower = MapColorToPower( Color( renderColor.r, renderColor.g, renderColor.b, renderColor.a ) );
 			}
 		}
 

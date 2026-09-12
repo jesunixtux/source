@@ -24,7 +24,6 @@
 #	include "BasePropDoor.h"
 #	include "portal_gamestats.h"
 #	include "triggers.h"
-#	include "tier0/stackstats.h"
 #	include "trigger_portal_cleanser.h"
 #	include "portal_mp_stats.h"
 #else

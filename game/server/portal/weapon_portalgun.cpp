@@ -6,6 +6,8 @@
 
 #include "cbase.h"
 
+static const char *s_pDelayedPlacementContext = "PortalDelayedPlacement";
+
 #include "BasePropDoor.h"
 #include "portal_player.h"
 #include "te_effect_dispatch.h"
@@ -395,7 +397,7 @@ float CWeaponPortalgun::TraceFirePortal( bool bPortal2, const Vector &vTraceStar
 
 	float fMustBeCloserThan = 2.0f;
 
-	CProp_Portal *pNearPortal = UTIL_Portal_FirstAlongRay( rayEyeArea, fMustBeCloserThan );
+	CProp_Portal *pNearPortal = static_cast<CProp_Portal *>( UTIL_Portal_FirstAlongRay( rayEyeArea, fMustBeCloserThan ) );
 
 	if ( !pNearPortal )
 	{
@@ -404,7 +406,7 @@ float CWeaponPortalgun::TraceFirePortal( bool bPortal2, const Vector &vTraceStar
 
 		fMustBeCloserThan = 2.0f;
 
-		pNearPortal = UTIL_Portal_FirstAlongRay( rayEyeArea, fMustBeCloserThan );
+		pNearPortal = static_cast<CProp_Portal *>( UTIL_Portal_FirstAlongRay( rayEyeArea, fMustBeCloserThan ) );
 	}
 
 	if ( pNearPortal && pNearPortal->IsActivedAndLinked() )
@@ -587,7 +589,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 
 		// Check if the players eye is behind the portal they're in and translate it
 		VMatrix matThisToLinked;
-		CProp_Portal *pPlayerPortal = pPlayer->m_hPortalEnvironment;
+		CProp_Portal *pPlayerPortal = static_cast<CProp_Portal *>( pPlayer->m_hPortalEnvironment.Get() );
 
 		if ( pPlayerPortal )
 		{
@@ -674,7 +676,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		if ( fPlacementSuccess < 0.5f )
 			vFinalPosition = tr.endpos;
 
-		pPortal->PlacePortal( vFinalPosition, qFinalAngles, fPlacementSuccess, true );
+		pPortal->PlacePortal( vFinalPosition, qFinalAngles, static_cast<PortalPlacementResult_t>( static_cast<int>( fPlacementSuccess ) ), true );
 
 		float fDelay = vTracerOrigin.DistTo( tr.endpos ) / ( ( bPlayer ) ? ( BLAST_SPEED ) : ( BLAST_SPEED_NON_PLAYER ) );
 

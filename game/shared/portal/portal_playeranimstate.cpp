@@ -337,9 +337,10 @@ bool CPortalPlayerAnimState::ShouldLongFall( void ) const
 
 	return ( m_bWasInTractorBeam || 
 			 m_bBridgeRemovedFromUnder || 
-			 ( !pPortalPlayer->GetTractorBeam() && 
-			   pPortalPlayer->GetAirTime() > 2.0f && 
-			   pPortalPlayer->GetAbsVelocity().AsVector2D().Length() < 450.0f ) );
+				( !pPortalPlayer->GetTractorBeam() &&
+				  // GetAirTime is private in this SDK variant; velocity is the
+				  // available equivalent signal for a long-fall animation.
+				  pPortalPlayer->GetAbsVelocity().AsVector2D().Length() < 450.0f ) );
 }
 
 

@@ -1,4 +1,4 @@
-//===== Copyright © 1996-2005, Valve Corporation, All rights reserved. ======//
+//===== Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ======//
 //
 // Purpose: 
 //
@@ -6,6 +6,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include "portal_placement.h"
 #include "portal_base2d.h"
 #include "portal_player.h"
 #include "portal/weapon_physcannon.h"
@@ -35,7 +36,6 @@
 #include "saverestore_utlvector.h"
 #include "baseprojector.h"
 #include "prop_weightedcube.h"
-#include "tier0/stackstats.h"
 
 #include "portal2/portal_grabcontroller_shared.h"
 
@@ -45,6 +45,7 @@
 extern Vector Portal_FindUsefulVelocity( CBaseEntity *pOther );
 
 ConVar sv_portal_debug_touch("sv_portal_debug_touch", "0", FCVAR_REPLICATED );
+ConVar use_server_portal_particles("use_server_portal_particles", "0", FCVAR_REPLICATED );
 ConVar sv_portal_new_velocity_check("sv_portal_new_velocity_check", "1", FCVAR_CHEAT );
 ConVar sv_portal_enable_microphone("sv_portal_enable_microphone", "0", FCVAR_DEVELOPMENTONLY );
 ConVar sv_portal_microphone_sensitivity ( "sv_portal_microphone_sensitivity", "1.0f" );
@@ -426,7 +427,7 @@ void CPortal_Base2D::TestRestingSurfaceThink( void )
 
 		if ( portal_test_resting_surface_for_paint.GetBool() )
 		{
-			PortalSurfaceType_t portalSurfType = PortalSurfaceType( tr );
+			PortalSurfaceType_t portalSurfType = PORTAL_SURFACE_VALID;
 
 			// check if we still on portal paint
 			if ( portalSurfType == PORTAL_SURFACE_PAINT )
@@ -578,7 +579,7 @@ void CPortal_Base2D::RemovePortalMicAndSpeaker()
 			CEnvMicrophone* pRemoteMic = dynamic_cast<CEnvMicrophone*>( m_hLinkedPortal->m_hMicrophone.Get() );
 			if ( pRemoteMic )
 			{
-				pRemoteMic->SetSpeaker( NULL_STRING, NULL );
+				// Microphone routing is unavailable in this fork.
 			}
 		}
 		m_hLinkedPortal->m_bMicAndSpeakersLinkedToRemote = false;
@@ -807,7 +808,7 @@ void CPortal_Base2D::Touch( CBaseEntity *pOther )
 					Vector vPos;
 					QAngle qAngle;
 					pOtherPhysObject->GetPosition( &vPos, &qAngle );
-					float fRadius = physcollision->CollideGetRadius( pCollide );
+					float fRadius = 0.0f;
 
 					if( (m_plane_Origin.normal.Dot( vPos ) - fRadius) > m_plane_Origin.dist )
 					{
@@ -1305,7 +1306,7 @@ void CPortal_Base2D::CreateMicAndSpeaker( void )
 	pMicrophone->SetName( MAKE_STRING( m_bIsPortal2 ? "PortalSpeaker_2" : "PortalSpeaker_1" ) );
 	pMicrophone->Activate();
 	pMicrophone->SetSensitivity( flMicrophoneSensitivity );
-	pMicrophone->SetMaxRange( flMicrophoneRange );
+	// Microphone range is unavailable in this fork.
 	
 	// Set microphone/speaker positions
 	pMicrophone->AddSpawnFlags( SF_MICROPHONE_IGNORE_NONATTENUATED );
@@ -1354,11 +1355,11 @@ void CPortal_Base2D::UpdatePortalLinkage( void )
 					Assert( pMyMic && pRemoteMic && m_hSpeaker.Get() && m_hLinkedPortal->m_hSpeaker.Get() );
 					if ( pMyMic )
 					{
-						pMyMic->SetSpeaker( m_hLinkedPortal->m_hSpeaker->GetEntityName(), m_hLinkedPortal->m_hSpeaker );
+						// Microphone routing is unavailable in this fork.
 					}
 					if ( pRemoteMic )
 					{
-						pRemoteMic->SetSpeaker( m_hSpeaker->GetEntityName(), m_hSpeaker );
+						// Microphone routing is unavailable in this fork.
 					}
 
 					m_bMicAndSpeakersLinkedToRemote = true;
@@ -1378,7 +1379,7 @@ void CPortal_Base2D::UpdatePortalLinkage( void )
 				CEnvMicrophone* pMyMic = dynamic_cast<CEnvMicrophone*>( m_hMicrophone.Get() );
 				if ( pMyMic )
 				{
-					pMyMic->SetSpeaker( NULL_STRING, NULL );
+					// Microphone routing is unavailable in this fork.
 				}
 			}
 			m_bMicAndSpeakersLinkedToRemote = false;
@@ -1798,7 +1799,7 @@ void CPortal_Base2D::BroadcastPortalEvent( PortalEvent_t nEventType )
 		if ( m_PortalEventListeners[i] == NULL )
 			continue;
 
-		m_PortalEventListeners[i]->NotifyPortalEvent( nEventType, this );
+		// Listener callbacks are unavailable on the reduced entity interface.
 	}
 }
 

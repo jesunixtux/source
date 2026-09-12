@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 //=============================================================================//
 #include "cbase.h"
@@ -12,6 +12,10 @@
 #include "fmtstr.h"
 #include "vprof.h"
 #include "paint_stream_shared.h"
+#ifdef GAME_DLL
+#include "particle_parse.h"
+#include "te_effect_dispatch.h"
+#endif
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -390,7 +394,7 @@ void PaintSplatEffect( const Vector& vecPosition, const Vector& vecNormal, int p
 #ifdef GAME_DLL
 	if ( !engine->IsDedicatedServer() )
 	{
-		pPlayer = UTIL_GetLocalPlayerOrListenServerHost();
+		pPlayer = UTIL_GetLocalPlayer();
 	}
 #else
 	pPlayer = GetSplitScreenViewPlayer();
@@ -399,7 +403,7 @@ void PaintSplatEffect( const Vector& vecPosition, const Vector& vecNormal, int p
 	if ( pPlayer )
 	{
 		CSingleUserRecipientFilter filter( pPlayer );
-		DispatchParticleEffect( paintSplatCallbacks[paintType].lpszParticleSystemName, vecPosition, angle, NULL, -1, &filter );
+		DispatchParticleEffect( paintSplatCallbacks[paintType].lpszParticleSystemName, vecPosition, angle );
 	}
 }
 
@@ -423,7 +427,7 @@ float CPaintStreamManager::PlayPaintImpactSound( const Vector &vecPosition, Pain
 {
 	//Emit the sound for the impact
 #ifdef GAME_DLL
-	CBasePlayer *pRecipient = UTIL_GetLocalPlayerOrListenServerHost();
+	CBasePlayer *pRecipient = UTIL_GetLocalPlayer();
 	if ( pRecipient == NULL )
 	{
 		return 0.0f;
@@ -478,7 +482,7 @@ void CPaintStreamManager::PlayMultiplePaintImpactSounds( TimeStampVector& channe
 
 	Assert( positions.Count() > 0 && soundName != NULL );
 
-	const int maxChannelsToAdd = imax( maxChannels - channelTimeStamps.Count(), 0 );
+	const int maxChannelsToAdd = MAX( maxChannels - channelTimeStamps.Count(), 0 );
 	if( positions.Count() > 0 && soundName != NULL && maxChannelsToAdd > 0 )
 	{
 		AccumulatedImpactSoundVector accumulatedSounds;
@@ -503,8 +507,8 @@ void CPaintStreamManager::PlayMultiplePaintImpactSounds( TimeStampVector& channe
 					sound.positions.AddToTail( soundPosition );
 					int& pitch = sound.soundParams.pitch; 
 					float& volume = sound.soundParams.volume;
-					const int adjustedPitch = pitch - isel( VOL_NORM - volume, sound.pitchDecreasePerFullVolumeImpact, 0 );
-					pitch = imax( adjustedPitch, sound.minAdjustedPitch );
+					const int adjustedPitch = pitch - ( ( VOL_NORM - volume ) > 0 ? sound.pitchDecreasePerFullVolumeImpact : 0 );
+					pitch = MAX( adjustedPitch, sound.minAdjustedPitch );
 					volume = fpmin( volume + sound.volumeIncreasePerImpact, VOL_NORM ); 
 					positionAccumulated = true;
 					break;
@@ -548,7 +552,7 @@ float CPaintStreamManager::PlayPaintImpactSound( const EmitSound_t& emitParams )
 {
 	//Emit the sound for the impact
 #ifdef GAME_DLL
-	CBasePlayer *pRecipient = UTIL_GetLocalPlayerOrListenServerHost();
+	CBasePlayer *pRecipient = UTIL_GetLocalPlayer();
 	if ( pRecipient == NULL )
 	{
 		return 0.0f;

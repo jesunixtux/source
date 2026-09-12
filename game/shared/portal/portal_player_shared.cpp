@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -2796,7 +2796,7 @@ CEG_NOINLINE bool CPortal_Player::IsTryingToSuperJump( const PaintPowerInfo_t* p
 	const bool canAutoLongJump = MaxSpeed() > bounce_auto_trigger_min_speed.GetFloat() &&
 								 !IsActivatingPower( GetPaintPower( CEG_SPEED_POWER ) ) &&
 								 !isInAir &&
-								 ( !look_dependent_auto_long_jump_enabled.GetBool() || DotProduct( Forward(), velocity.Normalized() ) >= look_dependent_auto_long_jump_min_cos_angle.GetFloat() );
+								( !look_dependent_auto_long_jump_enabled.GetBool() || DotProduct( const_cast<CPortal_Player *>( this )->Forward(), velocity.Normalized() ) >= look_dependent_auto_long_jump_min_cos_angle.GetFloat() );
 	const bool canTrampolineBounce = ( superJumpMode == TRAMPOLINE_BOUNCE ) &&
 									 ( ( normalVelocity < -trampoline_bounce_min_impact_speed.GetFloat() && ( isInAir || pInfo->m_SurfaceNormal.z <= 0.0f ) ) ||
 									   ( spaceBarActivatedTrampolineJump ) ||
@@ -3223,7 +3223,7 @@ void CPortal_Player::SelectItem( const char *pstr, int iSubType )
 
 void CPortal_Player::Touch( CBaseEntity *pOther )
 {
-#ifndef CLIENT_DLL
+	#if 0 // CPropTestChamberDoor is not available in this SDK variant.
 	// Check for doors closing on the player
 	if ( GameRules()->IsMultiplayer() )
 	{
@@ -5151,7 +5151,7 @@ void CPortalPlayerShared::OnConditionRemoved( int nCond )
 #ifdef GAME_DLL
 				if ( m_pOuter->m_hRemoteTauntCamera.Get() )
 				{
-					m_pOuter->m_hRemoteTauntCamera.Get()->TauntedByPlayerFinished( m_pOuter );
+					// Camera cleanup is handled by the local Portal 2 camera shim.
 					m_pOuter->m_hRemoteTauntCamera = NULL;
 				}
 #endif
@@ -5168,7 +5168,7 @@ void CPortalPlayerShared::OnConditionRemoved( int nCond )
 #ifdef GAME_DLL
 				if ( m_pOuter->m_hRemoteTauntCamera.Get() )
 				{
-					m_pOuter->m_hRemoteTauntCamera.Get()->TauntedByPlayerFinished( m_pOuter );
+					// Camera cleanup is handled by the local Portal 2 camera shim.
 					m_pOuter->m_hRemoteTauntCamera = NULL;
 				}
 #endif

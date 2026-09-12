@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -10,6 +10,9 @@
 #include "portal_shareddefs.h"
 #include "portal_placement.h"
 #include "weapon_portalgun_shared.h"
+
+const Vector CProp_Portal_Shared::vLocalMins( -PORTAL_HALF_DEPTH, -DEFAULT_PORTAL_HALF_WIDTH, -DEFAULT_PORTAL_HALF_HEIGHT * 0.25f );
+const Vector CProp_Portal_Shared::vLocalMaxs( PORTAL_HALF_DEPTH, DEFAULT_PORTAL_HALF_WIDTH, DEFAULT_PORTAL_HALF_HEIGHT * 0.25f );
 
 
 #if defined( GAME_DLL )

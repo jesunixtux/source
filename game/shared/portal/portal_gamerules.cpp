@@ -1,4 +1,4 @@
-//========= Copyright � 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: The Half-Life 2 game rules, such as the relationship tables and ammo
 //			damage cvars.
@@ -35,7 +35,9 @@
 	#include "portal/weapon_physcannon.h"
 	#include "props.h"		// For props flags used in making the portal weight box
 	#include "datacache/imdlcache.h"	// For precaching box model
+	#if 0
 	#include "vscript_server.h"
+	#endif
 #endif
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -182,10 +184,6 @@ bool CPortalGameRules::AllowDamage( CBaseEntity *pVictim, const CTakeDamageInfo 
 
 bool CPortalGameRules::IsSavingAllowed( void )
 {
-	if ( UTIL_GetLocalPlayerOrListenServerHost()->GetBonusChallenge() > 0 )
-	{
-		return false;
-	}
 	return true;
 }
 
@@ -416,7 +414,7 @@ void UpgradePlayerPotatogun( void )
 			{
 				pPortalGun->SetCanFirePortal1();
 				pPortalGun->SetCanFirePortal2();
-				pPortalGun->SetPotatosOnPortalgun( true );
+				// Potato-gun visuals are unavailable in this fork.
 			}
 			else
 			{
@@ -427,6 +425,7 @@ void UpgradePlayerPotatogun( void )
 }
 
 
+#if 0
 HSCRIPT GetPlayer( void )
 {
 	return ToHScript( UTIL_GetLocalPlayer() );	
@@ -456,4 +455,8 @@ void CPortalGameRules::RegisterScriptFunctions( void )
 	ScriptRegisterFunction( g_pScriptVM, TryDLC1InstalledOrCatch, "Tests if the DLC1 is installed for Try/Catch blocks." );
 	g_pScriptVM->RegisterInstance( &PlayerVoiceListener(), "PlayerVoiceListener" );
 }
+#endif
+#ifndef CLIENT_DLL
+void CPortalGameRules::RegisterScriptFunctions( void ) {}
+#endif
 #endif // !CLIENT_DLL

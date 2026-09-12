@@ -8,6 +8,7 @@
 //======================================================================================//
 
 #include "cbase.h"
+#include "func_portal_bumper.h"
 
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -16,33 +17,6 @@
 
 // Spawnflags
 #define SF_START_INACTIVE			0x01
-
-
-class CFuncPortalBumper : public CBaseEntity
-{
-public:
-	DECLARE_CLASS( CFuncPortalBumper, CBaseEntity );
-
-	CFuncPortalBumper();
-
-	// Overloads from base entity
-	virtual void	Spawn( void );
-
-	// Inputs to flip functionality on and off
-	void InputActivate( inputdata_t &inputdata );
-	void InputDeactivate( inputdata_t &inputdata );
-	void InputToggle( inputdata_t &inputdata );
-
-	// misc public methods
-	bool IsActive() { return m_bActive; }	// is this area currently bumping portals
-
-	DECLARE_DATADESC();
-
-private:
-	bool					m_bActive;			// are we currently blocking portals
-
-
-};
 
 
 LINK_ENTITY_TO_CLASS( func_portal_bumper, CFuncPortalBumper );
@@ -100,4 +74,3 @@ void CFuncPortalBumper::InputToggle( inputdata_t &inputdata )
 {
 	m_bActive = !m_bActive;
 }
-

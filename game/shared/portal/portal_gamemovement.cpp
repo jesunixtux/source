@@ -34,6 +34,8 @@
 	#include "recipientfilter.h"
 	#include "SoundEmitterSystem/isoundemittersystembase.h"
 	#include "weapon_portalgun.h"
+	#include "weapon_physcannon.h"
+	#include "trigger_tractorbeam.h"
 	#include "projectedwallentity.h"
 	#include "paint_power_info.h"
 	#include "particle_parse.h"
@@ -712,7 +714,7 @@ void CPortalGameMovement::TBeamMove( void )
 		vLinear.Init();
 		angAngular.Init();
 
-		pTractorBeam->CalculateFrameMovement( NULL, pPortalPlayer, gpGlobals->frametime, vLinear, angAngular );
+		// The tractor-beam controller in this fork has no frame callback.
 		mv->m_vecVelocity += vLinear * gpGlobals->frametime;
 	}
 
@@ -735,7 +737,13 @@ void CPortalGameMovement::AirMove( void )
 	{
 		// Disregard the player's air movement if they're in a phys controller
 		CBasePlayer *pPlayer = GetPortalPlayer();
-		if ( pPlayer->HasPhysicsFlag( C_BaseHLPlayer::PFLAG_VPHYSICS_MOTIONCONTROLLER ) )
+		if ( pPlayer->HasPhysicsFlag(
+#if defined( CLIENT_DLL )
+			C_BaseHLPlayer::PFLAG_VPHYSICS_MOTIONCONTROLLER
+#else
+			PFLAG_VPHYSICS_MOTIONCONTROLLER
+#endif
+			) )
 		{
 			fmove = 0;
 			smove = 0;

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 //=============================================================================//
 #include "cbase.h"
@@ -36,10 +36,8 @@
 ConVar max_sound_channels_per_paint_stream("max_sound_channels_per_paint_stream", "7", FCVAR_REPLICATED | FCVAR_CHEAT);
 
 
-IMPLEMENT_SHAREDCLASS_DT( CPaintStream )
-	SharedProp( m_sharedBlobData )
-	SharedProp( m_sharedBlobDataMutex )
-END_SHARED_TABLE()
+// The original shared datatable macro is not present in this SDK fork.
+// CPaintStream uses the normal server/client class tables instead.
 
 
 void CPaintStream::UpdateOnRemove()

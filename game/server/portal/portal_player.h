@@ -10,6 +10,7 @@
 #pragma once
 
 class CPortal_Player;
+class CFunc_LiquidPortal;
 
 #include "player.h"
 #include "portal_playeranimstate.h"
@@ -342,6 +343,7 @@ public:
 
 	CNetworkVar( bool, m_bPitchReorientation );
 	CNetworkHandle( CPortal_Base2D, m_hPortalEnvironment ); //if the player is in a portal environment, this is the associated portal
+	CHandle<CFunc_LiquidPortal> m_hSurroundingLiquidPortal;
 
 	friend class CPortal_Base2D;
 

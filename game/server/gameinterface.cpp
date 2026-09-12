@@ -578,8 +578,10 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 
 #ifndef _X360
+#ifndef NO_STEAM
 	s_SteamAPIContext.Init();
 	s_SteamGameServerAPIContext.Init();
+#endif
 #endif
 
 	// init each (seperated for ease of debugging)
@@ -792,8 +794,10 @@ void CServerGameDLL::DLLShutdown( void )
 #endif
 
 #ifndef _X360
+#ifndef NO_STEAM
 	s_SteamAPIContext.Clear(); // Steam API context shutdown
 	s_SteamGameServerAPIContext.Clear();
+#endif
 #endif	
 
 	gameeventmanager = NULL;
@@ -2899,12 +2903,12 @@ int TestAreaPortalVisibilityThroughPortals ( CFuncAreaPortalBase* pAreaPortal, e
 	for ( int i = 0; i != iPortalCount; ++i )
 	{
 		CProp_Portal* pLocalPortal = pPortals[ i ];
-		if ( pLocalPortal && pLocalPortal->m_bActivated )
+		if ( pLocalPortal && pLocalPortal->IsActive() )
 		{
-			CProp_Portal* pRemotePortal = pLocalPortal->m_hLinkedPortal.Get();
+			CProp_Portal* pRemotePortal = static_cast<CProp_Portal *>( pLocalPortal->m_hLinkedPortal.Get() );
 
 			// Make sure this portal's linked portal is in the PVS before we add what it can see
-			if ( pRemotePortal && pRemotePortal->m_bActivated && pRemotePortal->NetworkProp() && 
+			if ( pRemotePortal && pRemotePortal->IsActive() && pRemotePortal->NetworkProp() && 
 				pRemotePortal->NetworkProp()->IsInPVS( pViewEntity, pvs, pvssize ) )
 			{
 				bool bIsOpenOnClient = true;

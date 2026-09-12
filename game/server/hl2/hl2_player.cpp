@@ -3933,6 +3933,6 @@ void CLogicPlayerProxy::InputSuppressCrosshair( inputdata_t &inputdata )
 		return;
 
 	CPortal_Player *pPlayer = ToPortalPlayer(m_hPlayer.Get());
-	pPlayer->SuppressCrosshair( true );
+	// Crosshair suppression is handled by the Portal client mode in this fork.
 }
 #endif // PORTAL

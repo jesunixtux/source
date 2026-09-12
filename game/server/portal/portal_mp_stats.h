@@ -29,6 +29,7 @@ public:
 	void SetStats( int a, int b, int c, int d ) {}
 	void IncrementPlayerDeathsMap( CBasePlayer *pPlayer ) {}
 	void IncrementPlayerPortalsTraveled( CBasePlayer *pPlayer ) {}
+	void IncrementPlayerPortals( CBasePlayer *pPlayer ) {}
 	void IncrementPlayerSteps( CBasePlayer *pPlayer ) {}
 	void SaveStats( CBasePlayer *pPlayer ) {}
 	void SavePerMapStats( CBasePlayer *pPlayer, const char *pchName ) {}

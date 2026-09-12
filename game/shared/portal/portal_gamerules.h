@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Game rules for Portal.
 //
@@ -43,6 +43,7 @@ public:
 #endif
 
 	virtual bool ShouldCollide( int collisionGroup0, int collisionGroup1 );
+	virtual bool ShouldRemoveRadio() { return false; }
 
 private:
 

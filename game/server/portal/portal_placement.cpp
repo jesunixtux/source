@@ -99,7 +99,7 @@ void TracePortals( const CProp_Portal *pIgnorePortal, const Vector &vForward, co
 		for( int i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
-			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )
+			if( pTempPortal != pIgnorePortal && pTempPortal->IsActive() )
 			{
 				Vector vOtherOrigin = pTempPortal->GetAbsOrigin();
 				QAngle qOtherAngles = pTempPortal->GetAbsAngles();
@@ -934,7 +934,7 @@ void FitPortalAroundOtherPortals( const CProp_Portal *pIgnorePortal, Vector &vOr
 		for( int i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
-			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )
+			if( pTempPortal != pIgnorePortal && pTempPortal->IsActive() )
 			{
 				Vector vOtherOrigin = pTempPortal->GetAbsOrigin();
 				QAngle qOtherAngles = pTempPortal->GetAbsAngles();
@@ -991,12 +991,12 @@ bool IsPortalIntersectingNoPortalVolume( const Vector &vOrigin, const QAngle &qA
 							   ( ( vForward.y > 0.5f || vForward.y < -0.5f ) ? ( 0.0f ) : ( -PORTAL_BUMP_FORGIVENESS ) ),
 							   ( ( vForward.z > 0.5f || vForward.z < -0.5f ) ? ( 0.0f ) : ( -PORTAL_BUMP_FORGIVENESS ) ) );
 
-		if ( UTIL_IsBoxIntersectingPortal( vBoxCenter, vBoxExtents, vOrigin, qAngles ) )
+		if ( UTIL_IsBoxIntersectingPortal( vBoxCenter, vBoxExtents, vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT ) )
 		{
 			if ( sv_portal_placement_debug.GetBool() )
 			{
 				NDebugOverlay::Box( Vector( 0.0f, 0.0f, 0.0f ), vMin, vMax, 0, 255, 0, 128, 0.5f );
-				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 
 				DevMsg( "Portal placed in no portal volume.\n" );
 			}
@@ -1026,7 +1026,7 @@ bool IsPortalOverlappingOtherPortals( const CProp_Portal *pIgnorePortal, const V
 		for( int i = 0; i != iPortalCount; ++i )
 		{
 			CProp_Portal *pTempPortal = pPortals[i];
-			if( pTempPortal != pIgnorePortal && pTempPortal->m_bActivated )
+			if( pTempPortal != pIgnorePortal && pTempPortal->IsActive() )
 			{
 				Vector vOtherOrigin = pTempPortal->GetAbsOrigin();
 				QAngle qOtherAngles = pTempPortal->GetAbsAngles();
@@ -1043,7 +1043,7 @@ bool IsPortalOverlappingOtherPortals( const CProp_Portal *pIgnorePortal, const V
 				{
 					if ( sv_portal_placement_debug.GetBool() )
 					{
-						UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+						UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 						UTIL_Portal_NDebugOverlay( pTempPortal, 255, 0, 0, 128, false, 0.5f );
 
 						DevMsg( "Portal overlapped another portal.\n" );
@@ -1181,7 +1181,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 	{
 		if ( sv_portal_placement_debug.GetBool() )
 		{
-			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 			DevMsg( "Portal center has no surface behind it.\n" );
 		}
 
@@ -1218,7 +1218,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 	{
 		if ( sv_portal_placement_debug.GetBool() )
 		{
-			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 			DevMsg( "Portal placed on a pass through material.\n" );
 		}
 
@@ -1229,7 +1229,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 	{
 		if ( sv_portal_placement_debug.GetBool() )
 		{
-			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 			DevMsg( "Portal placed on a no portal material.\n" );
 		}
 
@@ -1266,7 +1266,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 
 			if ( sv_portal_placement_debug.GetBool() )
 			{
-				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 				DevMsg( "Portal was unable to fit on surface.\n" );
 			}
 
@@ -1280,7 +1280,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 		{
 			if ( sv_portal_placement_debug.GetBool() )
 			{
-				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+				UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 				DevMsg( "Portal adjusted too far from it's original location.\n" );
 			}
 
@@ -1324,7 +1324,7 @@ float VerifyPortalPlacement( const CProp_Portal *pIgnorePortal, Vector &vOrigin,
 	{
 		if ( sv_portal_placement_debug.GetBool() )
 		{
-			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, 0, 0, 255, 128, false, 0.5f );
+			UTIL_Portal_NDebugOverlay( vOrigin, qAngles, PORTAL_HALF_WIDTH, PORTAL_HALF_HEIGHT, 0, 0, 255, 128, false, 0.5f );
 		}
 		return PORTAL_ANALOG_SUCCESS_INVALID_SURFACE;
 	}

@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -27,6 +27,9 @@
 class CProp_Portal_Shared  //defined as a class to make intellisense more intelligent
 {
 public:
+	// Compatibility bounds used by the legacy placement/orientation code.
+	static const Vector vLocalMins;
+	static const Vector vLocalMaxs;
 
 #ifdef CLIENT_DLL
 	static CUtlVector<C_Prop_Portal *> AllPortals; //an array of existing portal entities	

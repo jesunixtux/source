@@ -39,6 +39,7 @@ public:
 	unsigned char m_iPortalLinkageGroupID; //which portal linkage group this gun is tied to, usually set by mapper, or inherited from owning player's index
 
 	inline unsigned char GetLinkageGroupID( void ) const { return m_iPortalLinkageGroupID; };
+	void SetLinkageGroupID( unsigned char iLinkageGroupID ) { m_iPortalLinkageGroupID = iLinkageGroupID; }
 	
 	// HACK HACK! Used to make the gun visually change when going through a cleanser!
 	CNetworkVar( float,	m_fEffectsMaxSize1 );
@@ -67,6 +68,7 @@ public:
 	void Spawn( void );
 	virtual void Activate();
 	void DoEffectBlast( CBaseEntity *pOwner, bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
+	void DoEffectBlast( bool bPortal2, int iPlacedBy, const Vector &ptStart, const Vector &ptFinalPos, const QAngle &qStartAngles, float fDelay );
 	virtual void OnPickedUp( CBaseCombatCharacter *pNewOwner );
 	void PlayPickupSound( void );
 
@@ -111,7 +113,9 @@ public:
 	void FirePortalDirection2( inputdata_t &inputdata );
 
 	bool TraceFirePortal( const Vector &vTraceStart, const Vector &vDirection, bool bPortal2, PortalPlacedBy_t ePlacedBy, TracePortalPlacementInfo_t &placementInfo );
+	float TraceFirePortal( bool bPortal2, const Vector &vTraceStart, const Vector &vDirection, trace_t &tr, Vector &vFinalPosition, QAngle &qFinalAngles, int iPlacedBy, bool bTest = false );
 	PortalPlacementResult_t FirePortal( bool bPortal2, Vector *pVector = 0 );
+	float FirePortal( bool bPortal2, Vector *pVector, bool bTest );
 	CProp_Portal *GetAssociatedPortal( bool bPortal2 );
 
 	bool PortalTraceClippedByBlockers( ComplexPortalTrace_t *pTraceResults, int nNumResultSegments, const Vector &vecDirection, bool bIsSecondPortal, TracePortalPlacementInfo_t &placementInfo );

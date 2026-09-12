@@ -9,6 +9,7 @@
 
 #include "cbase.h"
 #include "triggers.h"
+#include "trigger_portal_cleanser.h"
 #include "portal_player.h"
 #include "weapon_portalgun.h"
 #include "prop_portal_shared.h"
@@ -39,22 +40,6 @@ static char *g_pszPortalNonCleansable[] =
 // Purpose: Removes anything that touches it. If the trigger has a targetname,
 //			firing it will toggle state.
 //-----------------------------------------------------------------------------
-class CTriggerPortalCleanser : public CBaseTrigger
-{
-public:
-	DECLARE_CLASS( CTriggerPortalCleanser, CBaseTrigger );
-
-	void Spawn( void );
-	void Touch( CBaseEntity *pOther );
-
-	DECLARE_DATADESC();
-
-	// Outputs
-	COutputEvent m_OnDissolve;
-	COutputEvent m_OnFizzle;
-	COutputEvent m_OnDissolveBox;
-};
-
 BEGIN_DATADESC( CTriggerPortalCleanser )
 
 // Outputs

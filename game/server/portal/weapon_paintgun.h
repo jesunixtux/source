@@ -14,6 +14,7 @@
 
 #include "weapon_portalbasecombatweapon.h"
 #include "paint_color_manager.h"
+#include "paint_stream.h"
 
 class CWeaponPaintGun : public CBasePortalCombatWeapon
 {
@@ -23,6 +24,11 @@ public:
 	DECLARE_CLASS( CWeaponPaintGun, CBasePortalCombatWeapon );
 
 	CWeaponPaintGun( void );
+	virtual void ItemPostFrame( void );
+	virtual void PrimaryAttack( void );
+	virtual void SecondaryAttack( void );
+	virtual void StartShootingSound( void ) {}
+	virtual void StopShootingSound( void ) {}
 
 	virtual void Precache( void );
 	virtual void Spawn( void );
@@ -33,6 +39,10 @@ public:
 	bool HasAnyPaintPower( void ) const;
 	PaintPowerType GetCurrentPaint( void ) const;
 	int GetPaintCount( void ) const;
+	bool HasPaintAmmo( unsigned paintType ) const;
+	void DecrementPaintAmmo( unsigned paintType );
+	void ResetAmmo( void );
+	void SprayPaint( float flDeltaTime, int paintType );
 
 	void SetSubType( int iType ) OVERRIDE;
 
@@ -46,9 +56,16 @@ public:
 	PortalWeaponID GetWeaponID( void ) const { return WEAPON_PAINTGUN; }
 
 private:
+	DECLARE_ACTTABLE();
 	bool	m_bHasPaint[PAINT_POWER_TYPE_COUNT_PLUS_NO_POWER];
 	int		m_nCurrentColor;
 	int		m_nPaintAmmo;
+	CUtlVector<int> m_PaintAmmoPerType;
+	CHandle<CPaintStream> m_hPaintStream[PAINT_POWER_TYPE_COUNT];
+	bool m_bFiringPaint;
+	bool m_bFiringErase;
+	float m_flAccumulatedTime;
+	int m_nBlobRandomSeed;
 };
 
 #endif // WEAPON_PAINTGUN_H

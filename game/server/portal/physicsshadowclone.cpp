@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Clones a physics object (usually with a matrix transform applied)
 //
@@ -395,7 +395,7 @@ void CPhysicsShadowClone::SyncEntity( bool bPullChanges )
 
 	if( (ptOrigin - pDest->GetAbsOrigin()).LengthSqr() > 0.0001f || qDiff.LengthSqr() > 0.0001f )
 	{
-		pDest->Teleport( &ptOrigin, &qAngles, NULL, !fast_teleport_enable.GetBool() );
+		pDest->Teleport( &ptOrigin, &qAngles, NULL );
 	}
 	
 	if( vVelocity != pDest->GetAbsVelocity() )
@@ -443,7 +443,10 @@ static void FullSyncPhysicsObject( IPhysicsObject *pSource, IPhysicsObject *pDes
 		pDest->SetMaterialIndex( pSource->GetMaterialIndex() );
 		pDest->SetContents( pSource->GetContents() );
 
-		pDest->SyncWith( pSource );
+		Vector sourcePosition;
+		QAngle sourceAngles;
+		pSource->GetPosition( &sourcePosition, &sourceAngles );
+		pDest->SetPosition( sourcePosition, sourceAngles, bTeleport );
 	}	
 
 	//Damping

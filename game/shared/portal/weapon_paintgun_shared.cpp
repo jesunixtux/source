@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright Â© 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Shared variables, etc. for the paint gun.
 //
@@ -124,7 +124,7 @@ void CWeaponPaintGun::PrimaryAttack()
 {
 	bool bHasSelectedColor = false;
 #if !defined (CLIENT_DLL)
-	bHasSelectedColor = HasPaintPower( (PaintPowerType)m_nCurrentColor.Get() );
+	bHasSelectedColor = HasPaintPower( (PaintPowerType)m_nCurrentColor );
 #else // CLIENT_DLL
 	bHasSelectedColor = HasPaintPower( (PaintPowerType)m_nCurrentColor );
 #endif
@@ -201,13 +201,13 @@ void CWeaponPaintGun::SecondaryAttack()
 }
 
 
-bool CWeaponPaintGun::HasPaintPower( PaintPowerType nIndex )
+bool CWeaponPaintGun::HasPaintPower( PaintPowerType nIndex ) const
 {
 	return m_bHasPaint[nIndex];
 }
 
 
-bool CWeaponPaintGun::HasAnyPaintPower()
+bool CWeaponPaintGun::HasAnyPaintPower() const
 {
 	for( int i = 0; i < PAINT_POWER_TYPE_COUNT; ++i )
 	{
@@ -342,12 +342,12 @@ void CWeaponPaintGun::SetSubType( int iType )
 }
 
 
-PaintPowerType CWeaponPaintGun::GetCurrentPaint()
+PaintPowerType CWeaponPaintGun::GetCurrentPaint() const
 {
 #ifdef CLIENT_DLL
 	return (PaintPowerType)( m_nCurrentColor );
 #else //!CLIENT_DLL
-	return (PaintPowerType)( m_nCurrentColor.Get() );
+	return (PaintPowerType)( m_nCurrentColor );
 #endif
 }
 
@@ -382,7 +382,7 @@ void CWeaponPaintGun::DecrementPaintAmmo( unsigned paintType )
 
 		case PAINT_AMMO_PER_TYPE:
 			const int index = MIN( paintType, PAINT_POWER_TYPE_COUNT );
-			m_PaintAmmoPerType.Set( index, m_PaintAmmoPerType[index] - 1 );
+			m_PaintAmmoPerType[index] = m_PaintAmmoPerType[index] - 1;
 			break;
 	}
 }
@@ -390,11 +390,12 @@ void CWeaponPaintGun::DecrementPaintAmmo( unsigned paintType )
 void CWeaponPaintGun::ResetAmmo()
 {
 	m_nPaintAmmo = paintgun_max_ammo;
+	m_PaintAmmoPerType.SetCount( PAINT_POWER_TYPE_COUNT );
 
 	const int maxAmmo = paintgun_max_ammo;
 	for( int i = 0; i < PAINT_POWER_TYPE_COUNT; ++i )
 	{
-		m_PaintAmmoPerType.Set( i, maxAmmo );
+		m_PaintAmmoPerType[i] = maxAmmo;
 	}
 }
 
@@ -409,7 +410,7 @@ void CWeaponPaintGun::SprayPaint( float flDeltaTime, int paintType )
 	if ( pOwner == NULL )
 		return;
 
-	CPaintStream *pPaintStream = assert_cast< CPaintStream* >( m_hPaintStream.Get( paintType ).Get() );
+	CPaintStream *pPaintStream = assert_cast< CPaintStream* >( m_hPaintStream[paintType].Get() );
 	if ( !pPaintStream )
 		return;
 

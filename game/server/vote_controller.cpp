@@ -780,10 +780,11 @@ void CVoteController::TrackVoteCaller( CBasePlayer *pPlayer )
 	if ( !pPlayer )
 		return;
 
-	CSteamID steamID;
-	pPlayer->GetSteamID( &steamID );
+	// This fork does not expose the engine SteamID accessor; user IDs are
+	// stable for the lifetime of a vote and preserve the cooldown behavior.
+	uint64 steamID = static_cast<uint64>( pPlayer->GetUserID() );
 
-	int iIdx = m_VoteCallers.Find( steamID.ConvertToUint64() );
+	int iIdx = m_VoteCallers.Find( steamID );
 	if ( iIdx != m_VoteCallers.InvalidIndex() )
 	{
 		// Already being tracked - update timer
@@ -791,7 +792,7 @@ void CVoteController::TrackVoteCaller( CBasePlayer *pPlayer )
 		return;
 	}
 
-	m_VoteCallers.Insert( steamID.ConvertToUint64(), gpGlobals->curtime + sv_vote_creation_timer.GetInt() );
+	m_VoteCallers.Insert( steamID, gpGlobals->curtime + sv_vote_creation_timer.GetInt() );
 };
 
 //-----------------------------------------------------------------------------
@@ -802,11 +803,10 @@ bool CVoteController::CanEntityCallVote( CBasePlayer *pPlayer, int &nCooldown )
 	if ( !pPlayer )
 		return false;
 	
-	CSteamID steamID;
-	pPlayer->GetSteamID( &steamID );
+	uint64 steamID = static_cast<uint64>( pPlayer->GetUserID() );
 
 	// Has this SteamID tried to call a vote recently?
-	int iIdx = m_VoteCallers.Find( steamID.ConvertToUint64() );
+	int iIdx = m_VoteCallers.Find( steamID );
 	if ( iIdx != m_VoteCallers.InvalidIndex() )
 	{
 		// Timer elapsed?
@@ -1097,4 +1097,3 @@ public:
 };
 
 CVoteControllerSystem VoteControllerSystem( "CVoteControllerSystem" );
-

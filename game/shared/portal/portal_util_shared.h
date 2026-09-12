@@ -16,10 +16,14 @@
 
 extern bool g_bBulletPortalTrace;
 
+#ifdef GAME_DLL
+void UTIL_ClearTrace( trace_t &tr );
+#else
 inline void UTIL_ClearTrace( trace_t &tr )
 {
 	memset( &tr, 0, sizeof( tr ) );
 }
+#endif
 
 #ifdef CLIENT_DLL
 	#include "client_class.h"

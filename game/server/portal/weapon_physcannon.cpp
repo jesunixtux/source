@@ -492,6 +492,7 @@ public:
 
 	//set when a held entity is penetrating another through a portal. Needed for special fixes
 	void SetPortalPenetratingEntity( CBaseEntity *pPenetrated );
+	void CheckPortalOscillation( CPortal_Base2D *, CBaseEntity *, CPortal_Player * );
 
 private:
 	// Compute the max speed for an attached object
@@ -557,6 +558,8 @@ BEGIN_SIMPLE_DATADESC( CGrabController )
 	// DEFINE_PHYSPTR( m_controller ),
 
 END_DATADESC()
+
+void CGrabController::CheckPortalOscillation( CPortal_Base2D *, CBaseEntity *, CPortal_Player * ) {}
 
 const float DEFAULT_MAX_ANGULAR = 360.0f * 10.0f;
 const float REDUCED_CARRY_MASS = 1.0f;
@@ -803,7 +806,7 @@ void CGrabController::AttachEntity( CBasePlayer *pPlayer, CBaseEntity *pEntity, 
 		Vector end = start + ( vPlayerForward * distance );
 
 		CProp_Portal *pObjectPortal = NULL;
-		pObjectPortal = pPortalPlayer->GetHeldObjectPortal();
+		pObjectPortal = static_cast<CProp_Portal *>( pPortalPlayer->GetHeldObjectPortal() );
 
 		// If our end point hasn't gone into the portal yet we at least need to know what portal is in front of us
 		if ( !pObjectPortal )
@@ -819,7 +822,7 @@ void CGrabController::AttachEntity( CBasePlayer *pPlayer, CBaseEntity *pEntity, 
 				for( int i = 0; i != iPortalCount; ++i )
 				{
 					CProp_Portal *pTempPortal = pPortals[i];
-					if( pTempPortal->m_bActivated &&
+					if( pTempPortal->IsActivedAndLinked() &&
 						(pTempPortal->m_hLinkedPortal.Get() != NULL) )
 					{
 						float fDist = UTIL_IntersectRayWithPortal( rayPortalTest, pTempPortal );
@@ -1153,7 +1156,7 @@ void CPlayerPickupController::Init( CBasePlayer *pPlayer, CBaseEntity *pObject )
 	CPortal_Player *pOwner = ToPortalPlayer( pPlayer );
 	if ( pOwner )
 	{
-		pOwner->EnableSprint( false );
+		// Sprint lock is unavailable in this player fork.
 	}
 
 	// If the target is debris, convert it to non-debris
@@ -1218,7 +1221,7 @@ void CPlayerPickupController::Shutdown( bool bThrown )
 		CPortal_Player *pOwner = ToPortalPlayer( m_pPlayer );
 		if ( pOwner )
 		{
-			pOwner->EnableSprint( true );
+			// Sprint lock is unavailable in this player fork.
 		}
 
 		m_pPlayer->SetUseEntity( NULL );
@@ -1292,7 +1295,7 @@ void CPlayerPickupController::Use( CBaseEntity *pActivator, CBaseEntity *pCaller
 			// If throwing from the opposite side of a portal, reorient the direction
 			if( ((CPortal_Player *)m_pPlayer)->IsHeldObjectOnOppositeSideOfPortal() )
 			{
-				CProp_Portal *pHeldPortal = ((CPortal_Player *)m_pPlayer)->GetHeldObjectPortal();
+				CProp_Portal *pHeldPortal = static_cast<CProp_Portal *>( ((CPortal_Player *)m_pPlayer)->GetHeldObjectPortal() );
 				UTIL_Portal_VectorTransform( pHeldPortal->MatrixThisToLinked(), vecLaunch, vecLaunch );
 			}
 
@@ -1587,11 +1590,11 @@ enum
 
 enum
 {
-	EFFECT_NONE,
-	EFFECT_CLOSED,
-	EFFECT_READY,
-	EFFECT_HOLDING,
-	EFFECT_LAUNCH,
+	PHYSCANNON_EFFECT_NONE,
+	PHYSCANNON_EFFECT_CLOSED,
+	PHYSCANNON_EFFECT_READY,
+	PHYSCANNON_EFFECT_HOLDING,
+	PHYSCANNON_EFFECT_LAUNCH,
 };
 
 
@@ -1614,7 +1617,7 @@ CWeaponPhysCannon::CWeaponPhysCannon( void )
 	m_bOpen					= false;
 	m_nChangeState			= ELEMENT_STATE_NONE;
 	m_flCheckSuppressTime	= 0.0f;
-	m_EffectState			= EFFECT_NONE;
+	m_EffectState			= PHYSCANNON_EFFECT_NONE;
 	m_flLastDenySoundPlayed	= false;
 
 	m_flEndSpritesOverride[0] = 0.0f;
@@ -1691,7 +1694,7 @@ void CWeaponPhysCannon::OnRestore()
 
 	// Tracker 8106:  Physcannon effects disappear through level transition, so
 	//  just recreate any effects here
-	if ( m_EffectState != EFFECT_NONE )
+	if ( m_EffectState != PHYSCANNON_EFFECT_NONE )
 	{
 		DoEffect( m_EffectState, NULL );
 	}
@@ -1724,7 +1727,7 @@ inline float CWeaponPhysCannon::SpriteScaleFactor()
 bool CWeaponPhysCannon::Deploy( void )
 {
 	CloseElements();
-	DoEffect( EFFECT_READY );
+	DoEffect( PHYSCANNON_EFFECT_READY );
 
 	// Unbloat our bounds
 	if ( IsMegaPhysCannon() )
@@ -1910,7 +1913,7 @@ void CWeaponPhysCannon::PuntNonVPhysics( CBaseEntity *pEntity, const Vector &for
 	ApplyMultiDamage();
 	
 	//Explosion effect
-	DoEffect( EFFECT_LAUNCH, &tr.endpos );
+	DoEffect( PHYSCANNON_EFFECT_LAUNCH, &tr.endpos );
 
 	PrimaryFireEffect();
 	SendWeaponAnim( ACT_VM_SECONDARYATTACK );
@@ -2059,7 +2062,7 @@ void CWeaponPhysCannon::PuntVPhysics( CBaseEntity *pEntity, const Vector &vecFor
 	pOwner->ViewPunch( recoil );
 
 	//Explosion effect
-	DoEffect( EFFECT_LAUNCH, &tr.endpos );
+	DoEffect( PHYSCANNON_EFFECT_LAUNCH, &tr.endpos );
 
 	PrimaryFireEffect();
 	SendWeaponAnim( ACT_VM_SECONDARYATTACK );
@@ -2177,7 +2180,7 @@ void CWeaponPhysCannon::PuntRagdoll( CBaseEntity *pEntity, const Vector &vecForw
 	pOwner->ViewPunch( recoil );
 
 	//Explosion effect
-	DoEffect( EFFECT_LAUNCH, &tr.endpos );
+	DoEffect( PHYSCANNON_EFFECT_LAUNCH, &tr.endpos );
 
 	PrimaryFireEffect();
 	SendWeaponAnim( ACT_VM_SECONDARYATTACK );
@@ -2344,7 +2347,7 @@ void CWeaponPhysCannon::PrimaryAttack( void )
 
 	if ( ToPortalPlayer( pOwner )->IsHeldObjectOnOppositeSideOfPortal() )
 	{
-		CProp_Portal *pPortal = ToPortalPlayer( pOwner )->GetHeldObjectPortal();
+		CProp_Portal *pPortal = static_cast<CProp_Portal *>( ToPortalPlayer( pOwner )->GetHeldObjectPortal() );
 		UTIL_Portal_VectorTransform( pPortal->MatrixThisToLinked(), forward, forward );
 	}
 
@@ -2447,7 +2450,7 @@ void CWeaponPhysCannon::SecondaryAttack( void )
 
 		DetachObject();
 
-		DoEffect( EFFECT_READY );
+		DoEffect( PHYSCANNON_EFFECT_READY );
 
 		SendWeaponAnim( ACT_VM_PRIMARYATTACK );
 	}
@@ -2476,7 +2479,7 @@ void CWeaponPhysCannon::SecondaryAttack( void )
 			break;
 		}
 
-		DoEffect( EFFECT_HOLDING );
+		DoEffect( PHYSCANNON_EFFECT_HOLDING );
 	}
 }	
 
@@ -2555,7 +2558,7 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 
 		if ( pProp && pProp->HasInteraction( PROPINTER_PHYSGUN_CREATE_FLARE ) )
 		{
-			pOwner->FlashlightTurnOff();
+			pOwner->FlashlightTurnOff( NULL );
 		}
 #endif
 
@@ -2572,7 +2575,7 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 		// NVNT set the players constant force to simulate holding mass
 		HapticSetConstantForce(pOwner,clamp(m_grabController.GetLoadWeight()*0.05,1,5)*Vector(0,-1,0));
 #endif
-		pOwner->EnableSprint( false );
+		// Sprint lock is unavailable in this player fork.
 
 		float	loadWeight = ( 1.0f - GetLoadPercentage() );
 		float	maxSpeed = hl2_walkspeed.GetFloat() + ( ( hl2_normspeed.GetFloat() - hl2_walkspeed.GetFloat() ) * loadWeight );
@@ -2584,7 +2587,7 @@ bool CWeaponPhysCannon::AttachObject( CBaseEntity *pObject, const Vector &vPosit
 	// Don't drop again for a slight delay, in case they were pulling objects near them
 	m_flNextSecondaryAttack = gpGlobals->curtime + 0.4f;
 
-	DoEffect( EFFECT_HOLDING );
+	DoEffect( PHYSCANNON_EFFECT_HOLDING );
 	OpenElements();
 
 	if ( GetMotorSound() )
@@ -2926,7 +2929,7 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 
 	// Find out if it's being held across a portal
 	bool bLookingAtHeldPortal = true;
-	CProp_Portal *pPortal = pPortalPlayer->GetHeldObjectPortal();
+	CProp_Portal *pPortal = static_cast<CProp_Portal *>( pPortalPlayer->GetHeldObjectPortal() );
 
 	if ( !pPortal )
 	{
@@ -2958,7 +2961,7 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 				for( int i = 0; i != iPortalCount; ++i )
 				{
 					CProp_Portal *pTempPortal = pPortals[i];
-					if( pTempPortal->m_bActivated &&
+					if( pTempPortal->IsActivedAndLinked() &&
 						(pTempPortal->m_hLinkedPortal.Get() != NULL) )
 					{
 						float fDist = UTIL_IntersectRayWithPortal( rayPortalTest, pTempPortal );
@@ -3069,8 +3072,8 @@ bool CGrabController::UpdateObject( CBasePlayer *pPlayer, float flError )
 	// Translate hold position and angles across portal
 	if ( pPortalPlayer->IsHeldObjectOnOppositeSideOfPortal() )
 	{
-		CProp_Portal *pPortalLinked = pPortal->m_hLinkedPortal;
-		if ( pPortal && pPortal->m_bActivated && pPortalLinked != NULL )
+		CProp_Portal *pPortalLinked = static_cast<CProp_Portal *>( pPortal->m_hLinkedPortal.Get() );
+		if ( pPortal && pPortal->IsActivedAndLinked() && pPortalLinked != NULL )
 		{
 			Vector vTeleportedPosition;
 			QAngle qTeleportedAngles;
@@ -3132,7 +3135,7 @@ void CWeaponPhysCannon::DetachObject( bool playSound, bool wasLaunched )
 	CPortal_Player *pOwner = (CPortal_Player *)ToBasePlayer( GetOwner() );
 	if( pOwner != NULL )
 	{
-		pOwner->EnableSprint( true );
+		// Sprint lock is unavailable in this player fork.
 		pOwner->SetMaxSpeed( hl2_normspeed.GetFloat() );
 		pOwner->SetHeldObjectOnOppositeSideOfPortal( false );
 		if( wasLaunched )
@@ -3488,7 +3491,7 @@ void CWeaponPhysCannon::DoEffectIdle( void )
 
 		if ( m_hCenterSprite != NULL )
 		{
-			if ( m_EffectState == EFFECT_HOLDING )
+			if ( m_EffectState == PHYSCANNON_EFFECT_HOLDING )
 			{
 				m_hCenterSprite->SetBrightness( random->RandomInt( 32, 64 ) );
 				m_hCenterSprite->SetScale( random->RandomFloat( 0.2, 0.25 ) * flScaleFactor );
@@ -3502,7 +3505,7 @@ void CWeaponPhysCannon::DoEffectIdle( void )
 		
 		if ( m_hBlastSprite != NULL )
 		{
-			if ( m_EffectState == EFFECT_HOLDING )
+			if ( m_EffectState == PHYSCANNON_EFFECT_HOLDING )
 			{
 				m_hBlastSprite->SetBrightness( random->RandomInt( 125, 150 ) );
 				m_hBlastSprite->SetScale( random->RandomFloat( 0.125, 0.15 ) * flScaleFactor );
@@ -3571,7 +3574,7 @@ void CWeaponPhysCannon::ItemPostFrame()
 
 		if ( m_bActive == false )
 		{
-			DoEffect( EFFECT_READY );
+			DoEffect( PHYSCANNON_EFFECT_READY );
 		}
 	}
 	
@@ -3647,7 +3650,7 @@ void CWeaponPhysCannon::LaunchObject( const Vector &vecDir, float flForce )
 		Vector	center = pObject->WorldSpaceCenter();
 
 		//Do repulse effect
-		DoEffect( EFFECT_LAUNCH, &center );
+		DoEffect( PHYSCANNON_EFFECT_LAUNCH, &center );
 	}
 
 	// Stop our looping sound
@@ -3755,7 +3758,7 @@ void CWeaponPhysCannon::OpenElements( void )
 
 	m_bOpen = true;
 
-	DoEffect( EFFECT_READY );
+	DoEffect( PHYSCANNON_EFFECT_READY );
 }
 
 //-----------------------------------------------------------------------------
@@ -3797,7 +3800,7 @@ void CWeaponPhysCannon::CloseElements( void )
 		(CSoundEnvelopeController::GetController()).SoundChangePitch( GetMotorSound(), 50, 1.0f );
 	}
 	
-	DoEffect( EFFECT_CLOSED );
+	DoEffect( PHYSCANNON_EFFECT_CLOSED );
 }
 
 #define	PHYSCANNON_MAX_MASS		500
@@ -3910,7 +3913,7 @@ void CWeaponPhysCannon::DestroyEffects( void )
 void CWeaponPhysCannon::StopEffects( bool stopSound )
 {
 	// Turn off our effect state
-	DoEffect( EFFECT_NONE );
+	DoEffect( PHYSCANNON_EFFECT_NONE );
 
 	//Turn off main glow
 	if ( m_hCenterSprite != NULL )
@@ -4537,24 +4540,24 @@ void CWeaponPhysCannon::DoMegaEffect( int effectType, Vector *pos )
 {
 	switch( effectType )
 	{
-	case EFFECT_CLOSED:
+	case PHYSCANNON_EFFECT_CLOSED:
 		DoMegaEffectClosed();
 		break;
 
-	case EFFECT_READY:
+	case PHYSCANNON_EFFECT_READY:
 		DoMegaEffectReady();
 		break;
 
-	case EFFECT_HOLDING:
+	case PHYSCANNON_EFFECT_HOLDING:
 		DoMegaEffectHolding();
 		break;
 
-	case EFFECT_LAUNCH:
+	case PHYSCANNON_EFFECT_LAUNCH:
 		DoMegaEffectLaunch( pos );
 		break;
 
 	default:
-	case EFFECT_NONE:
+	case PHYSCANNON_EFFECT_NONE:
 		break;
 	}
 }
@@ -4579,24 +4582,24 @@ void CWeaponPhysCannon::DoEffect( int effectType, Vector *pos )
 
 	switch( effectType )
 	{
-	case EFFECT_CLOSED:
+	case PHYSCANNON_EFFECT_CLOSED:
 		DoEffectClosed( );
 		break;
 
-	case EFFECT_READY:
+	case PHYSCANNON_EFFECT_READY:
 		DoEffectReady( );
 		break;
 
-	case EFFECT_HOLDING:
+	case PHYSCANNON_EFFECT_HOLDING:
 		DoEffectHolding();
 		break;
 
-	case EFFECT_LAUNCH:
+	case PHYSCANNON_EFFECT_LAUNCH:
 		DoEffectLaunch( pos );
 		break;
 
 	default:
-	case EFFECT_NONE:
+	case PHYSCANNON_EFFECT_NONE:
 		DoEffectNone();
 		break;
 	}
