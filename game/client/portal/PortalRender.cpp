@@ -23,8 +23,8 @@
 #include "toolframework_client.h"
 #include "vgui_int.h"
 #include "renderparm.h"
-#include "shaderapi/ishaderapi.h"
 #include "shaderapi/ishadershadow.h"
+
 
 #ifdef PORTAL
 #include "c_prop_portal.h"
