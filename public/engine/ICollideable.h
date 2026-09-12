@@ -21,6 +21,7 @@ class QAngle;
 class CGameTrace;
 typedef CGameTrace trace_t;
 class IClientUnknown;
+class IPhysicsObject;
 
 
 abstract_class ICollideable
@@ -78,6 +79,10 @@ public:
 
 	// returns NULL unless this collideable has specified FSOLID_ROOT_PARENT_ALIGNED
 	virtual const matrix3x4_t	*GetRootParentToWorldTransform() const = 0;
+
+	// Portal 2 additions.
+	virtual unsigned int	GetRequiredTriggerFlags() const { return 0; }
+	virtual IPhysicsObject	*GetVPhysicsObject() const { return NULL; }
 };
 
 

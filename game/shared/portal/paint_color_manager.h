@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2009, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2009, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Declares the paint color manager class.
 //
@@ -7,7 +7,7 @@
 #define PAINT_COLOR_MANAGER_H
 
 // src/public/
-#include "game/shared/portal2/paint_enum.h"
+#include "portal2/paint_enum.h"
 
 PaintPowerType MapColorToPower( const color24& color );
 PaintPowerType MapColorToPower( const Color& color );

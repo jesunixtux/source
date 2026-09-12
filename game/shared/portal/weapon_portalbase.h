@@ -37,6 +37,9 @@ public:
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
 
+	// Bring in the base 1-arg DrawModel so derived weapons can still call it.
+	using CBaseEntity::DrawModel;
+
 	CWeaponPortalBase();
 
 	#ifdef GAME_DLL
@@ -67,10 +70,12 @@ public:
 public:
 	#if defined( CLIENT_DLL )
 	
-		virtual bool	ShouldDrawCrosshair( void ) { return true; }
-		virtual bool	ShouldPredict();
-		virtual void	OnDataChanged( DataUpdateType_t type );
-		virtual void	DrawCrosshair();
+	virtual IClientModelRenderable*	GetClientModelRenderable();
+	virtual int		DrawModel( int flags, const RenderableInstance_t &instance );
+	virtual bool	ShouldDrawCrosshair( void ) { return true; }
+	virtual bool	ShouldPredict();
+	virtual void	OnDataChanged( DataUpdateType_t type );
+	virtual void	DrawCrosshair();
 
 		virtual void	DoAnimationEvents( CStudioHdr *pStudio );
 		virtual void	GetRenderBounds( Vector& theMins, Vector& theMaxs );

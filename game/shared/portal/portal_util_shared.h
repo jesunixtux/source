@@ -15,6 +15,11 @@
 
 extern bool g_bBulletPortalTrace;
 
+inline void UTIL_ClearTrace( trace_t &tr )
+{
+	memset( &tr, 0, sizeof( tr ) );
+}
+
 #ifdef CLIENT_DLL
 	#include "client_class.h"
 	#include "interpolatedvar.h"
@@ -116,6 +121,23 @@ CPortal_Base2D *UTIL_IntersectEntityExtentsWithPortal( const CBaseEntity *pEntit
 
 void UTIL_Portal_NDebugOverlay( const Vector &ptPortalCenter, const QAngle &qPortalAngles, float fHalfWidth, float fHalfHeight, int r, int g, int b, int a, bool noDepthTest, float duration );
 void UTIL_Portal_NDebugOverlay( const CPortal_Base2D *pPortal, int r, int g, int b, int a, bool noDepthTest, float duration );
+
+// Portal 2 closest-passable-space adapter. Defined here because it is used by
+// both portal_util_shared.cpp and the implementation in baseplayer_shared.cpp.
+#define FL_AXIS_DIRECTION_NONE	0
+#define FL_AXIS_DIRECTION_X		0x1
+#define FL_AXIS_DIRECTION_Y		0x2
+#define FL_AXIS_DIRECTION_Z		0x4
+
+struct FindClosestPassableSpace_TraceAdapter_t
+{
+	void	(*pTraceFunc)( const Ray_t &ray, trace_t *pResult, FindClosestPassableSpace_TraceAdapter_t *pTraceAdapter );
+	bool	(*pPointOutsideWorldFunc)( const Vector &vTest, FindClosestPassableSpace_TraceAdapter_t *pTraceAdapter );
+	ITraceFilter *pTraceFilter;
+	unsigned int fMask;
+};
+
+bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, unsigned int iIterations, Vector &vCenterOut, int axisDirectionFlags, FindClosestPassableSpace_TraceAdapter_t *pAdapter );
 
 bool UTIL_FindClosestPassableSpace_InPortal( const CPortal_Base2D *pPortal, const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut );
 bool UTIL_FindClosestPassableSpace_InPortal_CenterMustStayInFront( const CPortal_Base2D *pPortal, const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, ITraceFilter *pTraceFilter, unsigned int fMask, unsigned int iIterations, Vector &vCenterOut );

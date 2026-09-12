@@ -13,7 +13,7 @@
 #define ACHIEVEMENT_STUBS_H
 #pragma once
 
-#include "baseentity.h"
+#include "cbase.h"
 #include "KeyValues.h"
 
 inline void UTIL_RecordAchievementEvent( const char *szAchievementName, CBaseEntity *pActivator )

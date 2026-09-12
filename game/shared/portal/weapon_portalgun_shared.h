@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -14,6 +14,7 @@
 
 #include "cbase.h"
 #include "portal_shareddefs.h"
+#include "portal_util_shared.h"
 
 #if defined( CLIENT_DLL )
 class C_InfoPlacementHelper;

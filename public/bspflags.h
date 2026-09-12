@@ -141,6 +141,15 @@
 #define MASK_SPLITAREAPORTAL		(CONTENTS_WATER|CONTENTS_SLIME)
 
 // UNDONE: This is untested, any moving water
+// Portal 2 (and this port) do not use water-current contents. Define the bits
+// as zero so legacy engine code that still references MASK_CURRENT compiles
+// without colliding with P2 content bits.
+#define CONTENTS_CURRENT_0			0
+#define CONTENTS_CURRENT_90			0
+#define CONTENTS_CURRENT_180		0
+#define CONTENTS_CURRENT_270		0
+#define CONTENTS_CURRENT_UP			0
+#define CONTENTS_CURRENT_DOWN		0
 #define MASK_CURRENT				(CONTENTS_CURRENT_0|CONTENTS_CURRENT_90|CONTENTS_CURRENT_180|CONTENTS_CURRENT_270|CONTENTS_CURRENT_UP|CONTENTS_CURRENT_DOWN)
 
 // everything that blocks corpse movement

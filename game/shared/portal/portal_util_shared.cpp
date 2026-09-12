@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -3470,3 +3470,11 @@ void UTIL_FindBrushEntitiesInSphere( CBrushEntityList& brushEnum, const Vector& 
 }
 
 #endif
+
+bool UTIL_FindClosestPassableSpace( const Vector &vCenter, const Vector &vExtents, const Vector &vIndecisivePush, unsigned int iIterations, Vector &vCenterOut, int axisDirectionFlags, FindClosestPassableSpace_TraceAdapter_t *pAdapter )
+{
+	// Stub: keep the starting position and report failure. The full collision
+	// relaxation algorithm is not required for the initial refactor build.
+	vCenterOut = vCenter;
+	return false;
+}

@@ -408,7 +408,12 @@ public:
 		Init(vOther.x, vOther.y, vOther.z);
 		return *this;
 	}
-	
+
+	inline bool IsZeroFast( void ) const
+	{
+		return IsZero();
+	}
+
 #endif
 	float w;	// this space is used anyway
 } ALIGN16_POST;

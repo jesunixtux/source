@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -28,6 +28,11 @@ extern IVModelInfo* modelinfo;
 	#include "portalrender.h"
 	#include "vgui_int.h"
 	#include "model_types.h"
+
+	// Portal 2 exposes GetHud()/HudIcons() as globals; map them to the base
+	// Source gHUD singleton for now so the crosshair code compiles.
+	#define GetHud()		gHUD
+	#define HudIcons()		gHUD
 #else
 
 	#include "portal_player.h"
@@ -199,7 +204,7 @@ int CWeaponPortalBase::DrawModel( int flags, const RenderableInstance_t &instanc
 		bChangeModelBack = true;
 	}
 
-	int iRetVal = BaseClass::DrawModel( flags, instance );
+	int iRetVal = C_BaseEntity::DrawModel( flags, instance );
 
 	if( bChangeModelBack )
 		SetModelIndex( iOriginalIndex );

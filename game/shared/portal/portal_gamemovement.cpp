@@ -2832,7 +2832,7 @@ void CPortalGameMovement::HandlePortalling( void )
 // Input  : ducked - 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-const Vector& CPortalGameMovement::GetPlayerMins( bool ducked ) const
+Vector CPortalGameMovement::GetPlayerMins( bool ducked ) const
 {
 	return ducked ? GetPortalPlayer()->GetDuckHullMins() : GetPortalPlayer()->GetStandHullMins();
 }
@@ -2842,7 +2842,7 @@ const Vector& CPortalGameMovement::GetPlayerMins( bool ducked ) const
 // Input  : ducked - 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-const Vector& CPortalGameMovement::GetPlayerMaxs( bool ducked ) const
+Vector CPortalGameMovement::GetPlayerMaxs( bool ducked ) const
 {	
 	return ducked ? GetPortalPlayer()->GetDuckHullMaxs() : GetPortalPlayer()->GetStandHullMaxs();
 }
@@ -2852,7 +2852,7 @@ const Vector& CPortalGameMovement::GetPlayerMaxs( bool ducked ) const
 // Input  : 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-const Vector& CPortalGameMovement::GetPlayerMins() const
+Vector CPortalGameMovement::GetPlayerMins() const
 {
 	return GetPlayerMins( GetPortalPlayer()->m_Local.m_bDucked );
 }
@@ -2862,7 +2862,7 @@ const Vector& CPortalGameMovement::GetPlayerMins() const
 // Input  : 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-const Vector& CPortalGameMovement::GetPlayerMaxs() const
+Vector CPortalGameMovement::GetPlayerMaxs() const
 {	
 	return GetPlayerMaxs( GetPortalPlayer()->m_Local.m_bDucked );
 }
@@ -2872,7 +2872,7 @@ const Vector& CPortalGameMovement::GetPlayerMaxs() const
 // Input  : ducked - 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-const Vector& CPortalGameMovement::GetPlayerViewOffset( bool ducked ) const
+Vector CPortalGameMovement::GetPlayerViewOffset( bool ducked ) const
 {
 	return ducked ? VEC_DUCK_VIEW : VEC_VIEW;
 }

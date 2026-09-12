@@ -19,6 +19,14 @@
 #define CBaseAnimating			C_BaseAnimating
 #define CBasePlayer				C_BasePlayer
 
+// Portal 2 aliased entity factory macro. The P2 source names classes without
+// the client prefix and relies on the factory macro to prepend it.
+#define LINK_ENTITY_TO_CLASS_ALIASED( localName, className ) LINK_ENTITY_TO_CLASS( localName, C_##className )
+
+#else
+
+#define LINK_ENTITY_TO_CLASS_ALIASED( localName, className ) LINK_ENTITY_TO_CLASS( localName, C##className )
+
 #endif
 
 

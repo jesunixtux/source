@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: Special handling for Portal usable ladders
 //
@@ -30,9 +30,9 @@ public:
 	bool	m_bInPortalEnv;
 // Overrides
 	virtual void ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove );
-	virtual const Vector&	GetPlayerMins( bool ducked ) const;
-	virtual const Vector&	GetPlayerMaxs( bool ducked ) const;
-	virtual const Vector&	GetPlayerViewOffset( bool ducked ) const;
+	virtual Vector	GetPlayerMins( bool ducked ) const;
+	virtual Vector	GetPlayerMaxs( bool ducked ) const;
+	virtual Vector	GetPlayerViewOffset( bool ducked ) const;
 	virtual void SetupMovementBounds( CMoveData *pMove );
 	virtual bool CheckJumpButton( void );
 
@@ -85,8 +85,8 @@ protected:
 	// Implement this if you want to know when the player collides during OnPlayerMove
 	virtual void	OnTryPlayerMoveCollision( trace_t &tr ) {}
 
-	virtual const Vector&	GetPlayerMins() const; // uses local player
-	virtual const Vector&	GetPlayerMaxs() const; // uses local player
+	virtual Vector	GetPlayerMins() const; // uses local player
+	virtual Vector	GetPlayerMaxs() const; // uses local player
 
 	// Decompoosed gravity
 	virtual void	StartGravity();

@@ -17,6 +17,7 @@
 #include "mathlib/vector.h"
 #include "mathlib/vector4d.h"
 #include "vcollide.h"
+#include "gametrace.h"
 
 
 // ------------------------------------------------------------------------------------
@@ -254,6 +255,15 @@ public:
 	virtual void TraceBox( const Vector &start, const Vector &end, const Vector &mins, const Vector &maxs, const CPhysCollide *pCollide, const Vector &collideOrigin, const QAngle &collideAngles, trace_t *ptr ) = 0;
 	virtual void TraceBox( const Ray_t &ray, const CPhysCollide *pCollide, const Vector &collideOrigin, const QAngle &collideAngles, trace_t *ptr ) = 0;
 	virtual void TraceBox( const Ray_t &ray, unsigned int contentsMask, IConvexInfo *pConvexInfo, const CPhysCollide *pCollide, const Vector &collideOrigin, const QAngle &collideAngles, trace_t *ptr ) = 0;
+
+	// Portal 2: axis-aligned box trace against an unrotated collide. Implemented
+	// as a non-virtual helper so the engine's IPhysicsCollision vtable is not
+	// disturbed while still allowing game code to compile.
+	bool TraceBoxAA( const Ray_t &ray, const CPhysCollide *pCollide, trace_t *ptr )
+	{
+		TraceBox( ray, pCollide, vec3_origin, vec3_angle, ptr );
+		return ptr->DidHit();
+	}
 
 	// Trace one collide against another
 	virtual void TraceCollide( const Vector &start, const Vector &end, const CPhysCollide *pSweepCollide, const QAngle &sweepAngles, const CPhysCollide *pCollide, const Vector &collideOrigin, const QAngle &collideAngles, trace_t *ptr ) = 0;
