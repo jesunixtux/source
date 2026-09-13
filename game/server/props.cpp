@@ -54,6 +54,11 @@
 // (displayed when the supply crate is picked up)
 #define NUM_SUPPLY_CRATE_HUD_HINTS		3
 
+// Enabled only by Portal 2's isolated compatibility cfg. The regular games
+// retain their historic behavior for models intentionally lacking VPhysics.
+static ConVar portal2_dynamicprop_bbox_fallback( "portal2_dynamicprop_bbox_fallback", "0", FCVAR_NONE,
+	"Use bbox VPhysics for dynamic props that have no collision model." );
+
 extern CBaseEntity *FindPickerEntity( CBasePlayer *pPlayer );
 
 
@@ -2572,6 +2577,27 @@ bool CPhysicsProp::CreateVPhysics()
 	PhysSolidOverride( tmpSolid, m_iszOverrideScript );
 
 	IPhysicsObject *pPhysicsObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, asleep, &tmpSolid );
+
+	if ( !pPhysicsObject && portal2_dynamicprop_bbox_fallback.GetBool() && GetModelIndex() )
+	{
+		// Some imported Portal 2 dynamic props have a render model but no
+		// compatible VPhysics collision lump.  Keep them in the Portal 1
+		// simulation as a conservative axis-aligned box instead of silently
+		// turning them non-solid.  This is sufficient for cubes, buttons and
+		// lightweight puzzle props while preserving the native physics path for
+		// models that do carry collision data.
+		SetSolid( SOLID_BBOX );
+		pPhysicsObject = PhysModelCreateBox( this, CollisionProp()->OBBMins(),
+			CollisionProp()->OBBMaxs(), GetAbsOrigin(), false );
+		if ( pPhysicsObject )
+		{
+			VPhysicsSetObject( pPhysicsObject );
+			SetMoveType( MOVETYPE_VPHYSICS );
+			if ( !asleep )
+				pPhysicsObject->Wake();
+			Warning( "PORTAL2_PHYSICS: using bbox fallback for dynamic prop (%s)\n", STRING( GetModelName() ) );
+		}
+	}
 
 	if ( !pPhysicsObject )
 	{

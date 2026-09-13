@@ -97,6 +97,8 @@ subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-material-c
                 str(stage), str(p2)], check=True)
 subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-gameplay.py'),
                 str(stage), str(portal), str(p2)], check=True)
+subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-sound-manifest.py'),
+                str(p2 / 'portal2'), str(stage / 'portal2_gameplay_compat')], check=True)
 subprocess.run([sys.executable, str(source / 'scripts/prepare-portal2-intro-script.py'),
                 '--game-dir', str(p2 / 'portal2'), '--output',
                 str(stage / 'portal2_gameplay_compat/scripts/portal2_intro1_scenes.txt')], check=True)
@@ -139,6 +141,10 @@ alias +zoom_in +zoom
 alias -zoom_in -zoom
 alias +zoom_out +zoom
 alias -zoom_out -zoom
+# Static render bounds can interfere with authored movers such as elevators.
+# Keep this diagnostic fallback off until a model-specific collision proxy exists.
+portal2_staticprop_bbox_fallback 0
+portal2_dynamicprop_bbox_fallback 1
 ''')
 (stage / 'Jugar-Portal2-Experimental.command').write_text('''#!/bin/bash
 set -euo pipefail

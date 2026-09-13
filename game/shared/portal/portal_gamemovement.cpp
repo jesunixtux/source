@@ -5265,6 +5265,71 @@ void CPortalGameMovement::PlayerMove()
 	}
 }
 
+// Portal changes the player's local up axis when walking on walls and ceilings.
+// The base noclip implementation hard-codes world Z for m_flUpMove, which makes
+// vertical flight ineffective or point in the wrong direction after Portal 2's
+// movement basis has changed.  Keep noclip camera-relative and use the same
+// acceleration/friction model as the Source implementation.
+void CPortalGameMovement::FullNoClipMove( float factor, float maxacceleration )
+{
+	Vector forward, right, up, wishvel, wishdir;
+	AngleVectors( mv->m_vecViewAngles, &forward, &right, &up );
+
+	if ( mv->m_nButtons & IN_SPEED )
+		factor *= 0.5f;
+
+	const float fmove = mv->m_flForwardMove * factor;
+	const float smove = mv->m_flSideMove * factor;
+	float upmove = mv->m_flUpMove * factor;
+
+	// Some macOS input paths do not populate CMoveData::m_flUpMove for the
+	// jump/duck buttons while noclip is active. Preserve the normal Source
+	// controls as a fallback without double-applying a populated upmove.
+	if ( upmove == 0.0f )
+	{
+		if ( mv->m_nButtons & IN_JUMP )
+			upmove += factor;
+		if ( mv->m_nButtons & IN_DUCK )
+			upmove -= factor;
+	}
+
+	wishvel = forward * fmove + right * smove + up * upmove;
+	wishdir = wishvel;
+	const float wishspeed = VectorNormalize( wishdir );
+	const float maxspeed = sv_maxspeed.GetFloat() * factor;
+
+	if ( wishspeed > maxspeed && wishspeed > 0.0f )
+		wishvel *= maxspeed / wishspeed;
+
+	if ( maxacceleration > 0.0f )
+	{
+		Accelerate( wishdir, wishspeed, maxacceleration );
+
+		const float speed = VectorLength( mv->m_vecVelocity );
+		if ( speed < 1.0f )
+		{
+			mv->m_vecVelocity.Init();
+			return;
+		}
+
+		const float control = ( speed < maxspeed / 4.0f ) ? maxspeed / 4.0f : speed;
+		const float drop = control * sv_friction.GetFloat() * player->m_surfaceFriction * gpGlobals->frametime;
+		const float newSpeed = MAX( 0.0f, speed - drop );
+		mv->m_vecVelocity *= newSpeed / speed;
+	}
+	else
+	{
+		mv->m_vecVelocity = wishvel;
+	}
+
+	Vector out;
+	VectorMA( mv->GetAbsOrigin(), gpGlobals->frametime, mv->m_vecVelocity, out );
+	mv->SetAbsOrigin( out );
+
+	if ( maxacceleration < 0.0f )
+		mv->m_vecVelocity.Init();
+}
+
 // Expose our interface.
 static CPortalGameMovement g_GameMovement;
 IGameMovement *g_pGameMovement = ( IGameMovement * )&g_GameMovement;

@@ -4905,6 +4905,11 @@ void CPortalSkyboxView::Draw()
 void CShadowDepthView::Setup( const CViewSetup &shadowViewIn, ITexture *pRenderTarget, ITexture *pDepthTexture )
 {
 	BaseClass::Setup( shadowViewIn );
+	// CRendering3dView::Setup copies the CViewSetup subobject.  On the ARM64
+	// build the cached base-view frustum pointer can be clobbered while that
+	// temporary shadow view is prepared.  It is shared with the still-valid
+	// main view, so rebind it before the view is submitted to the renderer.
+	m_Frustum = m_pMainView->GetFrustum();
 	m_pRenderTarget = pRenderTarget;
 	m_pDepthTexture = pDepthTexture;
 }

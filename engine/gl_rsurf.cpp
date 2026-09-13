@@ -125,6 +125,9 @@ static ConVar r_drawfuncdetail( "r_drawfuncdetail", "1", FCVAR_CHEAT, "Render fu
 static ConVar fog_enable_water_fog( "fog_enable_water_fog", "1", FCVAR_CHEAT );
 static ConVar r_fastzreject( "r_fastzreject", "0", FCVAR_ALLOWED_IN_COMPETITIVE, "Activate/deactivates a fast z-setting algorithm to take advantage of hardware with fast z reject. Use -1 to default to hardware settings" );
 static ConVar r_fastzrejectdisp( "r_fastzrejectdisp", "0", 0, "Activates/deactivates fast z rejection on displacements (360 only). Only active when r_fastzreject is on." );
+#ifdef USE_CONVARS
+static ConVar r_spewleaf( "r_spewleaf", "0" );
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -3007,7 +3010,6 @@ void R_BuildWorldLists( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo,
 	VectorCopy( g_EngineRenderer->ViewOrigin(), modelorg );
 
 #ifdef USE_CONVARS
-	static ConVar r_spewleaf("r_spewleaf", "0");
 	if ( r_spewleaf.GetInt() )
 	{
 		SpewLeaf();
@@ -5377,4 +5379,3 @@ bool CEngineBSPTree::EnumerateLeavesAlongRay( Ray_t const& ray, ISpatialLeafEnum
 		return EnumerateLeavesAlongExtrudedRay_R( host_state.worldbrush->nodes, ray, 0.0f, 1.0f, pEnum, context );
 	}
 }
-

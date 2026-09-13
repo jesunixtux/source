@@ -74,7 +74,23 @@ public:
 
 	inline C_PortalPlayerLocalData()
 	{
-		// non-networked
+		// Portal 2 movement reads these predicted values before the first full
+		// server update arrives.  Keep the client in the same upright state as
+		// the server instead of starting with zero vectors and zero hulls.
+		m_Up = Vector( 0, 0, 1 );
+		m_StickNormal = Vector( 0, 0, 1 );
+		m_OldStickNormal = Vector( 0, 0, 1 );
+		m_vLocalUp = Vector( 0, 0, 1 );
+		m_vStickRotationAxis = Vector( 1, 0, 0 );
+		m_StandHullMin = VEC_HULL_MIN;
+		m_StandHullMax = VEC_HULL_MAX;
+		m_DuckHullMin = VEC_DUCK_HULL_MIN;
+		m_DuckHullMax = VEC_DUCK_HULL_MAX;
+		m_CachedStandHullMinAttempt = VEC_HULL_MIN;
+		m_CachedStandHullMaxAttempt = VEC_HULL_MAX;
+		m_CachedDuckHullMinAttempt = VEC_DUCK_HULL_MIN;
+		m_CachedDuckHullMaxAttempt = VEC_DUCK_HULL_MAX;
+		m_flAirInputScale = 1.0f;
 	}
 };
 

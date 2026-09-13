@@ -37,6 +37,18 @@ for language, values in catalogs.items():
              f'        "P2ARM64_DISCONNECT" "{values[3]}"',
              f'        "P2ARM64_QUIT" "{values[4]}"',
              f'        "P2ARM64_LANGUAGE_ACTION" "{values[5]}"']
+    lines += [
+             '        "P2ARM64_MAIN_SINGLEPLAYER" "JUGAR SOLO"',
+             '        "P2ARM64_MAIN_COOP" "JUGAR PARTIDA COOP"',
+             '        "P2ARM64_MAIN_COURSES" "CÁMARAS DE LA COMUNIDAD"',
+             '        "P2ARM64_MAIN_OPTIONS" "OPCIONES"',
+             '        "P2ARM64_MAIN_EXTRAS" "EXTRAS"',
+             '        "P2ARM64_MAIN_QUIT" "SALIR"',
+             '        "P2ARM64_SP_CONTINUE" "CONTINUAR PARTIDA"',
+             '        "P2ARM64_SP_NEW" "NUEVA PARTIDA"',
+             '        "P2ARM64_SP_LOAD" "CARGAR PARTIDA"',
+             '        "P2ARM64_SP_CHALLENGE" "MODO DESAFÍO"',
+             '        "P2ARM64_SP_DEV" "COMENTARIOS DESARROLLADORES"']
     for name, label in language_names.items():
         lines.append(f'        "P2ARM64_LANGUAGE_{name.upper()}" "{label}"')
     lines += ['    }', '}']

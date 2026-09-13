@@ -530,7 +530,7 @@ void R_DecalGetMaterialAndSize( int decalIndex, IMaterial*& pDecalMaterial, floa
 static inline decal_t *MSurf_DecalPointer( SurfaceHandle_t surfID )
 {
 	WorldDecalHandle_t handle = MSurf_Decals(surfID );
-	if ( handle == WORLD_DECAL_HANDLE_INVALID )
+	if ( handle == WORLD_DECAL_HANDLE_INVALID || handle >= s_aDecalPool.Count() )
 		return NULL;
 
 	return s_aDecalPool[handle];
@@ -592,6 +592,15 @@ void R_DecalTerm( worldbrushdata_t *pBrushData, bool term_permanent_decals )
 	{
 		decal_t *pNext;
 		SurfaceHandle_t surfID = SurfaceHandleFromIndex( i, pBrushData );
+		// A disconnect clears the decal pool before every world-model shutdown.
+		// Imported Portal 2 maps can retain a surface handle from that old pool;
+		// treating it as an array index dereferences arbitrary memory on ARM64.
+		// Discard the stale handle here and continue unloading the map safely.
+		if ( MSurf_Decals( surfID ) != WORLD_DECAL_HANDLE_INVALID && !MSurf_DecalPointer( surfID ) )
+		{
+			MSurf_Decals( surfID ) = WORLD_DECAL_HANDLE_INVALID;
+			continue;
+		}
 		for( decal_t *pDecal=MSurf_DecalPointer( surfID ); pDecal; pDecal=pNext )
 		{
 			pNext = pDecal->pnext;

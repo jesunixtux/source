@@ -56,6 +56,24 @@
 static ConVar r_DrawSpecificStaticProp( "r_DrawSpecificStaticProp", "-1" );
 static ConVar r_drawstaticprops( "r_drawstaticprops", "1", FCVAR_CHEAT, "0=Off, 1=Normal, 2=Wireframe" );
 static ConVar r_colorstaticprops( "r_colorstaticprops", "0", FCVAR_CHEAT );
+// Disabled by default; the isolated Portal 2 cfg may enable a limited
+// compatibility path when imported models omit their VPhysics collision lumps.
+static ConVar portal2_staticprop_bbox_fallback( "portal2_staticprop_bbox_fallback", "0", FCVAR_NONE,
+	"0=off, 1=structural Portal 2 props only, 2=all static props without VPhysics." );
+
+// A render box is a useful recovery path for a missing collision lump, but it
+// is not a substitute for authored physics.  In particular, foliage often has
+// a huge render box and must remain non-solid.  Keep the normal Portal 1 path
+// intact and restrict the compatibility path to structural families seen in
+// Portal 2's early maps.  Mode 2 is retained solely as a diagnostic override.
+static bool Portal2StaticPropSupportsBBoxFallback( const char *pModelName )
+{
+	return pModelName &&
+		( Q_stristr( pModelName, "models/anim_wp/framework/" ) ||
+		  Q_stristr( pModelName, "models/elevator/" ) ||
+		  Q_stristr( pModelName, "models/props_bts/pipe_" ) ||
+		  Q_stristr( pModelName, "models/props_destruction/wall_dest_" ) );
+}
 ConVar r_staticpropinfo( "r_staticpropinfo", "0" );
 ConVar  r_drawmodeldecals( "r_drawmodeldecals", "1" );
 extern ConVar mat_fullbright;
@@ -1122,9 +1140,23 @@ void CStaticProp::InsertPropIntoKDTree()
 		{
 			char szModel[MAX_PATH];
 			Q_strncpy( szModel, m_pModel ? modelloader->GetName( m_pModel ) : "unknown model", sizeof( szModel ) );
-			Warning( "SOLID_VPHYSICS static prop with no vphysics model! (%s)\n", szModel );
-			m_nSolidType = SOLID_NONE;
-			return;
+			if ( portal2_staticprop_bbox_fallback.GetInt() == 2 ||
+				 ( portal2_staticprop_bbox_fallback.GetBool() && Portal2StaticPropSupportsBBoxFallback( szModel ) ) )
+			{
+				// The imported Portal 2 static-prop set contains Studio models whose
+				// VPhysics lump is unavailable to this branch.  Dropping such a prop
+				// to SOLID_NONE makes floors, frames and puzzle geometry non-solid.
+				// Preserve collision with the model's conservative render box;
+				// CreateVPhysics already knows how to construct the matching box.
+				Warning( "PORTAL2_PHYSICS: using bbox fallback for static prop without vphysics (%s)\n", szModel );
+				m_nSolidType = SOLID_BBOX;
+			}
+			else
+			{
+				Warning( "SOLID_VPHYSICS static prop with no vphysics model! (%s)\n", szModel );
+				m_nSolidType = SOLID_NONE;
+				return;
+			}
 		}
 	}
 
@@ -2364,4 +2396,3 @@ void Cmd_PropCrosshair_f (void)
 }
 
 static ConCommand prop_crosshair( "prop_crosshair", Cmd_PropCrosshair_f, "Shows name for prop looking at", FCVAR_CHEAT );
-

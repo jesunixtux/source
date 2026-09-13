@@ -83,6 +83,7 @@ protected:
 
 	// Handle MOVETYPE_WALK.
 	virtual void	FullWalkMove();
+	virtual void	FullNoClipMove( float factor, float maxacceleration );
 
 	// Implement this if you want to know when the player collides during OnPlayerMove
 	virtual void	OnTryPlayerMoveCollision( trace_t &tr ) {}

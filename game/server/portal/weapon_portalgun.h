@@ -57,6 +57,10 @@ public:
 		static Vector cone = VECTOR_CONE_10DEGREES;
 		return cone;
 	}
+	// Portal shots are not backed by a conventional ammo pool.  Portal 2
+	// arrivals create the gun at runtime, where its inherited clip starts empty;
+	// treating that clip as ammunition prevents Weapon_Switch from selecting it.
+	virtual bool HasAnyAmmo( void ) { return true; }
 	
 	virtual void Precache ( void );
 

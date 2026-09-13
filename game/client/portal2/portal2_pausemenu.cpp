@@ -84,6 +84,7 @@ public:
 
 	void Toggle();
 	void ShowMenu( bool bShow );
+	void ShowMainMenu();
 
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void OnKeyCodePressed( vgui::KeyCode code );
@@ -93,6 +94,13 @@ public:
 	virtual void PerformLayout();
 
 private:
+	enum MenuMode_t
+	{
+		MENU_PAUSE = 0,
+		MENU_MAIN,
+		MENU_SINGLEPLAYER
+	};
+
 	enum PauseAction_t
 	{
 		ACTION_RESUME = 0,
@@ -109,6 +117,12 @@ private:
 	void DrawToken( const char *pToken, int x, int y, vgui::HFont font, Color color );
 	void CycleLanguage();
 	int GetActionAtPos( int x, int y ) const;
+	void DrawMainMenu();
+	void DrawSinglePlayerMenu();
+	int GetMainActionAtPos( int x, int y ) const;
+	int GetSinglePlayerActionAtPos( int x, int y ) const;
+	void RunMainAction( int action );
+	void RunSinglePlayerAction( int action );
 
 	vgui::HFont m_hTitleFont;
 	vgui::HFont m_hTextFont;
@@ -118,6 +132,9 @@ private:
 	int m_nMenuH;
 	int m_nButtonH;
 	int m_nHoverAction;
+	MenuMode_t m_MenuMode;
+	int m_nHoverMainAction;
+	int m_nHoverSinglePlayerAction;
 };
 
 static CPortal2FallbackPausePanel *g_pPortal2PausePanel = NULL;
@@ -134,6 +151,9 @@ CPortal2FallbackPausePanel::CPortal2FallbackPausePanel( vgui::Panel *pParent )
 	m_nMenuH = 368;
 	m_nButtonH = 42;
 	m_nHoverAction = -1;
+	m_MenuMode = MENU_PAUSE;
+	m_nHoverMainAction = 0;
+	m_nHoverSinglePlayerAction = 0;
 
 	SetVisible( false );
 	SetPaintEnabled( true );
@@ -187,6 +207,7 @@ void CPortal2FallbackPausePanel::Toggle()
 
 void CPortal2FallbackPausePanel::ShowMenu( bool bShow )
 {
+	m_MenuMode = MENU_PAUSE;
 	SetVisible( bShow );
 
 	if ( bShow )
@@ -202,6 +223,17 @@ void CPortal2FallbackPausePanel::ShowMenu( bool bShow )
 		vgui::surface()->SetCursorAlwaysVisible( false );
 		engine->ClientCmd_Unrestricted( "unpause\n" );
 	}
+}
+
+void CPortal2FallbackPausePanel::ShowMainMenu()
+{
+	m_MenuMode = MENU_MAIN;
+	m_nHoverMainAction = 0;
+	SetVisible( true );
+	MoveToFront();
+	RequestFocus();
+	vgui::input()->SetMouseFocus( GetVPanel() );
+	vgui::surface()->SetCursorAlwaysVisible( true );
 }
 
 void CPortal2FallbackPausePanel::RunAction( PauseAction_t action )
@@ -248,7 +280,22 @@ void CPortal2FallbackPausePanel::OnKeyCodePressed( vgui::KeyCode code )
 {
 	if ( code == KEY_ESCAPE || code == KEY_F10 )
 	{
-		ShowMenu( false );
+		if ( m_MenuMode == MENU_SINGLEPLAYER )
+			m_MenuMode = MENU_MAIN;
+		else
+			ShowMenu( false );
+		return;
+	}
+
+	if ( m_MenuMode == MENU_MAIN && code >= KEY_1 && code <= KEY_6 )
+	{
+		RunMainAction( code - KEY_1 );
+		return;
+	}
+
+	if ( m_MenuMode == MENU_SINGLEPLAYER && code >= KEY_1 && code <= KEY_6 )
+	{
+		RunSinglePlayerAction( code - KEY_1 );
 		return;
 	}
 
@@ -280,10 +327,30 @@ void CPortal2FallbackPausePanel::OnMouseReleased( vgui::MouseCode code )
 		ScreenToLocal( x, y );
 
 		const int nAction = GetActionAtPos( x, y );
-		if ( nAction >= 0 )
+		if ( m_MenuMode == MENU_PAUSE && nAction >= 0 )
 		{
 			RunAction( (PauseAction_t)nAction );
 			return;
+		}
+
+		if ( m_MenuMode == MENU_MAIN )
+		{
+			const int nMainAction = GetMainActionAtPos( x, y );
+			if ( nMainAction >= 0 )
+			{
+				RunMainAction( nMainAction );
+				return;
+			}
+		}
+
+		if ( m_MenuMode == MENU_SINGLEPLAYER )
+		{
+			const int nSinglePlayerAction = GetSinglePlayerActionAtPos( x, y );
+			if ( nSinglePlayerAction >= 0 )
+			{
+				RunSinglePlayerAction( nSinglePlayerAction );
+				return;
+			}
 		}
 	}
 
@@ -342,11 +409,143 @@ int CPortal2FallbackPausePanel::GetActionAtPos( int x, int y ) const
 	return -1;
 }
 
+int CPortal2FallbackPausePanel::GetMainActionAtPos( int x, int y ) const
+{
+	const int nX = 48;
+	const int nW = MIN( 360, m_nMenuW );
+	const int nY = m_nMenuY + 122;
+	for ( int i = 0; i < 6; ++i )
+	{
+		if ( x >= nX && x <= nX + nW && y >= nY + i * 38 && y <= nY + i * 38 + 34 )
+			return i;
+	}
+	return -1;
+}
+
+int CPortal2FallbackPausePanel::GetSinglePlayerActionAtPos( int x, int y ) const
+{
+	const int nX = m_nMenuX + 36;
+	const int nY = m_nMenuY + 104;
+	for ( int i = 0; i < 5; ++i )
+	{
+		if ( x >= nX && x <= nX + m_nMenuW - 72 && y >= nY + i * 38 && y <= nY + i * 38 + 34 )
+			return i;
+	}
+	return -1;
+}
+
+void CPortal2FallbackPausePanel::RunMainAction( int action )
+{
+	switch ( action )
+	{
+	case 0:
+		m_MenuMode = MENU_SINGLEPLAYER;
+		m_nHoverSinglePlayerAction = 0;
+		break;
+	case 1:
+		engine->ClientCmd_Unrestricted( "disconnect; map sp_a1_intro1\n" );
+		SetVisible( false );
+		break;
+	case 2:
+		engine->ClientCmd_Unrestricted( "gameui_activate\n" );
+		break;
+	case 3:
+		engine->ClientCmd_Unrestricted( "gameui_activate\n" );
+		break;
+	case 4:
+		engine->ClientCmd_Unrestricted( "gameui_activate\n" );
+		break;
+	case 5:
+		engine->ClientCmd_Unrestricted( "quit\n" );
+		break;
+	default:
+		break;
+	}
+}
+
+void CPortal2FallbackPausePanel::RunSinglePlayerAction( int action )
+{
+	if ( action >= 0 && action <= 4 )
+	{
+		// The first playable Portal 2 chapter is the safe entry point while the
+		// original chapter browser is still being restored.
+		engine->ClientCmd_Unrestricted( "disconnect; map sp_a1_intro1\n" );
+		SetVisible( false );
+	}
+}
+
+void CPortal2FallbackPausePanel::DrawMainMenu()
+{
+	static const char *s_ppszMainTokens[] = {
+		"#P2ARM64_MAIN_SINGLEPLAYER", "#P2ARM64_MAIN_COOP", "#P2ARM64_MAIN_COURSES",
+		"#P2ARM64_MAIN_OPTIONS", "#P2ARM64_MAIN_EXTRAS", "#P2ARM64_MAIN_QUIT"
+	};
+
+	// The reference menu keeps the game scene visible and uses a restrained
+	// black veil, with the active row as a pale Portal-style card.
+	vgui::surface()->DrawSetColor( 0, 0, 0, 92 );
+	vgui::surface()->DrawFilledRect( 0, 0, GetWide(), GetTall() );
+	DrawText( L"PORTAL 2", 54, 54, m_hTitleFont, Color( 235, 239, 240, 255 ) );
+	DrawText( L"●", 208, 52, m_hTitleFont, Color( 65, 196, 229, 255 ) );
+
+	const int nX = 48;
+	const int nY = 122;
+	for ( int i = 0; i < 6; ++i )
+	{
+		const bool bHover = i == m_nHoverMainAction;
+		if ( bHover )
+		{
+			vgui::surface()->DrawSetColor( 225, 228, 226, 225 );
+			vgui::surface()->DrawFilledRect( nX, nY + i * 38, nX + MIN( 360, m_nMenuW ), nY + i * 38 + 34 );
+		}
+		DrawToken( s_ppszMainTokens[i], nX + 12, nY + i * 38 + 7, m_hTextFont,
+			bHover ? Color( 24, 28, 28, 255 ) : Color( 205, 211, 212, 255 ) );
+	}
+}
+
+void CPortal2FallbackPausePanel::DrawSinglePlayerMenu()
+{
+	static const char *s_ppszTokens[] = { "#P2ARM64_SP_CONTINUE", "#P2ARM64_SP_NEW", "#P2ARM64_SP_LOAD", "#P2ARM64_SP_CHALLENGE", "#P2ARM64_SP_DEV" };
+	const int nX = m_nMenuX + 36;
+	const int nY = m_nMenuY + 72;
+	vgui::surface()->DrawSetColor( 235, 237, 234, 232 );
+	vgui::surface()->DrawFilledRect( m_nMenuX, m_nMenuY, m_nMenuX + m_nMenuW, m_nMenuY + 292 );
+	DrawText( L"JUGAR SOLO", nX, nY, m_hTitleFont, Color( 24, 28, 28, 255 ) );
+	for ( int i = 0; i < 5; ++i )
+	{
+		const bool bHover = i == m_nHoverSinglePlayerAction;
+		if ( bHover )
+		{
+			vgui::surface()->DrawSetColor( 205, 208, 205, 255 );
+			vgui::surface()->DrawFilledRect( nX - 8, nY + 48 + i * 38, nX + m_nMenuW - 48, nY + 48 + i * 38 + 34 );
+		}
+		DrawToken( s_ppszTokens[i], nX, nY + 48 + i * 38 + 7, m_hTextFont, Color( 28, 32, 32, 255 ) );
+	}
+}
+
 void CPortal2FallbackPausePanel::Paint()
 {
 	EnsureFonts();
 	PerformLayout();
 	Portal2RefreshMenuLanguage();
+	if ( m_MenuMode == MENU_MAIN )
+	{
+		int cx, cy;
+		vgui::input()->GetCursorPosition( cx, cy );
+		ScreenToLocal( cx, cy );
+		m_nHoverMainAction = GetMainActionAtPos( cx, cy );
+		DrawMainMenu();
+		return;
+	}
+	if ( m_MenuMode == MENU_SINGLEPLAYER )
+	{
+		int cx, cy;
+		vgui::input()->GetCursorPosition( cx, cy );
+		ScreenToLocal( cx, cy );
+		m_nHoverSinglePlayerAction = GetSinglePlayerActionAtPos( cx, cy );
+		DrawSinglePlayerMenu();
+		return;
+	}
 
 	int wide, tall;
 	GetSize( wide, tall );
@@ -429,16 +628,39 @@ static CPortal2FallbackPausePanel *Portal2PauseMenu_GetPanel()
 
 CON_COMMAND_F( portal2_pausemenu, "Shows the Portal 1-compatible game menu in the Portal 2 ARM64 target.", FCVAR_CLIENTDLL )
 {
-	engine->ClientCmd_Unrestricted( "gameui_activate\n" );
+	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+	if ( pPanel )
+		pPanel->ShowMenu( true );
+}
+
+CON_COMMAND_F( portal2_mainmenu, "Shows the Portal 2 ARM64 compatibility main menu.", FCVAR_CLIENTDLL )
+{
+	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+	if ( pPanel )
+		pPanel->ShowMainMenu();
 }
 
 bool Portal2PauseMenu_HandleKeyInput( int down, ButtonCode_t keynum )
 {
-	if ( !down )
+	CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+	if ( !pPanel )
 		return false;
 
-	// Let the engine process Escape/F10 through the standard GameUI route.
-	// The launchers bind both keys to gameui_activate.
+	if ( down && ( keynum == KEY_ESCAPE || keynum == KEY_F10 ) )
+	{
+		if ( pPanel->IsVisible() )
+			pPanel->Toggle();
+		else
+			pPanel->ShowMenu( true );
+		return true;
+	}
+
+	if ( pPanel->IsVisible() )
+	{
+		if ( down )
+			pPanel->OnKeyCodePressed( (vgui::KeyCode)keynum );
+		return true;
+	}
 	return false;
 }
 

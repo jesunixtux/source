@@ -698,8 +698,6 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 	}
 	return pWorldPhysics;
 }
-
-
 //=============================================================================
 //
 // Physics Game Trace
@@ -1051,5 +1049,3 @@ void PrecachePhysicsSounds()
 		pprop->soundhandles.strainSound = PrecachePhysicsSoundByStringIndex( pprop->sounds.strainSound );
 	}
 }
-
-

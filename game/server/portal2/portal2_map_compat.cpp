@@ -26,7 +26,7 @@ public:
 
 #define PORTAL2_DECLARE_PROXY( N ) \
     void InputProxyRelay##N( inputdata_t &inputdata ) \
-    { m_OnProxyRelay[N - 1].FireOutput( this, this ); }
+    { m_OnProxyRelay[N - 1].FireOutput( inputdata.pActivator ? inputdata.pActivator : this, this ); }
     PORTAL2_PROXY_CHANNELS( PORTAL2_DECLARE_PROXY )
 #undef PORTAL2_DECLARE_PROXY
 

@@ -934,6 +934,24 @@ void CPortal_Player::Spawn(void)
 
 	SetPlayerModel();
 
+	// Initialize Portal 2's local movement state before BaseClass::Spawn()
+	// creates the player collision shadow.  Otherwise the hull accessors still
+	// return zero-sized boxes and the physics controller cannot be created.
+	m_PortalLocal.m_Up = Vector( 0, 0, 1 );
+	m_PortalLocal.m_StickNormal = Vector( 0, 0, 1 );
+	m_PortalLocal.m_OldStickNormal = Vector( 0, 0, 1 );
+	m_PortalLocal.m_vLocalUp = Vector( 0, 0, 1 );
+	m_PortalLocal.m_vStickRotationAxis = Vector( 1, 0, 0 );
+	m_PortalLocal.m_StandHullMin = VEC_HULL_MIN;
+	m_PortalLocal.m_StandHullMax = VEC_HULL_MAX;
+	m_PortalLocal.m_DuckHullMin = VEC_DUCK_HULL_MIN;
+	m_PortalLocal.m_DuckHullMax = VEC_DUCK_HULL_MAX;
+	m_PortalLocal.m_CachedStandHullMinAttempt = VEC_HULL_MIN;
+	m_PortalLocal.m_CachedStandHullMaxAttempt = VEC_HULL_MAX;
+	m_PortalLocal.m_CachedDuckHullMinAttempt = VEC_DUCK_HULL_MIN;
+	m_PortalLocal.m_CachedDuckHullMaxAttempt = VEC_DUCK_HULL_MAX;
+	m_PortalLocal.m_flAirInputScale = 1.0f;
+
 	BaseClass::Spawn();
 
 #if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )

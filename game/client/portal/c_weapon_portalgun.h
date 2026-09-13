@@ -135,6 +135,9 @@ public:
 		static Vector cone = VECTOR_CONE_10DEGREES;
 		return cone;
 	}
+	// Keep predicted weapon selection consistent with the server: portals do
+	// not consume a conventional weapon-ammo pool.
+	virtual bool HasAnyAmmo( void ) { return true; }
 	
 	void Precache ( void );
 
