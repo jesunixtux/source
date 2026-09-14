@@ -210,7 +210,14 @@ void CGameUI::Initialize( CreateInterfaceFn factory )
 	staticPanel->SetBounds(0, 0, 400, 300 );
 	staticPanel->SetPaintBorderEnabled( false );
 	staticPanel->SetPaintBackgroundEnabled( true );
+	#ifdef PORTAL2
+	// The ARM64 Portal 2 front page is rendered by CBasePanel itself.  The
+	// inherited build disables its paint pass because the original title used
+	// BaseModUI instead, which leaves the compatibility overlay invisible.
+	staticPanel->SetPaintEnabled( true );
+	#else
 	staticPanel->SetPaintEnabled( false );
+	#endif
 	staticPanel->SetVisible( true );
 	staticPanel->SetMouseInputEnabled( false );
 	staticPanel->SetKeyBoardInputEnabled( false );
@@ -391,6 +398,15 @@ void CGameUI::PlayGameStartupSound()
 
 	if ( CommandLine()->FindParm( "-nostartupsound" ) )
 		return;
+
+#ifdef PORTAL2
+	// Portal 2 ships its menu music as WAV files in music/mainmenu, whereas
+	// the generic GameUI startup scan below intentionally considers MP3 files
+	// only.  Without this explicit path the compatibility target reaches the
+	// main menu silently even though the original Portal 2 assets are mounted.
+	engine->ClientCmd_Unrestricted( "play *#music/mainmenu/portal2_background01.wav" );
+	return;
+#endif
 
 	FileFindHandle_t fh;
 
@@ -810,6 +826,21 @@ void CGameUI::RunFrame()
 	// Run frames
 	g_VModuleLoader.RunFrame();
 	BasePanel()->RunFrame();
+
+#ifdef PORTAL2
+	// Portal 2's stock front end is BaseModUI, which this compatibility target
+	// does not build.  The classic CGameMenu is still retained for its dialogs,
+	// but its child controls do not paint reliably on the macOS ARM64 VGUI
+	// backend.  Once the client DLL has had a few frames to create its root
+	// panel, show the native compatibility main menu instead.
+	static int s_nPortal2MenuFrames = 0;
+	static bool s_bPortal2MainMenuShown = false;
+	if ( !s_bPortal2MainMenuShown && ( !IsInLevel() || IsInBackgroundLevel() ) && ++s_nPortal2MenuFrames >= 12 )
+	{
+		engine->ClientCmd_Unrestricted( "portal2_mainmenu" );
+		s_bPortal2MainMenuShown = true;
+	}
+#endif
 
 	// Play the start-up music the first time we run frame
 	if ( IsPC() && m_bPlayGameStartupSound )

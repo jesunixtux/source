@@ -926,8 +926,21 @@ CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 	// This is saved as persistant data, and here is where we check for that
 	CheckBonusBlinkState();
 
+	// The original Portal 2 front end is BaseModUI, which is not part of this
+	// compatibility build. Do not wait for its platform activation before
+	// drawing the classic GameUI menu: command-line gameui_activate can run
+	// before this panel has been constructed on macOS.
+#ifdef PORTAL2
+	// There is no BaseModUI activation pass in this target to make the menu
+	// panel visible. The alpha alone is insufficient because VGUI menus start
+	// hidden, so establish both pieces of state here.
+	UpdateGameMenus();
+	m_pGameMenu->SetVisible( true );
+	SetMenuAlpha( 255 );
+#else
 	// start the menus fully transparent
 	SetMenuAlpha( 0 );
+#endif
 
 	if ( GameUI().IsConsoleUI() )
 	{
@@ -1143,7 +1156,44 @@ void CBasePanel::PaintBackground()
 		// not in the game or loading dialog active or exiting, draw the ui background
 		DrawBackgroundImage();
 	}
-	else if ( IsX360() )
+
+#ifdef PORTAL2
+	// BaseModUI is absent in the ARM64 target and the legacy CMenu children do
+	// not traverse on this renderer.  Keep its dialog implementation, but draw
+	// the front-page choices directly on the already-working base panel.
+	// The engine reports Portal 2's animated front-page scene as an in-level
+	// background. Treat that state as the main menu, not as active gameplay.
+	if ( ( !GameUI().IsInLevel() || GameUI().IsInBackgroundLevel() ) && !g_hLoadingDialog.Get() )
+	{
+		static HFont s_hMenuFont = INVALID_FONT;
+		static HFont s_hTitleFont = INVALID_FONT;
+		if ( s_hMenuFont == INVALID_FONT )
+		{
+			surface()->CreateFont(); // handle zero is unusable on this POSIX surface
+			s_hMenuFont = surface()->CreateFont();
+			s_hTitleFont = surface()->CreateFont();
+			surface()->SetFontGlyphSet( s_hMenuFont, "Helvetica", 24, 500, 0, 0, ISurface::FONTFLAG_ANTIALIAS | ISurface::FONTFLAG_DROPSHADOW );
+			surface()->SetFontGlyphSet( s_hTitleFont, "Helvetica", 36, 700, 0, 0, ISurface::FONTFLAG_ANTIALIAS | ISurface::FONTFLAG_DROPSHADOW );
+		}
+
+		const wchar_t *items[] = { L"JUGAR", L"CARGAR PARTIDA", L"OPCIONES", L"SALIR" };
+		surface()->DrawSetTextFont( s_hTitleFont );
+		surface()->DrawSetTextColor( 238, 242, 242, 255 );
+		surface()->DrawSetTextPos( 64, 62 );
+		surface()->DrawPrintText( L"PORTAL 2", 8 );
+		for ( int i = 0; i < ARRAYSIZE( items ); ++i )
+		{
+			const int y = 145 + i * 48;
+			surface()->DrawSetColor( 12, 18, 20, 172 );
+			surface()->DrawFilledRect( 54, y, 390, y + 38 );
+			surface()->DrawSetTextFont( s_hMenuFont );
+			surface()->DrawSetTextColor( 225, 232, 233, 255 );
+			surface()->DrawSetTextPos( 68, y + 7 );
+			surface()->DrawPrintText( items[i], V_wcslen( items[i] ) );
+		}
+	}
+#endif
+	if ( GameUI().IsInLevel() && IsX360() )
 	{
 		// only valid during loading from level to level
 		m_bUseRenderTargetImage = false;
@@ -1463,6 +1513,44 @@ void CBasePanel::OnLevelLoadingFinished()
 }
 
 //-----------------------------------------------------------------------------
+// Selects one of Portal 2's shipped chapter loading images for the classic
+// GameUI path.  Portal 2 normally drives these through BaseModUI, which this
+// ARM64 compatibility target does not build; the images themselves are still
+// present in pak01 and can be drawn by the regular VGUI background panel.
+#ifdef PORTAL2
+static void GetPortal2LoadingBackground( char *pFilename, size_t nFilenameSize, bool bIsWidescreen )
+{
+	char mapName[MAX_PATH];
+	V_FileBase( engine->GetLevelName() ? engine->GetLevelName() : "", mapName, sizeof( mapName ) );
+
+	const char *pChapter = "default_a";
+	if ( !Q_strnicmp( mapName, "sp_a1_", 6 ) )
+		pChapter = "a1";
+	else if ( !Q_strnicmp( mapName, "sp_a2_", 6 ) )
+		pChapter = "a2";
+	else if ( !Q_strnicmp( mapName, "sp_a3_", 6 ) )
+		pChapter = "a3";
+	else if ( !Q_strnicmp( mapName, "sp_a4_", 6 ) )
+		pChapter = "a4";
+	else if ( !Q_strnicmp( mapName, "sp_a5_", 6 ) )
+		pChapter = "a5";
+	else if ( !Q_strnicmp( mapName, "mp_coop_", 8 ) )
+		pChapter = "coop";
+
+	unsigned int nVariant = 0;
+	for ( const char *p = mapName; *p; ++p )
+		nVariant = ( nVariant * 33 ) + static_cast<unsigned char>( *p );
+	nVariant = ( nVariant % 4 ) + 1;
+	// Portal 2 shipped a single a5 loading screen; the other chapter sets have
+	// four variants.
+	if ( !V_stricmp( pChapter, "a5" ) )
+		nVariant = 1;
+
+	Q_snprintf( pFilename, nFilenameSize, "vgui/loading_screens/loadingscreen_%s_%u%s",
+		pChapter, nVariant, bIsWidescreen ? "_widescreen" : "" );
+}
+#endif
+
 // Draws the background image.
 //-----------------------------------------------------------------------------
 void CBasePanel::DrawBackgroundImage()
@@ -1757,6 +1845,22 @@ void CBasePanel::RunFrame()
 	InvalidateLayout();
 	vgui::GetAnimationController()->UpdateAnimations( engine->Time() );
 
+#ifdef PORTAL2
+	// The client compatibility menu owns the Portal 2 background front page.
+	// Suppress the legacy GameUI title/menu, whose Portal 1 scheme resolves to
+	// weapon-icon glyphs on this build, while retaining its dialogs for use
+	// after selecting an action.
+	const char *pLevelName = engine->GetLevelName();
+	if ( pLevelName && Q_stristr( pLevelName, "background_menu" ) )
+	{
+		m_pGameMenu->CGameMenu::BaseClass::SetVisible( false );
+		if ( m_pGameLogo )
+			m_pGameLogo->SetVisible( false );
+		for ( int i = 0; i < m_pGameMenuButtons.Count(); ++i )
+			m_pGameMenuButtons[i]->SetVisible( false );
+	}
+#endif
+
 	if ( GameUI().IsConsoleUI() )
 	{
 		// run the console ui animations
@@ -1807,6 +1911,25 @@ void CBasePanel::RunFrame()
 		delete m_pAsyncJob;
 		m_pAsyncJob = NULL;
 	}
+
+#ifdef PORTAL2
+	const char *pPortal2Level = engine->GetLevelName();
+	if ( pPortal2Level && Q_stristr( pPortal2Level, "background_menu" ) )
+	{
+		m_pGameMenu->CGameMenu::BaseClass::SetVisible( false );
+		m_pGameMenu->SetAlpha( 0 );
+		if ( m_pGameLogo )
+		{
+			m_pGameLogo->SetVisible( false );
+			m_pGameLogo->SetAlpha( 0 );
+		}
+		for ( int i = 0; i < m_pGameMenuButtons.Count(); ++i )
+		{
+			m_pGameMenuButtons[i]->SetVisible( false );
+			m_pGameMenuButtons[i]->SetAlpha( 0 );
+		}
+	}
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1994,10 +2117,19 @@ void CBasePanel::ApplySchemeSettings(IScheme *pScheme)
 	// work out which background image to use
 	if ( IsPC() || !IsX360() )
 	{
+		#ifdef PORTAL2
+		if ( m_bLevelLoading )
+		{
+			GetPortal2LoadingBackground( filename, sizeof( filename ), bIsWidescreen );
+		}
+		else
+		#endif
+		{
 		// pc uses blurry backgrounds based on the background level
 		char background[MAX_PATH];
 		engine->GetMainMenuBackgroundName( background, sizeof(background) );
 		Q_snprintf( filename, sizeof( filename ), "console/%s%s", background, ( bIsWidescreen ? "_widescreen" : "" ) );
+		}
 	}
 	else
 	{
@@ -2066,6 +2198,20 @@ void CBasePanel::OnGameUIActivated()
 	{
 		// Layout the first time to avoid focus issues (setting menus visible will grab focus)
 		UpdateGameMenus();
+
+#ifdef PORTAL2
+		// The Portal 2 compatibility target does not load Portal 2's original
+		// BaseModUI platform module. On macOS that leaves the classic GameUI
+		// fade waiting for a platform-ready transition that never arrives, so
+		// the menu is present but remains fully transparent. Make the first
+		// disconnected main menu visible immediately; in-level pause handling
+		// still follows the normal GameUI path.
+		if ( !GameUI().IsInLevel() )
+		{
+			SetMenuAlpha( 255 );
+		}
+#endif
+
 		m_bEverActivated = true;
 
 #if defined( _X360 )

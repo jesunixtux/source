@@ -7,6 +7,7 @@
 
 #include "cbase.h"
 #include "portalrenderable_flatbasic.h"
+#include "c_prop_portal.h"
 #include "precache_register.h"
 #include "Portal_DynamicMeshRenderingUtils.h"
 #include "portal_shareddefs.h"
@@ -655,7 +656,13 @@ void CPortalRenderable_FlatBasic::AddToVisAsExitPortal( ViewCustomVisibility_t *
 
 void CPortalRenderable_FlatBasic::DrawStencilMask( IMatRenderContext *pRenderContext )
 {
-	DrawSimplePortalMesh( pRenderContext, g_pPortalRender->m_MaterialsAccess.m_WriteZ_Model );
+	// The aperture needs the stencil-hole material. WriteZ_Model only repairs
+	// depth around the edge after the stencil mask has been written.
+	IMaterial *pStencilHoleMaterial = IsPropPortal()
+		? C_Prop_Portal::m_Materials.m_Portal_Stencil_Hole
+		: C_Portal_Base2D::m_Materials.m_Portal_Stencil_Hole;
+
+	DrawSimplePortalMesh( pRenderContext, pStencilHoleMaterial );
 	DrawRenderFixMesh( pRenderContext, g_pPortalRender->m_MaterialsAccess.m_WriteZ_Model );
 }
 

@@ -227,6 +227,10 @@ void CPortal2FallbackPausePanel::ShowMenu( bool bShow )
 
 void CPortal2FallbackPausePanel::ShowMainMenu()
 {
+	// The compatibility panel replaces the classic GameUI front page. Hide
+	// that layer so its tiny legacy labels and icon-font title do not bleed
+	// through over the animated scene.
+	engine->ClientCmd_Unrestricted( "gameui_hide; cl_drawhud 0\n" );
 	m_MenuMode = MENU_MAIN;
 	m_nHoverMainAction = 0;
 	SetVisible( true );
@@ -413,7 +417,10 @@ int CPortal2FallbackPausePanel::GetMainActionAtPos( int x, int y ) const
 {
 	const int nX = 48;
 	const int nW = MIN( 360, m_nMenuW );
-	const int nY = m_nMenuY + 122;
+	// DrawMainMenu uses screen-space coordinates so the front page remains
+	// anchored at the upper-left at every resolution. Keep its hit boxes in
+	// exactly the same coordinate system.
+	const int nY = 122;
 	for ( int i = 0; i < 6; ++i )
 	{
 		if ( x >= nX && x <= nX + nW && y >= nY + i * 38 && y <= nY + i * 38 + 34 )
@@ -425,7 +432,8 @@ int CPortal2FallbackPausePanel::GetMainActionAtPos( int x, int y ) const
 int CPortal2FallbackPausePanel::GetSinglePlayerActionAtPos( int x, int y ) const
 {
 	const int nX = m_nMenuX + 36;
-	const int nY = m_nMenuY + 104;
+	// DrawSinglePlayerMenu starts its first selectable row here.
+	const int nY = m_nMenuY + 120;
 	for ( int i = 0; i < 5; ++i )
 	{
 		if ( x >= nX && x <= nX + m_nMenuW - 72 && y >= nY + i * 38 && y <= nY + i * 38 + 34 )
@@ -443,7 +451,7 @@ void CPortal2FallbackPausePanel::RunMainAction( int action )
 		m_nHoverSinglePlayerAction = 0;
 		break;
 	case 1:
-		engine->ClientCmd_Unrestricted( "disconnect; map sp_a1_intro1\n" );
+		engine->ClientCmd_Unrestricted( "cl_drawhud 1; stopsound; disconnect; map sp_a1_intro1\n" );
 		SetVisible( false );
 		break;
 	case 2:
@@ -469,7 +477,7 @@ void CPortal2FallbackPausePanel::RunSinglePlayerAction( int action )
 	{
 		// The first playable Portal 2 chapter is the safe entry point while the
 		// original chapter browser is still being restored.
-		engine->ClientCmd_Unrestricted( "disconnect; map sp_a1_intro1\n" );
+		engine->ClientCmd_Unrestricted( "cl_drawhud 1; stopsound; disconnect; map sp_a1_intro1\n" );
 		SetVisible( false );
 	}
 }
@@ -708,6 +716,20 @@ public:
 
 	virtual void Update( float /*frametime*/ )
 	{
+		// The background map is the first point where the client VGUI root is
+		// guaranteed to exist. BaseModUI is unavailable in this target, so show
+		// the compatibility front page directly from the client system.
+		if ( engine->IsInGame() )
+		{
+			const char *pLevelName = engine->GetLevelName();
+			if ( pLevelName && Q_stristr( pLevelName, "background_menu" ) )
+			{
+				CPortal2FallbackPausePanel *pPanel = Portal2PauseMenu_GetPanel();
+				if ( pPanel && !pPanel->IsVisible() )
+					pPanel->ShowMainMenu();
+			}
+		}
+
 		// A command-line request arrives during level load; defer the standard
 		// GameUI activation until the map is actually running, otherwise the
 		// loading transition immediately hides it again.
