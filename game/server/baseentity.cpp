@@ -3870,10 +3870,20 @@ ConVar ent_messages_draw( "ent_messages_draw", "0", FCVAR_CHEAT, "Visualizes all
 bool CBaseEntity::AcceptInput( const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, int outputID )
 {
 #ifdef PORTAL2
-	if ( !Q_stricmp( szInputName, "RunScriptCode" ) || !Q_stricmp( szInputName, "CallScriptFunction" ) )
+	if ( !Q_stricmp( szInputName, "RunScriptCode" ) ||
+		 !Q_stricmp( szInputName, "RunScriptFile" ) ||
+		 !Q_stricmp( szInputName, "CallScriptFunction" ) )
 	{
+		extern bool Portal2VScriptHandleInput( CBaseEntity *, const char *, const char * );
+		if ( Portal2VScriptHandleInput( this, szInputName, Value.String() ) )
+			return true;
+
+		// The map-specific adapter remains a fallback until each authored script
+		// sequence has a VScript regression proving equivalent behavior.
 		extern bool Portal2RunIntroScript( CBaseEntity *, const char * );
-		return Portal2RunIntroScript( this, Value.String() );
+		if ( Q_stricmp( szInputName, "RunScriptFile" ) )
+			return Portal2RunIntroScript( this, Value.String() );
+		return false;
 	}
 #endif
 	if ( ent_messages_draw.GetBool() )

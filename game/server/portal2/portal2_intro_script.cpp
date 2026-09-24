@@ -292,10 +292,6 @@ BEGIN_DATADESC( CPortal2IntroRuntime )
     DEFINE_INPUTFUNC( FIELD_VOID, "TestElevatorTransition", InputTestElevatorTransition ),
 END_DATADESC()
 
-// logic_script dispatches to the same map-scoped handler as scripted actors.
-class CPortal2ScriptHost : public CPointEntity {};
-LINK_ENTITY_TO_CLASS( logic_script, CPortal2ScriptHost );
-
 bool Portal2RunIntroScript( CBaseEntity *host, const char *code )
 {
     extern bool Portal2RunArrivalScript(CBaseEntity *,const char *);

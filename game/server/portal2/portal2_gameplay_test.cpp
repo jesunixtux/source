@@ -5,6 +5,7 @@
 #include "tier0/icommandline.h"
 #include "portal_player.h"
 #include "weapon_portalgun.h"
+#include "portal_placement.h"
 #include "entityoutput.h"
 #include "eventqueue.h"
 #include "player_pickup.h"
@@ -92,8 +93,8 @@ public:
             {
                 Q_snprintf(name,sizeof(name),"portal_blue_%d",i);
                 CProp_Portal *portal=dynamic_cast<CProp_Portal *>(gEntList.FindEntityByName(NULL,name));
-                Msg("PORTAL2_BUTTONS portal=%d active=%d\n",i,portal ? (int)portal->m_bActivated : -1);
-                correct=correct && portal && (portal->m_bActivated==(i==choice));
+				Msg("PORTAL2_BUTTONS portal=%d active=%d\n",i,portal ? (int)portal->IsActive() : -1);
+				correct=correct && portal && (portal->IsActive()==(i==choice));
             }
             Msg("PORTAL2_BUTTONS select_%d=%s chosen=%d\n",m_step/2+1,correct?"PASS":"FAIL",choice);
         }
@@ -134,14 +135,13 @@ END_DATADESC()
 class CPortal2GameplayTest : public CAutoGameSystemPerFrame
 {
 public:
-    CPortal2GameplayTest() : CAutoGameSystemPerFrame("Portal2GameplayTest"), m_step(0),m_start(-1),m_crossed(false) {}
+    CPortal2GameplayTest() : CAutoGameSystemPerFrame("Portal2GameplayTest"), m_step(0),m_start(-1),m_crossed(false),m_hasBlueHit(false) {}
     void LevelInitPreEntity()
-    { m_step=0; m_start=-1; m_crossed=false; g_TestPressedButtons=g_TestHeldButtons=0; }
+    { m_step=0; m_start=-1; m_crossed=false; m_hasBlueHit=false; g_TestPressedButtons=g_TestHeldButtons=0; }
     bool Shoot(CPortal_Player *p,bool orange)
     {
         CWeaponPortalgun *gun=Gun(p);
         if(!gun) return false;
-        CProp_Portal *blue=CProp_Portal::FindPortal(gun->m_iPortalLinkageGroupID,false);
         const int pitches[]={0,30,-30,60,-60,90};
         for(unsigned pi=0;pi<ARRAYSIZE(pitches);++pi) for(int yaw=0;yaw<360;yaw+=15)
         {
@@ -149,14 +149,16 @@ public:
             Vector dir,hit; QAngle final; trace_t tr; const QAngle aim(pitch,yaw,0);
             AngleVectors(aim,&dir);
             const float result=gun->TraceFirePortal(orange,p->EyePosition(),dir,tr,hit,final,PORTAL_PLACED_BY_PLAYER,true);
+            const PortalPlacementResult_t placementResult=static_cast<PortalPlacementResult_t>(static_cast<int>(result));
             if(pitch==0 && yaw%90==0)
                 Msg("PORTAL2_GAMEPLAY_TEST trace yaw=%d result=%.3f fraction=%.4f solid=%d surface=%s\n",
                     yaw,result,tr.fraction,tr.startsolid,tr.surface.name?tr.surface.name:"<none>");
-            if(result<0.3f || (orange && blue && hit.DistTo(blue->GetAbsOrigin())<160)) continue;
+            if(!PortalPlacementSucceeded(placementResult) || (orange && m_hasBlueHit && hit.DistTo(m_blueHit)<160)) continue;
             p->SnapEyeAngles(aim);
             // Exercise PlayerRunCommand/ItemPostFrame rather than invoking an
             // attack directly. Only this opt-in fixture injects the buttons.
             g_TestPressedButtons=orange?IN_ATTACK2:IN_ATTACK;
+            if(!orange) { m_blueHit=hit; m_hasBlueHit=true; }
             Msg("PORTAL2_GAMEPLAY_TEST attack=%s aim=%d %d result=%.3f\n",orange?"orange":"blue",pitch,yaw,result);
             return true;
         }
@@ -285,13 +287,13 @@ public:
             }
             m_step=9;
         }
-        if(m_step==9 && elapsed>43) { g_TestHeldButtons=IN_ZOOM; m_step=10; }
-        if(m_step==10 && elapsed>44)
-        {
-            Msg("PORTAL2_GAMEPLAY_TEST zoom_in=%s fov=%d\n",p->GetFOV()<=36?"PASS":"FAIL",p->GetFOV());
-            m_step=11;
-        }
-        if(m_step==11 && elapsed>45) { g_TestHeldButtons=0; m_step=12; }
+		if(m_step==9 && elapsed>43) { g_TestPressedButtons=IN_ZOOM; m_step=10; }
+		if(m_step==10 && elapsed>44)
+		{
+			Msg("PORTAL2_GAMEPLAY_TEST zoom_in=%s fov=%d\n",p->GetFOV()==45?"PASS":"FAIL",p->GetFOV());
+			m_step=11;
+		}
+		if(m_step==11 && elapsed>45) { g_TestPressedButtons=IN_ZOOM; m_step=12; }
         if(m_step==12 && elapsed>46)
         {
             Msg("PORTAL2_GAMEPLAY_TEST zoom_out=%s fov=%d\n",p->GetFOV()==p->GetDefaultFOV()?"PASS":"FAIL",p->GetFOV());
@@ -327,7 +329,7 @@ public:
         Msg("PORTAL2_GAMEPLAY_TEST observed_real_portal_teleport=%d\n",m_crossed);
     }
 private:
-    int m_step; float m_start; bool m_crossed; Vector m_direction,m_exit,m_entry,m_closedDoor;
+    int m_step; float m_start; bool m_crossed,m_hasBlueHit; Vector m_direction,m_exit,m_entry,m_closedDoor,m_blueHit;
     EHANDLE m_cube,m_door;
 };
 static CPortal2GameplayTest g_Portal2GameplayTest;

@@ -673,10 +673,12 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		CProp_Portal *pPortal = CProp_Portal::FindPortal( m_iPortalLinkageGroupID, bPortal2, true );
 
 		// If it was a failure, put the effect at exactly where the player shot instead of where the portal bumped to
-		if ( fPlacementSuccess < 0.5f )
+		const PortalPlacementResult_t placementResult =
+			static_cast<PortalPlacementResult_t>( static_cast<int>( fPlacementSuccess ) );
+		if ( !PortalPlacementSucceeded( placementResult ) )
 			vFinalPosition = tr.endpos;
 
-		pPortal->PlacePortal( vFinalPosition, qFinalAngles, static_cast<PortalPlacementResult_t>( static_cast<int>( fPlacementSuccess ) ), true );
+		pPortal->PlacePortal( vFinalPosition, qFinalAngles, placementResult, true );
 
 		float fDelay = vTracerOrigin.DistTo( tr.endpos ) / ( ( bPlayer ) ? ( BLAST_SPEED ) : ( BLAST_SPEED_NON_PLAYER ) );
 

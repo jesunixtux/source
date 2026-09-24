@@ -10,9 +10,11 @@
 #pragma once
 #endif
 
+#include "portal_shareddefs.h"
 
 struct CPortalCornerFitData;
 
+bool PortalPlacementSucceeded( PortalPlacementResult_t eResult );
 bool FitPortalOnSurface( const CProp_Portal *pIgnorePortal, Vector &vOrigin, const Vector &vForward, const Vector &vRight, 
 						 const Vector &vTopEdge, const Vector &vBottomEdge, const Vector &vRightEdge, const Vector &vLeftEdge, 
 						 int iPlacedBy, ITraceFilter *pTraceFilterPortalShot, 

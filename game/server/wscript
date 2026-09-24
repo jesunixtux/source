@@ -73,6 +73,20 @@ def build(bld):
 	source = game["sources"] + ['../../public/tier0/memoverride.cpp']
 	includes += game["includes"]
 	defines = game["defines"]
+	if bld.env.GAMES == 'portal2':
+		squirrel_sources = [
+			'sqapi.cpp', 'sqbaselib.cpp', 'sqclass.cpp', 'sqcompiler.cpp',
+			'sqdebug.cpp', 'sqfuncstate.cpp', 'sqlexer.cpp', 'sqmem.cpp',
+			'sqobject.cpp', 'sqstate.cpp', 'sqtable.cpp', 'sqvm.cpp'
+		]
+		source += ['../../external/squirrel/squirrel/' + name for name in squirrel_sources]
+		source += ['../../external/squirrel/sqstdlib/sqstdaux.cpp']
+		includes += [
+			'../../external/squirrel/include',
+			'../../external/squirrel/squirrel',
+			'../../external/squirrel/sqstdlib'
+		]
+		defines += ['_SQ64=1']
 
 	defines.remove('PROTECTED_THINGS_ENABLE')
 

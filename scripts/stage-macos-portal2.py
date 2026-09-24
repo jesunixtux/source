@@ -128,6 +128,9 @@ menu_scripts = stage / 'portal2_override/scripts'
 menu_maps.mkdir(parents=True, exist_ok=True)
 menu_scripts.mkdir(parents=True, exist_ok=True)
 shutil.copy2(portal / 'portal/maps/background1.bsp', menu_maps / 'background_menu.bsp')
+(menu_scripts / 'vscripts').mkdir(parents=True, exist_ok=True)
+for test_script in (source / 'game/server/portal2/tests').glob('*.nut'):
+    shutil.copy2(test_script, menu_scripts / 'vscripts' / test_script.name)
 (menu_scripts / 'chapterbackgrounds.txt').write_text('''"chapters"
 {
     1 "background_menu"

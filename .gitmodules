@@ -7,3 +7,6 @@
 [submodule "thirdparty"]
 	path = thirdparty
     url = https://github.com/SourceEngine-CommunityEdition/source-thirdparty.git
+[submodule "external/squirrel"]
+	path = external/squirrel
+	url = https://github.com/albertodemichelis/squirrel.git

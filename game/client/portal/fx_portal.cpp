@@ -81,10 +81,24 @@ void C_PortalBlast::Init( bool bIsPortal2, PortalPlacedBy_t ePlacedBy, const Vec
 
 	m_ptAimPoint = m_ptCreationPoint + vForward * m_ptCreationPoint.DistTo( m_ptDeathPoint );
 
+#ifdef PORTAL2
+	// Portal 2's current PCF projectile streams contain a rope renderer whose
+	// serialized layout is incompatible with this SDK particle runtime on ARM64.
+	// Creating it dereferences a null render context. Keep the real projectile
+	// and portal placement, but omit only the unsafe trail until PCF v2 support
+	// is implemented.
+	static bool s_bWarnedAboutProjectileTrail = false;
+	if ( !s_bWarnedAboutProjectileTrail )
+	{
+		DevWarning( "[PORTAL2] Disabled incompatible portal projectile particle trail\n" );
+		s_bWarnedAboutProjectileTrail = true;
+	}
+#else
 	if ( ePlacedBy == PORTAL_PLACED_BY_PLAYER )
 		ParticleProp()->Create( ( ( bIsPortal2 ) ? ( "portal_2_projectile_stream" ) : ( "portal_1_projectile_stream" ) ), PATTACH_ABSORIGIN_FOLLOW );
 	else
 		ParticleProp()->Create( ( ( bIsPortal2 ) ? ( "portal_2_projectile_stream_pedestal" ) : ( "portal_1_projectile_stream_pedestal" ) ), PATTACH_ABSORIGIN_FOLLOW );
+#endif
 }
 
 void C_PortalBlast::ClientThink( void )

@@ -349,6 +349,15 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	ucmd->buttons |= player->m_afButtonForced;
 	ucmd->buttons &= ~player->m_afButtonDisabled;
 
+#ifdef PORTAL2
+	// Opt-in Portal 2 integration fixtures must inject input before
+	// UpdateButtonState/PreThink so weapons and PlayerUse see real button edges.
+	extern bool Portal2GameplayTestOwnsInput();
+	extern int Portal2GameplayTestButtons();
+	if ( Portal2GameplayTestOwnsInput() )
+		ucmd->buttons |= Portal2GameplayTestButtons();
+#endif
+
 	if ( player->m_bGamePaused )
 	{
 		// If no clipping and cheats enabled and noclipduring game enabled, then leave

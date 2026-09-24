@@ -6,8 +6,30 @@ CWeaponPortalgun::CWeaponPortalgun() {}
 void CWeaponPortalgun::Precache(){}
 void CWeaponPortalgun::OnRestore(){}
 void CWeaponPortalgun::UpdateOnRemove(){BaseClass::UpdateOnRemove();}
-void CWeaponPortalgun::PrimaryAttack(){}
-void CWeaponPortalgun::SecondaryAttack(){}
+void CWeaponPortalgun::PrimaryAttack()
+{
+	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+	if ( !m_bCanFirePortal1 || !pPlayer )
+		return;
+	FirePortal( false, NULL, false );
+	m_iLastFiredPortal = 1;
+	WeaponSound( SINGLE );
+	m_OnFiredPortal1.FireOutput( pPlayer, this );
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetFireRate();
+	pPlayer->SetAnimation( PLAYER_ATTACK1 );
+}
+void CWeaponPortalgun::SecondaryAttack()
+{
+	CBasePlayer *pPlayer = ToBasePlayer( GetOwner() );
+	if ( !m_bCanFirePortal2 || !pPlayer )
+		return;
+	FirePortal( true, NULL, false );
+	m_iLastFiredPortal = 2;
+	WeaponSound( WPN_DOUBLE );
+	m_OnFiredPortal2.FireOutput( pPlayer, this );
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->curtime + GetFireRate();
+	pPlayer->SetAnimation( PLAYER_ATTACK1 );
+}
 void CWeaponPortalgun::ItemPreFrame(){}
 void CWeaponPortalgun::ItemHolsterFrame(){}
 void CWeaponPortalgun::WeaponIdle(){}
@@ -34,7 +56,11 @@ void WallPainted(int,int,CBaseEntity*){}
 void PaintPowerPickup(int,CBasePlayer*){}
 CBaseEntity *GetCoopSpawnLocation(int){return NULL;}
 
-PortalPlacementResult_t CWeaponPortalgun::FirePortal(bool,Vector*){return PORTAL_PLACEMENT_SUCCESS;}
+PortalPlacementResult_t CWeaponPortalgun::FirePortal(bool bPortal2,Vector *pDirection)
+{
+	const float result = FirePortal( bPortal2, pDirection, false );
+	return static_cast<PortalPlacementResult_t>( static_cast<int>( result ) );
+}
 
 BEGIN_SIMPLE_DATADESC(PortalPlayerStatistics_t)
 END_DATADESC()
