@@ -41,6 +41,12 @@ static void VScriptPrint( HSQUIRRELVM, const SQChar *pFormat, ... )
 
 static void VScriptError( HSQUIRRELVM, const SQChar *pFormat, ... )
 {
+	// Squirrel's standard runtime handler emits a multiline stack dump through
+	// this callback. Keep normal campaign logs concise; vscript_debug restores
+	// the complete diagnostic when a script is being investigated.
+	if ( !vscript_debug.GetBool() )
+		return;
+
 	char buffer[2048];
 	va_list args;
 	va_start( args, pFormat );
@@ -97,6 +103,7 @@ public:
 		const char *pName = ( pDebugName && pDebugName[0] ) ? pDebugName : "RunScriptCode";
 		if ( SQ_FAILED( sq_compilebuffer( m_pVM, pCode, V_strlen( pCode ), pName, SQTrue ) ) )
 		{
+			Warning( "[VSCRIPT] Compile failed: %s (set vscript_debug 1 for details)\n", pName );
 			sq_settop( m_pVM, oldTop );
 			return false;
 		}
@@ -113,8 +120,8 @@ public:
 		sq_pushobject( m_pVM, scope );
 		const bool ok = SQ_SUCCEEDED( sq_call( m_pVM, 1, SQFalse, SQTrue ) );
 		m_hExecutingEntity = previousExecutingEntity;
-		if ( !ok )
-			LogMissingNativeFunction( scope, pCode );
+		if ( !ok && !LogMissingNativeFunction( scope, pCode, pName ) )
+			Warning( "[VSCRIPT] Runtime failed: %s (set vscript_debug 1 for details)\n", pName );
 		sq_settop( m_pVM, oldTop );
 		return ok;
 	}
@@ -160,6 +167,9 @@ public:
 		sq_pushobject( m_pVM, scope );
 		const bool ok = SQ_SUCCEEDED( sq_call( m_pVM, 1, SQFalse, SQTrue ) );
 		m_hExecutingEntity = previousExecutingEntity;
+		if ( !ok )
+			Warning( "[VSCRIPT] Script function failed: %s (set vscript_debug 1 for details)\n",
+				pFunctionName );
 		sq_settop( m_pVM, oldTop );
 		return ok;
 	}
@@ -185,14 +195,14 @@ public:
 	CBaseEntity *ExecutingEntity() const { return m_hExecutingEntity.Get(); }
 
 private:
-	void LogMissingNativeFunction( const HSQOBJECT &scope, const char *pCode )
+	bool LogMissingNativeFunction( const HSQOBJECT &scope, const char *pCode, const char *pDebugName )
 	{
 		// Portal 2 map outputs commonly contain a single global function call.
 		// Diagnose that safe subset without guessing the behavior of the missing API.
 		while ( *pCode == ' ' || *pCode == '\t' || *pCode == '\r' || *pCode == '\n' )
 			++pCode;
 		if ( !( isalpha( static_cast<unsigned char>( *pCode ) ) || *pCode == '_' ) )
-			return;
+			return false;
 
 		char functionName[128];
 		int length = 0;
@@ -203,7 +213,7 @@ private:
 		while ( *pCode == ' ' || *pCode == '\t' )
 			++pCode;
 		if ( *pCode != '(' )
-			return;
+			return false;
 
 		const SQInteger oldTop = sq_gettop( m_pVM );
 		sq_pushobject( m_pVM, scope );
@@ -211,7 +221,9 @@ private:
 		const bool missing = SQ_FAILED( sq_get( m_pVM, -2 ) );
 		sq_settop( m_pVM, oldTop );
 		if ( missing )
-			Warning( "[VSCRIPT] Missing native function: %s\n", functionName );
+			Warning( "[VSCRIPT] Missing native function: %s (%s)\n", functionName,
+				pDebugName ? pDebugName : "RunScriptCode" );
+		return missing;
 	}
 
 	static CPortal2VScriptVM *FromVM( HSQUIRRELVM vm )
