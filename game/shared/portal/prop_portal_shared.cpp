@@ -164,10 +164,11 @@ void CProp_Portal::DelayedPlacementThink( void )
 #endif
 }
 
-// default to sane-looking but incorrect portal height for CEG - Updated in constructor
+// Keep the real gameplay aperture separate from vLocalMins/vLocalMaxs above,
+// whose quarter-height Z bounds are only the portal entity's thin trigger box.
 bool CProp_Portal::ms_DefaultPortalSizeInitialized = false; // for CEG protection
 float CProp_Portal::ms_DefaultPortalHalfWidth = DEFAULT_PORTAL_HALF_WIDTH;
-float CProp_Portal::ms_DefaultPortalHalfHeight = 0.25 * DEFAULT_PORTAL_HALF_HEIGHT;
+float CProp_Portal::ms_DefaultPortalHalfHeight = DEFAULT_PORTAL_HALF_HEIGHT;
 
 //NULL portal will return default width/height
 void CProp_Portal::GetPortalSize( float &fHalfWidth, float &fHalfHeight, CProp_Portal *pPortal )

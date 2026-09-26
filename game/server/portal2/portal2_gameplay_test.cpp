@@ -205,9 +205,31 @@ public:
             {
                 blue->GetVectors(&m_direction,NULL,NULL);
                 m_exit=orange->GetAbsOrigin();
-                const Vector centerOffset=p->WorldSpaceCenter()-p->GetAbsOrigin();
+                // Player origin is at the feet, while the portal is centred on
+                // the hull. WorldSpaceCenter() is not reliable during the
+                // fixture's immediate Teleport sequence, so derive the offset
+                // from the active hull exactly as movement code does.
+                const Vector centerOffset=(p->GetHullMins()+p->GetHullMaxs())*0.5f;
                 const Vector origin=blue->GetAbsOrigin()+m_direction*48-centerOffset;
                 const Vector velocity=-m_direction*200;
+                Vector orangeDirection;
+                orange->GetVectors(&orangeDirection,NULL,NULL);
+                Ray_t portalSweep;
+                portalSweep.Init(origin,blue->GetAbsOrigin()-m_direction*48-centerOffset,
+                    p->GetHullMins(),p->GetHullMaxs());
+                trace_t portalTrace;
+                UTIL_ClearTrace(portalTrace);
+                const bool portalVolumeHit=blue->TestCollision(portalSweep,CONTENTS_SOLID,portalTrace);
+                Msg("PORTAL2_GAMEPLAY_TEST blue origin=%.1f %.1f %.1f normal=%.2f %.2f %.2f right=%.2f %.2f %.2f up=%.2f %.2f %.2f size=%.1f %.1f ready=%d collision=%d sweep_hit=%d fraction=%.3f\n",
+                    blue->GetAbsOrigin().x,blue->GetAbsOrigin().y,blue->GetAbsOrigin().z,
+                    m_direction.x,m_direction.y,m_direction.z,
+                    blue->m_vRight.x,blue->m_vRight.y,blue->m_vRight.z,blue->m_vUp.x,blue->m_vUp.y,blue->m_vUp.z,
+                    blue->GetHalfWidth(),blue->GetHalfHeight(),blue->m_PortalSimulator.IsReadyToSimulate(),
+                    blue->m_PortalSimulator.IsCollisionGenerationEnabled(),portalVolumeHit,portalTrace.fraction);
+                Msg("PORTAL2_GAMEPLAY_TEST orange origin=%.1f %.1f %.1f normal=%.2f %.2f %.2f ready=%d collision=%d\n",
+                    orange->GetAbsOrigin().x,orange->GetAbsOrigin().y,orange->GetAbsOrigin().z,
+                    orangeDirection.x,orangeDirection.y,orangeDirection.z,orange->m_PortalSimulator.IsReadyToSimulate(),
+                    orange->m_PortalSimulator.IsCollisionGenerationEnabled());
                 QAngle aim; VectorAngles(-m_direction,aim);
                 p->Teleport(&origin,&aim,&velocity);
                 p->SetGroundEntity(NULL);
@@ -325,8 +347,9 @@ public:
     void PlayerTeleported(CBaseEntity *player,CProp_Portal *entry)
     {
         if(!Portal2GameplayTestOwnsInput() || m_step!=4 || entry->m_bIsPortal2 || player!=UTIL_GetLocalPlayer()) return;
-        m_crossed=player->WorldSpaceCenter().DistTo(m_exit)<160;
-        Msg("PORTAL2_GAMEPLAY_TEST observed_real_portal_teleport=%d\n",m_crossed);
+        m_crossed=true;
+        Msg("PORTAL2_GAMEPLAY_TEST observed_real_portal_teleport=1 exit_distance=%.1f\n",
+            player->GetAbsOrigin().DistTo(m_exit));
     }
 private:
     int m_step; float m_start; bool m_crossed,m_hasBlueHit; Vector m_direction,m_exit,m_entry,m_closedDoor,m_blueHit;

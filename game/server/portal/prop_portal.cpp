@@ -86,7 +86,10 @@ CProp_Portal::CProp_Portal( void )
 	{
 		ms_DefaultPortalSizeInitialized = true; // for CEG protection
 		CEG_GCV_PRE();
-		ms_DefaultPortalHalfHeight = DEFAULT_PORTAL_HALF_HEIGHT * 0.25f; // compatibility fallback
+		// The quarter-height value is only appropriate for the thin trigger/model
+		// bounds. Feeding it to Resize() also shrinks the simulator's actual hole,
+		// making a standing player collide with the portal's own wall proxy.
+		ms_DefaultPortalHalfHeight = DEFAULT_PORTAL_HALF_HEIGHT;
 		CEG_GCV_POST();
 	}
 	m_FizzleEffect = PORTAL_FIZZLE_KILLED;
@@ -689,6 +692,13 @@ void CProp_Portal::PostTeleportTouchingEntity( CBaseEntity *pOther )
 		pLinked->m_NotifyOnPortalled->OnPostPortalled( pOther, false );
 
 	BaseClass::PostTeleportTouchingEntity( pOther );
+
+#ifdef PORTAL2
+	// The opt-in gameplay regression test observes this production teleport
+	// callback. The observer is inert unless -portal2_gameplay_test is present.
+	extern void Portal2GameplayTestPlayerTeleported( CBaseEntity *, CProp_Portal * );
+	Portal2GameplayTestPlayerTeleported( pOther, this );
+#endif
 }
 
 //-----------------------------------------------------------------------------
