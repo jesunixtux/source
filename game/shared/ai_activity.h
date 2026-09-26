@@ -2107,7 +2107,7 @@ typedef enum
 	ACT_SPELL_VM_ARM, 
 	ACT_SPELL_VM_FIRE,
 
-#ifdef PORTAL2
+#if defined( PORTAL ) || defined( PORTAL2 )
 	// Append target-specific activities so existing activity numbers stay stable.
 	ACT_VM_PICKUP_IDLE,
 

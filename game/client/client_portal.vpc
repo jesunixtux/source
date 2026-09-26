@@ -191,6 +191,7 @@ $Project "Client (Portal)"
 			$Folder	"Weapons"
 			{
 				$File	"portal\c_weapon_physcannon.cpp"
+				$File	"portal\c_weapon_paintgun.cpp"
 				$File	"portal\c_weapon_portalgun.cpp"
 				$File	"portal\c_weapon_portalgun.h"
 				$File	"portal\c_weapon_stubs_portal.cpp"

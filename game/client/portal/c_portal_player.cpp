@@ -635,7 +635,7 @@ void C_Portal_Player::UpdateOnRemove( void )
 		m_pHeldEntityThirdpersonClone = NULL;
 	}
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	m_Inventory.RemoveListener( this );
 
 	RemoveClientsideWearables();
@@ -2256,7 +2256,7 @@ void C_Portal_Player::OnDataChanged( DataUpdateType_t type )
 	{
 		if ( m_bWasAlivePreUpdate && !IsAlive() )
 		{
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 			RemoveClientsideWearables();
 #endif
 		}
@@ -3962,7 +3962,7 @@ void C_Portal_Player::ClientPlayerRespawn()
 	// clear animation state
 	m_PlayerAnimState->ClearAnimationState();
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	UpdateInventory();
 	UpdateClientsideWearables();
 #endif
@@ -3978,7 +3978,7 @@ int C_Portal_Player::GetDefaultFOV( void ) const
 }
 
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 //-----------------------------------------------------------------------------
 // Purpose: Request this player's inventories from the steam backend

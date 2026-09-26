@@ -1,7 +1,9 @@
 #include "cbase.h"
 #include "weapon_portalgun.h"
 #include "env_portal_laser.h"
+#ifdef NO_STEAM
 CSteamAPIContext *steamapicontext = NULL;
+#endif
 CWeaponPortalgun::CWeaponPortalgun() {}
 void CWeaponPortalgun::Precache(){}
 void CWeaponPortalgun::OnRestore(){}

@@ -1619,7 +1619,7 @@ const char *CPortal_Player::GetPlayerModelName( void )
 #endif // PORTAL2_PUZZLEMAKER
 	if ( GameRules()->IsMultiplayer() )
 	{
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 		int iBot = ( GetTeamNumber() == TEAM_BLUE ) ? P2BOT_ATLAS : P2BOT_PBODY;
 		m_bIsBendy = false;
 

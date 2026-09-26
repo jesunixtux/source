@@ -64,11 +64,11 @@
 #include "matchmaking/portal2/imatchext_portal2.h"
 #include "portal2_research_data_tracker.h"
 
-#if !defined(NO_STEAM) && !defined(_PS3)
+#if defined( PORTAL2 ) && !defined(NO_STEAM) && !defined(_PS3)
 #include "gc_serversystem.h"
 #endif
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	#include "econ_gcmessages.h"
 #endif //!defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
@@ -621,7 +621,7 @@ void CPortal_Player::UpdateOnRemove( void )
 	}
 #endif // USE_SLOWTIME
 
-#if !defined(NO_STEAM) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined(NO_STEAM) && !defined( NO_STEAM_GAMECOORDINATOR )
 	m_Inventory.RemoveListener( this );
 #endif
 
@@ -629,7 +629,7 @@ void CPortal_Player::UpdateOnRemove( void )
 }
 
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 //-----------------------------------------------------------------------------
 // Purpose: Request this player's inventories from the steam backend
@@ -870,7 +870,7 @@ void CPortal_Player::GiveDefaultItems( void )
 			// Don't give me a rollcage if I have a hat equipped
 			bool bHasHeadgearEquipped = false;
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
  			CEconItemView *pItem = GetItemInLoadoutSlot( LOADOUT_POSITION_HEAD );
  			bHasHeadgearEquipped = ( pItem && pItem->IsValid() );
 #endif
@@ -889,7 +889,7 @@ void CPortal_Player::GiveDefaultItems( void )
 		{
 			bool bHasFlagEquipped = false;
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 			// Don't give me an antenna if I have a flag equipped
  			CEconItemView *pItem = GetItemInLoadoutSlot( LOADOUT_POSITION_MISC );
  			if ( pItem && pItem->IsValid() )
@@ -954,7 +954,7 @@ void CPortal_Player::Spawn(void)
 
 	BaseClass::Spawn();
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	// Check the make sure we have our inventory each time we spawn
 	UpdateInventory( false );
 
@@ -3335,7 +3335,7 @@ void CPortal_Player::CreateRagdollEntity( const CTakeDamageInfo &info )
 
 void CPortal_Player::Jump( void )
 {
-	#if !defined ( _GAMECONSOLE ) && !defined( NO_STEAM )
+#if defined( PORTAL2 ) && !defined ( _GAMECONSOLE ) && !defined( NO_STEAM )
 	g_PortalGameStats.Event_PlayerJump( GetAbsOrigin(), GetAbsVelocity() );
 	#endif
 
@@ -3396,7 +3396,7 @@ void CPortal_Player::Event_Killed( const CTakeDamageInfo &info )
 		}
 	}
 
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
+#if defined( PORTAL2 ) && !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	g_PortalGameStats.Event_PlayerDeath( this );
 #endif
 
@@ -3572,7 +3572,7 @@ int CPortal_Player::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	if ( bIsTurret )
 	{
-		#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
+		#if defined( PORTAL2 ) && !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 		g_PortalGameStats.Event_TurretDamage( inputInfoCopy.GetDamage() );
 		#endif
 	}
@@ -4168,7 +4168,7 @@ void CPortal_Player::Taunt( const char *pchTauntForce /*=NULL*/, bool bAuto /*= 
 
 		if ( V_strcmp( pchTauntForce, "item" ) == 0 )
 		{
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 			// FIXME: Use the item to decide what taunt to do
 			CEconItemView *pItem = GetItemInLoadoutSlot( LOADOUT_POSITION_GESTURE );
 			if ( pItem && pItem->IsValid() )
@@ -4257,7 +4257,7 @@ void CPortal_Player::Taunt( const char *pchTauntForce /*=NULL*/, bool bAuto /*= 
 		}
 	}
 
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
+#if defined( PORTAL2 ) && !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	// Record taunts used in gamestats (jeep says null means airtaunt)
 	g_PortalGameStats.Event_PlayerTaunt( this, pchTauntForce ? pchTauntForce : "airtaunt" );
 #endif //!defined( _GAMECONSOLE )
@@ -4855,7 +4855,7 @@ void CPortal_Player::ApplyPortalTeleportation( const CPortal_Base2D *pEnteredPor
 		UTIL_RecordAchievementEvent( "ACH.FOUR_PORTALS", this );
 	}
 
-#if !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
+#if defined( PORTAL2 ) && !defined( _GAMECONSOLE ) && !defined( NO_STEAM )
 	g_PortalGameStats.Event_PortalTeleport( this );
 #endif
 
@@ -4903,6 +4903,7 @@ CON_COMMAND( startneurotoxins, "Starts the nerve gas timer." )
 		pPlayer->SetNeuroToxinDamageTime( fCoundownTime );
 }
 
+#ifdef PORTAL2
 void CPortal_Player::InitialSpawn( void )
 {
 	BaseClass::InitialSpawn();
@@ -4915,10 +4916,11 @@ void CPortal_Player::InitialSpawn( void )
 
 	m_bReadyForDLCItemUpdates = false;
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	UpdateInventory( true );
 #endif
 }
+#endif // PORTAL2
 
 extern ConVar *sv_cheats;
 void CC_give_me_a_point( void )

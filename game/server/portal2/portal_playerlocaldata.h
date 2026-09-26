@@ -17,7 +17,7 @@
 #include "simtimer.h"
 #include "util_shared.h"
 #include "portal_player_shared.h"
-#include "paint_enum.h"
+#include "portal2/paint_enum.h"
 
 class CTrigger_TractorBeam;
 

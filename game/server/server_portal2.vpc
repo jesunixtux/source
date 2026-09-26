@@ -15,6 +15,7 @@ $Project "Portal 2 extensions"
     {
         $File "portal2\npc_personality_core.cpp"
         $File "portal2\npc_wheatley_boss.cpp"
+        $File "portal2\boss_futbol_compat.cpp"
         $File "portal2\player_pickup_controller.cpp"
         $File "portal2\portal2_eventlog.cpp"
         $File "portal2\portal2_gamemove.cpp"

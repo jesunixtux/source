@@ -15,7 +15,7 @@
 #include "c_portal_base2d.h"
 #include "weapon_portalbase.h"
 #include "colorcorrectionmgr.h"
-#include "c_portal_playerlocaldata.h"
+#include "portal2/c_portal_playerlocaldata.h"
 #include "iinput.h"
 #include "paint_power_user.h"
 #include "paintable_entity.h"
@@ -28,7 +28,7 @@
 class C_Trigger_TractorBeam;
 #define CTrigger_TractorBeam C_Trigger_TractorBeam
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	#include "portal2_item_inventory.h"
 #endif
 
@@ -59,7 +59,7 @@ class CMoveData;
 // >> Portal_Player
 //=============================================================================
 class C_Portal_Player : public PaintPowerUser< CPaintableEntity< C_BasePlayer > >
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	, public IInventoryUpdateListener
 #endif
 {
@@ -685,7 +685,7 @@ private:
 	friend class CPortalPlayerShared;
 	friend class CMultiPlayerAnimState;
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 	//----------------------------
 	// INVENTORY MANAGEMENT

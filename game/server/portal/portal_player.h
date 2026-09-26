@@ -29,7 +29,7 @@ class CFunc_LiquidPortal;
 #include "npc_security_camera.h"
 #include "portal_base2d.h"
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	#include "portal2_item_inventory.h"
 #endif
 
@@ -75,7 +75,7 @@ class CMoveData;
 // >> Portal_Player
 //=============================================================================
 class CPortal_Player : public PaintPowerUser< CPaintableEntity< CBaseMultiplayerPlayer > >
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 	, public IInventoryUpdateListener
 #endif
 {
@@ -693,7 +693,7 @@ private: // PAINT SPECIFIC
 	friend class CPortalPlayerShared;
 	friend class CGrabController;
 
-#if !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
+#if defined( PORTAL2 ) && !defined( NO_STEAM ) && !defined( NO_STEAM_GAMECOORDINATOR )
 
 	//----------------------------
 	// ECONOMY INVENTORY MANAGEMENT

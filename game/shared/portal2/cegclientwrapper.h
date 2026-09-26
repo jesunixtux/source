@@ -13,7 +13,7 @@
 #pragma once
 #endif
 
-#include "paint_enum.h"
+#include "portal2/paint_enum.h"
 #include "bspflags.h"
 
 namespace CEG

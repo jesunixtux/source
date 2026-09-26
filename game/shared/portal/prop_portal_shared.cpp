@@ -11,6 +11,10 @@
 #include "portal_placement.h"
 #include "weapon_portalgun_shared.h"
 
+#if defined( GAME_DLL ) && !defined( PORTAL2 )
+#include "func_portal_orientation.h"
+#endif
+
 const Vector CProp_Portal_Shared::vLocalMins( -PORTAL_HALF_DEPTH, -DEFAULT_PORTAL_HALF_WIDTH, -DEFAULT_PORTAL_HALF_HEIGHT * 0.25f );
 const Vector CProp_Portal_Shared::vLocalMaxs( PORTAL_HALF_DEPTH, DEFAULT_PORTAL_HALF_WIDTH, DEFAULT_PORTAL_HALF_HEIGHT * 0.25f );
 
@@ -34,9 +38,9 @@ void CProp_Portal::PlacePortal( const Vector &vOrigin, const QAngle &qAngles, Po
 	Vector vNewOrigin = vOrigin;
 	QAngle qNewAngles = qAngles;
 
-#if !defined( PORTAL2 )
+#if defined( GAME_DLL ) && !defined( PORTAL2 )
 	UTIL_TestForOrientationVolumes( qNewAngles, vNewOrigin, this );
-#endif // PORTAL2
+#endif // GAME_DLL && !PORTAL2
 
 	if ( PortalPlacementSucceeded( eResult ) == false && sv_portal_placement_never_fail.GetBool() == false )
 	{
