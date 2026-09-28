@@ -1,8 +1,6 @@
 //========= Copyright (c) Valve Corporation, All rights reserved. ============//
 //
-// Purpose: Server-side stub for the placement helper entity used by the
-//          portal gun. Full helper logic will be imported later; for now this
-//          lets shared weapon code compile and link.
+// Purpose: Server-authoritative Portal 2 placement helper contract.
 //
 //=============================================================================//
 
@@ -25,7 +23,7 @@ public:
 	CInfoPlacementHelper();
 
 	void Spawn( void ) override;
-	void UpdateOnRemove( void ) override;
+	int UpdateTransmitState( void ) override;
 
 	float GetTargetRadius() const { return m_flTargetRadius; }
 	const QAngle &GetTargetAngles() const;
@@ -36,21 +34,23 @@ public:
 	float GetTargetSize() const { return m_flTargetSize; }
 	bool UsesSizeLimit() const { return m_bUsesSizeLimit; }
 
-	static CUtlVector< CInfoPlacementHelper * > &Helpers();
-
 private:
 	void InputEnable( inputdata_t &inputdata );
 	void InputDisable( inputdata_t &inputdata );
 
-	float m_flTargetRadius;
-	QAngle m_angTargetAngles;
-	float m_flTargetSize;
+	CNetworkVar( float, m_flTargetRadius );
+	CNetworkVar( float, m_flTargetSize );
+	CNetworkVar( bool, m_bEnabled );
+	CNetworkVar( bool, m_bSnapToHelperAngles );
+	CNetworkVar( bool, m_bForcePlacement );
+	CNetworkVar( bool, m_bHideUntilPlaced );
+	CNetworkVar( bool, m_bUsesSizeLimit );
+
 	bool m_bStartDisabled;
-	bool m_bEnabled;
-	bool m_bSnapToHelperAngles;
-	bool m_bForcePlacement;
-	bool m_bHideUntilPlaced;
-	bool m_bUsesSizeLimit;
+	string_t m_iszProxyName;
+	string_t m_iszAttachTargetName;
+	COutputEvent m_OnObjectPlaced;
+	COutputInt m_OnObjectPlacedSize;
 };
 
 CInfoPlacementHelper *UTIL_FindPlacementHelper( const Vector &vecPosition, CBasePlayer *pPlayer );
@@ -60,6 +60,8 @@ class CInfoPlacementHelper : public CBaseAnimating
 	DECLARE_CLASS( CInfoPlacementHelper, CBaseAnimating );
 public:
 	float GetTargetRadius() const { return 0.0f; }
+	const QAngle &GetTargetAngles() const { return GetAbsAngles(); }
+	bool ShouldUseHelperAngles() const { return false; }
 };
 
 inline CInfoPlacementHelper *UTIL_FindPlacementHelper( const Vector &vecPosition, CBasePlayer *pPlayer )

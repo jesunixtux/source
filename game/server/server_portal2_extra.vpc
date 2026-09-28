@@ -10,6 +10,8 @@ $Configuration
 }
 $Project "Portal 2 extensions"
 {
+	$File "portal2\info_placement_helper.cpp"
+	$File "portal2\info_placement_helper_test.cpp"
     $File "portal2\npc_personality_core.cpp"
     $File "portal2\npc_wheatley_boss.cpp"
     $File "portal2\boss_futbol_compat.cpp"

@@ -13,6 +13,8 @@ public:
 	DECLARE_CLASS( C_InfoPlacementHelper, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
 
+	C_InfoPlacementHelper();
+
 	const QAngle &GetTargetAngles( void ) const;
 	bool ShouldUseHelperAngles( void ) const { return m_bSnapToHelperAngles; }
 	float GetTargetRadius( void ) const { return m_flTargetRadius; }
@@ -22,11 +24,8 @@ public:
 	float GetTargetSize( void ) const { return m_flTargetSize; }
 	bool UsesSizeLimit( void ) const { return m_bUsesSizeLimit; }
 
-	static CUtlVector< C_InfoPlacementHelper * > &Helpers();
-
 private:
 	float m_flTargetRadius;
-	QAngle m_angTargetAngles;
 	float m_flTargetSize;
 	bool m_bEnabled;
 	bool m_bSnapToHelperAngles;

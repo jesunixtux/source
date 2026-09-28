@@ -1,7 +1,6 @@
 #include "cbase.h"
 #include "props.h"
 #include "triggers.h"
-#include "info_placement_helper.h"
 #include "paint_sprayer.h"
 
 namespace
@@ -221,7 +220,6 @@ BEGIN_DATADESC(CCompatPaintBomb)
 	DEFINE_KEYFIELD(m_bAllowFunnel, FIELD_BOOLEAN, "allowfunnel"),
 END_DATADESC()
 
-LINK_ENTITY_TO_CLASS(info_placement_helper, CInfoPlacementHelper);
 LINK_ENTITY_TO_CLASS(info_paint_sprayer, CPaintSprayer);
 
 class CCompatTriggerCatapult : public CBaseTrigger

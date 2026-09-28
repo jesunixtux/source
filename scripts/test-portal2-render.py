@@ -29,10 +29,13 @@ p.add_argument('--vscript', action='store_true',
                help='run the minimal real Squirrel/VScript regression after loading the map')
 p.add_argument('--boss', action='store_true',
                help='run the opt-in Wheatley boss hit/phase regression on sp_a4_finale4')
+p.add_argument('--placement-helper', action='store_true',
+               help='run the isolated info_placement_helper selection and state test')
 p.add_argument('--extra-cvar', action='append', default=[], metavar='NAME=VALUE',
                help='append a +NAME VALUE pair to the engine command line (repeatable)')
 args = p.parse_args()
-if sum((args.gameplay, args.intro_scenes, args.elevator_transition, args.buttons, args.intro2_exit, args.boss)) > 1:
+if sum((args.gameplay, args.intro_scenes, args.elevator_transition, args.buttons, args.intro2_exit,
+        args.boss, args.placement_helper)) > 1:
     p.error('Choose only one opt-in integration test')
 if args.boss and args.map != 'sp_a4_finale4':
     p.error('--boss requires --map sp_a4_finale4')
@@ -75,6 +78,8 @@ if args.vscript:
     command += ['-portal2_vscript_test']
 if args.boss:
     command += ['-portal2_boss_test']
+if args.placement_helper:
+    command += ['-portal2_placement_helper_test']
 if args.no_prop_lighting:
     command += ['+r_proplightingfromdisk', '0']
 if args.portal_texture:
@@ -188,6 +193,12 @@ if args.vscript:
     passed = passed and 'VSCRIPT_BASIC FAIL' not in text
 if args.boss:
     passed = passed and 'PORTAL2_BOSS_TEST hits=3 defeated=1' in text
+if args.placement_helper:
+    passed = passed and all(f'PORTAL2_PLACEMENT_HELPER {check} PASS' in text
+                            for check in ('inside', 'outside', 'deterministic', 'orientation',
+                                          'disabled', 'absent', 'invalid_radius', 'tie_break'))
+    passed = passed and 'PORTAL2_PLACEMENT_HELPER ' in text and ' FAIL' not in '\n'.join(
+        line for line in text.splitlines() if 'PORTAL2_PLACEMENT_HELPER ' in line)
 label = 'GAMEPLAY' if args.gameplay else ('INTRO SCENES' if args.intro_scenes else ('ELEVATOR TRANSITION' if args.elevator_transition else ('BINK' if args.bink else 'MAP LOAD')))
 if args.buttons:
     label = 'BUTTONS'
@@ -199,6 +210,8 @@ if args.vscript:
     label = 'VSCRIPT BASIC'
 if args.boss:
     label = 'BOSS'
+if args.placement_helper:
+    label = 'PLACEMENT HELPER'
 print(f'{label} {"PASS" if passed else "FAIL"}: alive={alive}, server_active={activated}, shader_index_error={bad_shader}')
 print(f'Artifacts: {out}')
 print('Tests are bounded fixtures, not a full campaign playthrough. Gameplay checks gun, traversal and cube/button/door I/O; intro-scenes checks the vault dialogue chain; buttons checks intro2 portal selection and reuse. Inspect map.png for visual quality.')
