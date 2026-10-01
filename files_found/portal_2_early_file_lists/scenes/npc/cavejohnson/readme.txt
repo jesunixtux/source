@@ -1,0 +1,5 @@
+some of these files are hard to seperate as they both reference cave johnson the same even if they are for the human on or the cube one
+
+the mechanic of the camera/photos seems to be seperated into 3 seperate sub mechanics that can be used independantly of the other, the camera itself has a mechanic (most likely the capture/release/snapshot thing), scale is seperate aswell and does not need to be used, the film capacity seems to prevent either a large amount of photos from being taken/used at the same time or limits how much an object can be scaled
+
+the rest of the files are for the story as cave gets uploaded and a rather funny scene that was mentioed in portal 2 post mortem https://youtu.be/OLqk4aqpXlQ?t=333 there is a normal version of the legalese that betty spurts aswell as a 90 decibel loud version

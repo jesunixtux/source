@@ -1,0 +1,2 @@
+files for different mbot and obot animation events, the code itself was re-used for detecting proper conditions for coop taunts and for l4d and l4d2 callouts
+talker is a folder from portal2\scripts and contains the coop bots taunt conditions aswell a the response rules file that was addapted for coop and contains documentation for the system

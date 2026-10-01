@@ -1,0 +1,3 @@
+sp_turret_islands is supposedly for the tribal turrets where you get 'married' perhaps to do with that turret concept art with a companion cube over the top of it
+
+sabotage, sphere and core maps have to do with the version of the story where you meet and get to know several more cores than just pendleton (wheatly) and sabotage glados , after you meet enough of the cores she gets jealous and has dinner with you in a date breakup style, see the map relist roast beef for a bit more info

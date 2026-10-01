@@ -1,0 +1,5 @@
+the vista and temp maps are to do with the version of portal 2 with lots of personality cores, sabotaging glados and the dinner breakup (roast beef)
+
+the chicken and lab maps are for the f-stop original concept, the aperture training doors snd references both the portal gun and the camera, used together the portals could be resized and moved, code for this is still in the games files through both retail scaling commands and the code used for the razer hydra portal 2 dlc, there is a texture reference somewhere aswell to doors in photos, look in map relists exerpts for a reference to 'doorway', some maps reference the androids having their own dispenser
+
+the devtest map snd has some infoon the floor turret, the floor turret could be the spherical turret's internal name as a thought, there are still some sounds in the other files
