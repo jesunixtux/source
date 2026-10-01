@@ -6,7 +6,11 @@
 //===========================================================================//
 
 #include <stdio.h>
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include <process.h>
+#endif
 
 #include "threadtools.h"
 
@@ -801,7 +805,15 @@ bool g_bIsCreatingNewGameMenuForPreFetching = false;
 CBasePanel::CBasePanel() : Panel(NULL, "BaseGameUIPanel")
 {
 	FILE *dbg = fopen( "/tmp/gui_diag.log", "w" );
-	if ( dbg ) { fprintf( dbg, "[diag] CBasePanel ctor pid=%d\n", getpid() ); fclose( dbg ); }
+	if ( dbg )
+	{
+#ifdef _WIN32
+		fprintf( dbg, "[diag] CBasePanel ctor pid=%d\n", _getpid() );
+#else
+		fprintf( dbg, "[diag] CBasePanel ctor pid=%d\n", getpid() );
+#endif
+		fclose( dbg );
+	}
 	if( NeedProportional() )
 		SetProportional( true );
 

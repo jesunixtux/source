@@ -368,7 +368,7 @@ void CPortalRenderable_FlatBasic::RenderPortalViewToBackBuffer( CViewRender *pVi
 		static Frustum_t tmpFrustum;
 		if ( !r_lockportalfrustum.GetBool() )
 		{
-			tmpFrustum.SetPlanes( seeThroughFrustum );
+			tmpFrustum.SetPlanes( static_cast<const VPlane *>( seeThroughFrustum ) );
 		}
 		if ( bUseSeeThroughFrustum )
 		{

@@ -4149,11 +4149,11 @@ void AddBboxToPlaneList( Vector4D *pListInsertPosition, const Vector &vMins, con
 void AddBboxToPlaneList_SIMD( fltx4 *pListInsertPosition, const fltx4 &vMins, const fltx4 &vMaxs )
 {
 	pListInsertPosition[0] = SetWFromXSIMD( g_SIMD_Identity[0], vMaxs );	//	Vector4D(1, 0, 0, vMaxs.x);
-	pListInsertPosition[1] = -SetWFromXSIMD( g_SIMD_Identity[0], vMins );	//	Vector4D(-1, 0, 0, -vMins.x);
+	pListInsertPosition[1] = NegSIMD( SetWFromXSIMD( g_SIMD_Identity[0], vMins ) );	//	Vector4D(-1, 0, 0, -vMins.x);
 	pListInsertPosition[2] = SetWFromYSIMD( g_SIMD_Identity[1], vMaxs );	//  Vector4D(0, 1, 0, vMaxs.y);
-	pListInsertPosition[3] = -SetWFromYSIMD( g_SIMD_Identity[1], vMins );	//	Vector4D(0, -1, 0, -vMins.y);
+	pListInsertPosition[3] = NegSIMD( SetWFromYSIMD( g_SIMD_Identity[1], vMins ) );	//	Vector4D(0, -1, 0, -vMins.y);
 	pListInsertPosition[4] = SetWFromZSIMD( g_SIMD_Identity[2], vMaxs );	//	Vector4D(0, 0, 1, vMaxs.z);
-	pListInsertPosition[5] = -SetWFromZSIMD( g_SIMD_Identity[2], vMins );	//	Vector4D(0, 0, -1, -vMins.z);
+	pListInsertPosition[5] = NegSIMD( SetWFromZSIMD( g_SIMD_Identity[2], vMins ) );	//	Vector4D(0, 0, -1, -vMins.z);
 }
 
 inline const Vector ToVector( const float* vec )
@@ -4300,13 +4300,13 @@ int ComputeContactPlane_SIMD( fltx4& plane, const CMesh& contactRegion, const fl
 		const fltx4 p2 = *(const fltx4 *)( contactRegion.GetVertex(i2) );
 
 		// Compute the normal to the plane defined by the triangle
-		const fltx4 planeNormal = CrossProductSIMD( p1 - p0, p2 - p0 );
+		const fltx4 planeNormal = CrossProductSIMD( SubSIMD( p1, p0 ), SubSIMD( p2, p0 ) );
 
 		// Choose the normal corresponding to the triangle with the largest area
 		// (since this is the intersection volume of a slightly expanded AABB, which
 		// is only penetrating the brush by the expansion amount). Also, make sure it
 		// points in the general direction of the point outside the plane.
-		const fltx4 outVector = outsidePt - p0;
+		const fltx4 outVector = SubSIMD( outsidePt, p0 );
 		const fltx4 areaSq = Dot3SIMD( planeNormal, planeNormal );
 		const fltx4 dotProd = Dot3SIMD( planeNormal, outVector );
 		const fltx4 f4IsMax = (fltx4)CmpLeSIMD( areaSq, maxAreaSq );			//	if ( areaSq <= maxAreaSq )
@@ -4548,7 +4548,7 @@ void ComputeAABBContactsWithBrushEntity_SIMD( ContactVector& contacts, const cpl
 		for( int j = 0; j < iClipPlaneCount; ++j )
 		{
 			const cplane_t& plane = pClipPlanes[j];
-			planes[iPlaneCount] = -LoadUnalignedSIMD(&plane.normal);
+			planes[iPlaneCount] = NegSIMD( LoadUnalignedSIMD(&plane.normal) );
 			++iPlaneCount;
 		}
 
@@ -4591,7 +4591,7 @@ void ComputeAABBContactsWithBrushEntity_SIMD( ContactVector& contacts, const cpl
 			{
 				const fltx4 centroid = ComputeCentroid_SIMD( contactRegion );
 				const fltx4 dist = Dot3SIMD( centroid, plane );
-				const fltx4 diff = dist - SplatWSIMD( plane );
+				const fltx4 diff = SubSIMD( dist, SplatWSIMD( plane ) );
 				const fltx4 contactPt = MsubSIMD(diff, plane, centroid);		//	centroid - diff * plane.normal;
 
 				// Figure out if the contact is on a thin surface

@@ -45,7 +45,9 @@ void CWeaponPortalgun::PlayPickupSound(){}
 void CWeaponPortalgun::DelayAttack(float){}
 void CWeaponPortalgun::UseDeny(){}
 Activity CWeaponPortalgun::GetPrimaryAttackActivity(){return ACT_VM_IDLE;}
-acttable_t CWeaponPortalgun::m_acttable[] = {};
+// MSVC rejects an empty brace initializer for an array of deduced bound, so give the
+// stub a single invalid entry instead of zero entries; lookups therefore still miss.
+acttable_t CWeaponPortalgun::m_acttable[] = { { ACT_INVALID, ACT_INVALID, false } };
 IMPLEMENT_ACTTABLE(CWeaponPortalgun)
 void CWeaponPortalgun::SetCanFirePortal1(bool v){m_bCanFirePortal1=v;}
 void CWeaponPortalgun::SetCanFirePortal2(bool v){m_bCanFirePortal2=v;}

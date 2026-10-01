@@ -4,6 +4,7 @@
 ConVar sv_portal_placement_never_fail( "sv_portal_placement_never_fail", "0", FCVAR_REPLICATED | FCVAR_CHEAT );
 
 ConVar player_held_object_use_view_model( "player_held_object_use_view_model", "-1", FCVAR_REPLICATED | FCVAR_CHEAT );
+ConVar player_held_object_collide_with_player( "player_held_object_collide_with_player", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "Should held objects collide with players" );
 ConVar locator_background_style( "locator_background_style", "0" );
 ConVar locator_background_color( "locator_background_color", "0 0 0 128" );
 ConVar locator_background_thickness_x( "locator_background_thickness_x", "12" );

@@ -17,6 +17,10 @@
 abstract_class ITriggerCatapultAutoList
 {
 public:
+	// The auto list stores and deletes derived pointers, and assert_cast() needs a
+	// polymorphic source type, so the interface must carry a virtual function.
+	virtual ~ITriggerCatapultAutoList() {}
+
 	static const CUtlVector< ITriggerCatapultAutoList* >& AutoList( void )
 	{
 		static CUtlVector< ITriggerCatapultAutoList* > s_AutoList;

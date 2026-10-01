@@ -28,5 +28,7 @@ void CWeaponPaintGun::ItemPostFrame(){}
 void CWeaponPaintGun::PrimaryAttack(){}
 void CWeaponPaintGun::SecondaryAttack(){}
 void CWeaponPaintGun::ResetAmmo(){}
-acttable_t CWeaponPaintGun::m_acttable[] = {};
+// MSVC rejects an empty brace initializer for an array of deduced bound, so give the
+// stub a single invalid entry instead of zero entries; lookups therefore still miss.
+acttable_t CWeaponPaintGun::m_acttable[] = { { ACT_INVALID, ACT_INVALID, false } };
 IMPLEMENT_ACTTABLE(CWeaponPaintGun)

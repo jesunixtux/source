@@ -15,7 +15,11 @@
 
 // SPECIAL NOTE #2: This must be the final include in a .cpp or .h file!!!
 
-#if defined(_DEBUG) && !defined(USE_MEM_DEBUG)
+// NDEBUG and _DEBUG can be visible at the same time when the toolchain selects
+// the debug CRT while the build is configured as release. Enabling the memory
+// debug path there would install the 'new' macro and break every declaration
+// of operator new, so only honour _DEBUG in a debug (non-NDEBUG) build.
+#if defined(_DEBUG) && !defined(NDEBUG) && !defined(USE_MEM_DEBUG)
 #define USE_MEM_DEBUG 1
 #endif
 
