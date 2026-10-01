@@ -667,7 +667,15 @@ int CVTFTexture::FileSize( int nMipSkipCount ) const
 	int nOffset = pImageDataInfo->resData;
 
 	int nFaceSize = ComputeFaceSize( nMipSkipCount );
-	int nImageSize = nFaceSize * m_nFaceCount * m_nFrameCount;
+	int nFileFaceCount = m_nFaceCount;
+	if ( IsCubeMap() && m_nVersion[0] == 7 && m_nVersion[1] >= 1 && m_nVersion[1] < 5 )
+	{
+		// VTF 7.1-7.4 normally stores a seventh, legacy spheremap face.
+		// LoadImageData discards it (and detects the known 7.4 files that omit
+		// it), but the initial bounded read still has to include those bytes.
+		++nFileFaceCount;
+	}
+	int nImageSize = nFaceSize * nFileFaceCount * m_nFrameCount;
 	return nOffset + nImageSize;
 }
 
@@ -1087,7 +1095,12 @@ bool CVTFTexture::UnserializeEx( CUtlBuffer &buf, bool bHeaderOnly, int nForceFl
 	m_nFrameCount = header.numFrames;
 
 
-	m_nFaceCount = (m_nFlags & TEXTUREFLAGS_ENVMAP) ? CUBEMAP_FACE_COUNT : 1;
+	// VTF files store the six hardware cubemap faces.  CUBEMAP_FACE_COUNT also
+	// includes the legacy generated spheremap slot, so using it here makes 7.5
+	// files appear one face too short and causes UnserializeEx to reject every
+	// Portal 2 cubemap.  Older formats that contain a spheremap are handled by
+	// LoadImageData's explicit compatibility skip.
+	m_nFaceCount = (m_nFlags & TEXTUREFLAGS_ENVMAP) ? CUBEMAP_FACE_COUNT - 1 : 1;
 
 	// NOTE: We're going to store space for all mip levels, even if we don't 
 	// have data on disk for them. This is for backward compatibility
@@ -3494,4 +3507,3 @@ it was once.
 		pPad->Flush();
 	}
 */
-

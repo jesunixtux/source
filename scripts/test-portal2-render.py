@@ -27,6 +27,8 @@ p.add_argument('--phys-probe', action='store_true',
                help='spawn the weighted cube above the player and verify vphysics settles it (use --map sp_a1_intro2 --seconds 50)')
 p.add_argument('--vscript', action='store_true',
                help='run the minimal real Squirrel/VScript regression after loading the map')
+p.add_argument('--script-nugget', action='store_true',
+               help='verify script_nugget EntityGroup, OnPostSpawn and AwardNugget behavior')
 p.add_argument('--boss', action='store_true',
                help='run the opt-in Wheatley boss hit/phase regression on sp_a4_finale4')
 p.add_argument('--placement-helper', action='store_true',
@@ -41,11 +43,19 @@ if args.boss and args.map != 'sp_a4_finale4':
     p.error('--boss requires --map sp_a4_finale4')
 if args.intro2_exit and args.map not in ('sp_a1_intro2', 'sp_a1_intro3', 'sp_a1_intro4', 'sp_a1_intro5'):
     p.error('--intro2-exit requires an intro chain map (sp_a1_intro2..sp_a1_intro5)')
+if args.script_nugget and args.map != 'script_nugget':
+    p.error('--script-nugget requires --map script_nugget')
 if not 10 <= args.seconds <= 120:
     p.error('--seconds must be between 10 and 120')
 stage = args.stage.resolve()
 if not (stage / 'hl2_osx').is_file():
     p.error('Missing staging executable')
+if args.vscript:
+    fixture_dir = Path(__file__).resolve().parent.parent / 'game/server/portal2/tests'
+    game_vscript_dir = stage.parent / 'portal2/scripts/vscripts'
+    game_vscript_dir.mkdir(parents=True, exist_ok=True)
+    for fixture_name in ('vscript_test_basic.nut', 'vscript_test_include.nut'):
+        shutil.copy2(fixture_dir / fixture_name, game_vscript_dir / fixture_name)
 out = stage / 'diagnostics' / datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')
 out.mkdir(parents=True)
 # A previous run's markers must never satisfy this run's assertions or trigger
@@ -76,6 +86,8 @@ if args.phys_probe:
     command += ['-portal2_phys_probe']
 if args.vscript:
     command += ['-portal2_vscript_test']
+if args.script_nugget:
+    command += ['-portal2_script_nugget_test']
 if args.boss:
     command += ['-portal2_boss_test']
 if args.placement_helper:
@@ -85,7 +97,7 @@ if args.no_prop_lighting:
 if args.portal_texture:
     command += ['+r_portal_use_stencils', '0']
 command += ['+map', args.map]
-if args.vscript:
+if args.vscript or args.script_nugget:
     command += ['+vscript_debug', '1']
 if args.gameplay:
     command += ['+mat_hdr_level', '+mat_info', '+mat_fullbright', '+mat_phong']
@@ -191,6 +203,10 @@ if args.phys_probe:
 if args.vscript:
     passed = passed and text.count('VSCRIPT_BASIC PASS') == 1
     passed = passed and 'VSCRIPT_BASIC FAIL' not in text
+if args.script_nugget:
+    passed = passed and text.count('PORTAL2_SCRIPT_NUGGET spawn_count=6 award=PASS') == 1
+    passed = passed and 'PORTAL2_SCRIPT_NUGGET FAIL' not in text
+    passed = passed and 'Error reading texture data "materials/maps/script_nugget/' not in text
 if args.boss:
     passed = passed and 'PORTAL2_BOSS_TEST hits=3 defeated=1' in text
 if args.placement_helper:
@@ -208,6 +224,8 @@ if args.phys_probe:
     label = 'PHYS PROBE'
 if args.vscript:
     label = 'VSCRIPT BASIC'
+if args.script_nugget:
+    label = 'SCRIPT NUGGET'
 if args.boss:
     label = 'BOSS'
 if args.placement_helper:

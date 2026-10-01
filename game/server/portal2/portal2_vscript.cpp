@@ -60,8 +60,12 @@ class CPortal2VScriptVM : public CAutoGameSystemPerFrame
 public:
 	CPortal2VScriptVM() : CAutoGameSystemPerFrame( "Portal2VScriptVM" ), m_pVM( NULL ) {}
 
-	bool Init()
+	bool Init() { return EnsureInitialized(); }
+
+	bool EnsureInitialized()
 	{
+		if ( m_pVM )
+			return true;
 		m_pVM = sq_open( 1024 );
 		if ( !m_pVM )
 		{
@@ -95,7 +99,7 @@ public:
 
 	bool RunCode( CBaseEntity *pEntity, const char *pCode, const char *pDebugName )
 	{
-		if ( !m_pVM || !pCode || !pCode[0] )
+		if ( !pCode || !pCode[0] || !EnsureInitialized() )
 			return false;
 
 		HSQOBJECT scope = GetScope( pEntity );
@@ -144,9 +148,9 @@ public:
 		return RunCode( pEntity, static_cast<const char *>( source.Base() ), path );
 	}
 
-	bool CallFunction( CBaseEntity *pEntity, const char *pFunctionName )
+	bool CallFunction( CBaseEntity *pEntity, const char *pFunctionName, bool bWarnIfMissing = true )
 	{
-		if ( !m_pVM || !pFunctionName || !pFunctionName[0] )
+		if ( !pFunctionName || !pFunctionName[0] || !EnsureInitialized() )
 			return false;
 
 		HSQOBJECT scope = GetScope( pEntity );
@@ -156,7 +160,8 @@ public:
 		if ( SQ_FAILED( sq_get( m_pVM, -2 ) ) )
 		{
 			sq_settop( m_pVM, oldTop );
-			Warning( "[VSCRIPT] Missing script function: %s\n", pFunctionName );
+			if ( bWarnIfMissing )
+				Warning( "[VSCRIPT] Missing script function: %s\n", pFunctionName );
 			return false;
 		}
 
@@ -190,6 +195,38 @@ public:
 			sq_pushinteger( m_pVM, static_cast<SQInteger>( pEntity->GetRefEHandle().ToInt() ) );
 		else
 			sq_pushnull( m_pVM );
+	}
+
+	bool SetEntityGroup( CBaseEntity *pEntity, const string_t *pMemberNames, int memberCount )
+	{
+		if ( !pEntity || !pMemberNames || memberCount < 0 || !EnsureInitialized() )
+		{
+			Warning( "[VSCRIPT] EntityGroup prerequisites failed vm=%d entity=%d names=%d count=%d\n",
+				m_pVM != NULL, pEntity != NULL, pMemberNames != NULL, memberCount );
+			return false;
+		}
+
+		HSQOBJECT scope = GetScope( pEntity );
+		const SQInteger oldTop = sq_gettop( m_pVM );
+		sq_pushobject( m_pVM, scope );
+		sq_pushstring( m_pVM, "EntityGroup", -1 );
+		sq_newarray( m_pVM, 0 );
+		for ( int i = 0; i < memberCount; ++i )
+		{
+			CBaseEntity *pMember = NULL;
+			if ( pMemberNames[i] != NULL_STRING )
+				pMember = gEntList.FindEntityByName( NULL, STRING( pMemberNames[i] ), pEntity );
+			PushEntity( pMember );
+			sq_arrayappend( m_pVM, -2 );
+		}
+		const SQInteger slotTop = sq_gettop( m_pVM );
+		const SQRESULT result = sq_newslot( m_pVM, -3, SQFalse );
+		const bool ok = SQ_SUCCEEDED( result );
+		if ( !ok )
+			Warning( "[VSCRIPT] EntityGroup slot failed result=%lld top=%lld\n",
+				static_cast<long long>( result ), static_cast<long long>( slotTop ) );
+		sq_settop( m_pVM, oldTop );
+		return ok;
 	}
 
 	CBaseEntity *ExecutingEntity() const { return m_hExecutingEntity.Get(); }
@@ -273,6 +310,43 @@ private:
 			sq_newslot( vm, -3, SQFalse );
 		}
 		return 1;
+	}
+
+	static SQInteger NativeEntityGetName( HSQUIRRELVM vm )
+	{
+		CPortal2VScriptVM *self = FromVM( vm );
+		CBaseEntity *entity = self->EntityFromArg( 1 );
+		if ( !entity )
+			return sq_throwerror( vm, "GetName called on an invalid entity handle" );
+		sq_pushstring( vm, STRING( entity->GetEntityName() ), -1 );
+		return 1;
+	}
+
+	static SQInteger NativeSpawnEntityAtEntityOrigin( HSQUIRRELVM vm )
+	{
+		CPortal2VScriptVM *self = FromVM( vm );
+		CBaseEntity *maker = self->EntityFromArg( 1 );
+		CBaseEntity *destination = self->EntityFromArg( 2 );
+		if ( !maker || !destination )
+			return sq_throwerror( vm, "SpawnEntityAtEntityOrigin received an invalid entity handle" );
+		if ( !FClassnameIs( maker, "env_entity_maker" ) )
+			return sq_throwerror( vm, "SpawnEntityAtEntityOrigin requires an env_entity_maker" );
+
+		// The stock script binding receives an entity handle, while the legacy
+		// map input only accepts a targetname. Temporarily place the maker at the
+		// exact destination so duplicate targetnames remain deterministic.
+		const Vector oldOrigin = maker->GetAbsOrigin();
+		const QAngle oldAngles = maker->GetAbsAngles();
+		maker->SetAbsOrigin( destination->GetAbsOrigin() );
+		maker->SetAbsAngles( destination->GetAbsAngles() );
+		variant_t empty;
+		const bool accepted = maker->AcceptInput( "ForceSpawn", destination,
+			self->ExecutingEntity(), empty, 0 );
+		maker->SetAbsOrigin( oldOrigin );
+		maker->SetAbsAngles( oldAngles );
+		if ( !accepted )
+			return sq_throwerror( vm, "env_entity_maker rejected ForceSpawn" );
+		return 0;
 	}
 
 	static SQInteger NativeEntFire( HSQUIRRELVM vm )
@@ -377,6 +451,16 @@ private:
 		RegisterGlobal( "EntFireByHandle", NativeEntFireByHandle );
 		RegisterGlobal( "IncludeScript", NativeIncludeScript );
 
+		// Entity handles are packed integers in this compact VM. Extending the
+		// numeric delegate preserves handle identity while supporting the entity
+		// methods used by Portal 2's shipped scripts.
+		if ( SQ_SUCCEEDED( sq_getdefaultdelegate( m_pVM, OT_INTEGER ) ) )
+		{
+			RegisterTableFunction( "GetName", NativeEntityGetName );
+			RegisterTableFunction( "SpawnEntityAtEntityOrigin", NativeSpawnEntityAtEntityOrigin );
+			sq_pop( m_pVM, 1 );
+		}
+
 		sq_pushroottable( m_pVM );
 		sq_pushstring( m_pVM, "Entities", -1 );
 		sq_newtable( m_pVM );
@@ -467,10 +551,16 @@ CPortal2VScriptVM g_Portal2VScriptVM;
 class CPortal2LogicScript : public CPointEntity
 {
 public:
+	enum { MAX_SCRIPT_GROUP = 16 };
+
 	DECLARE_CLASS( CPortal2LogicScript, CPointEntity );
 	DECLARE_DATADESC();
 
-	CPortal2LogicScript() : m_iszScripts( NULL_STRING ) {}
+	CPortal2LogicScript() : m_iszScripts( NULL_STRING )
+	{
+		for ( int i = 0; i < MAX_SCRIPT_GROUP; ++i )
+			m_iszGroupMembers[i] = NULL_STRING;
+	}
 
 	void Spawn()
 	{
@@ -483,10 +573,23 @@ public:
 	{
 		if ( m_iszScripts == NULL_STRING )
 			return;
+
+		int lastMember = MAX_SCRIPT_GROUP - 1;
+		while ( lastMember >= 0 && m_iszGroupMembers[lastMember] == NULL_STRING )
+			--lastMember;
+		if ( !g_Portal2VScriptVM.SetEntityGroup( this, m_iszGroupMembers, lastMember + 1 ) )
+		{
+			Warning( "[VSCRIPT] Failed to create EntityGroup for %s\n", GetDebugName() );
+			return;
+		}
+
 		char scripts[1024];
 		V_strncpy( scripts, STRING( m_iszScripts ), sizeof( scripts ) );
+		bool loadedAny = false;
 		for ( char *script = strtok( scripts, " ;\t\r\n" ); script; script = strtok( NULL, " ;\t\r\n" ) )
-			Portal2VScriptRunFile( this, script );
+			loadedAny = Portal2VScriptRunFile( this, script ) || loadedAny;
+		if ( loadedAny )
+			g_Portal2VScriptVM.CallFunction( this, "OnPostSpawn", false );
 	}
 
 	void InputRunScriptCode( inputdata_t &data ) { Portal2VScriptRunCode( this, data.value.String() ); }
@@ -495,12 +598,29 @@ public:
 
 private:
 	string_t m_iszScripts;
+	string_t m_iszGroupMembers[MAX_SCRIPT_GROUP];
 };
 
 LINK_ENTITY_TO_CLASS( logic_script, CPortal2LogicScript );
 
 BEGIN_DATADESC( CPortal2LogicScript )
 	DEFINE_KEYFIELD( m_iszScripts, FIELD_STRING, "vscripts" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[0], FIELD_STRING, "Group00" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[1], FIELD_STRING, "Group01" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[2], FIELD_STRING, "Group02" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[3], FIELD_STRING, "Group03" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[4], FIELD_STRING, "Group04" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[5], FIELD_STRING, "Group05" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[6], FIELD_STRING, "Group06" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[7], FIELD_STRING, "Group07" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[8], FIELD_STRING, "Group08" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[9], FIELD_STRING, "Group09" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[10], FIELD_STRING, "Group10" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[11], FIELD_STRING, "Group11" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[12], FIELD_STRING, "Group12" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[13], FIELD_STRING, "Group13" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[14], FIELD_STRING, "Group14" ),
+	DEFINE_KEYFIELD( m_iszGroupMembers[15], FIELD_STRING, "Group15" ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "RunScriptCode", InputRunScriptCode ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "RunScriptFile", InputRunScriptFile ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "CallScriptFunction", InputCallScriptFunction ),
@@ -575,6 +695,67 @@ static void RunPortal2VScriptBasicTest()
 		Warning( "VSCRIPT_BASIC FAIL: script execution\n" );
 	}
 }
+
+static int CountEntitiesByClassname( const char *pClassname )
+{
+	int count = 0;
+	for ( CBaseEntity *entity = gEntList.FindEntityByClassname( NULL, pClassname ); entity;
+		  entity = gEntList.FindEntityByClassname( entity, pClassname ) )
+		++count;
+	return count;
+}
+
+static void RunPortal2ScriptNuggetTest()
+{
+	CBaseEntity *host = gEntList.FindEntityByName( NULL, "nugget_script" );
+	const int triggerCount = CountEntitiesByClassname( "trigger_once" );
+	const int modelCount = CountEntitiesByClassname( "cycler" );
+	bool awardOk = host && Portal2VScriptCallFunction( host, "AwardNugget" );
+	bool stateOk = awardOk && Portal2VScriptRunCode( host,
+		"if (number_of_nuggets != 6 || AwardedNuggetCount != 1) "
+		"throw \"script_nugget state mismatch\";",
+		"portal2_script_nugget_test" );
+
+	if ( host && triggerCount == 6 && modelCount == 6 && stateOk )
+	{
+		Msg( "PORTAL2_SCRIPT_NUGGET spawn_count=6 award=PASS\n" );
+		return;
+	}
+
+	Warning( "PORTAL2_SCRIPT_NUGGET FAIL host=%d triggers=%d models=%d award=%d state=%d\n",
+		host != NULL, triggerCount, modelCount, awardOk, stateOk );
+}
+
+class CPortal2ScriptNuggetTestSystem : public CAutoGameSystemPerFrame
+{
+public:
+	CPortal2ScriptNuggetTestSystem()
+		: CAutoGameSystemPerFrame( "Portal2ScriptNuggetTestSystem" ), m_bRan( false ),
+		  m_flFirstCheck( -1.0f ) {}
+
+	void LevelInitPreEntity() { m_bRan = false; m_flFirstCheck = -1.0f; }
+
+	void FrameUpdatePostEntityThink()
+	{
+		if ( m_bRan || !CommandLine()->FindParm( "-portal2_script_nugget_test" ) ||
+			 !gpGlobals || gpGlobals->curtime < 1.0f )
+			return;
+		if ( m_flFirstCheck < 0.0f )
+			m_flFirstCheck = gpGlobals->curtime;
+		const bool entitiesReady = CountEntitiesByClassname( "trigger_once" ) == 6 &&
+			CountEntitiesByClassname( "cycler" ) == 6;
+		if ( !entitiesReady && gpGlobals->curtime - m_flFirstCheck < 3.0f )
+			return;
+		m_bRan = true;
+		RunPortal2ScriptNuggetTest();
+	}
+
+private:
+	bool m_bRan;
+	float m_flFirstCheck;
+};
+
+CPortal2ScriptNuggetTestSystem g_Portal2ScriptNuggetTestSystem;
 
 class CPortal2VScriptBasicTestSystem : public CAutoGameSystemPerFrame
 {

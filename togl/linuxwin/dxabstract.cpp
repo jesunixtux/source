@@ -5752,7 +5752,13 @@ HRESULT IDirect3DDevice9::SetTransform(D3DTRANSFORMSTATETYPE State,CONST D3DMATR
 {
 	GL_BATCH_PERF_CALL_TIMER;
 	GL_PUBLIC_ENTRYPOINT_CHECKS( this );
-	DXABSTRACT_BREAK_ON_ERROR();
+	// TOGL does not expose a Direct3D fixed-function matrix stack. The shader
+	// API keeps the authoritative matrices and uploads them through shader
+	// constants; legacy fixed-function snapshots can still issue SetTransform
+	// while drawing fallback materials or VGUI. Treat that compatibility call
+	// as the successful no-op this function's return value already promised.
+	(void)State;
+	(void)pMatrix;
 	return S_OK;
 }
 
