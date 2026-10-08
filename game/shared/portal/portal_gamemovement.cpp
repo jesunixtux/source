@@ -48,6 +48,16 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+#if defined( PORTAL2_DLL ) && !defined( CLIENT_DLL )
+	// Portal 2 port: opt-in GroundEntity/BaseVelocity instrumentation
+	// (ALLAZGOS.md section 38). Server-side only; pairs with the PORTAL2_GROUND
+	// per-frame trace in portal2_map_compat.cpp. This override is the movement
+	// path that actually runs for the Portal 2 player (the base class
+	// CGameMovement::SetGroundEntity is not reached), so the transition log is
+	// placed here, not in gamemovement.cpp.
+	extern ConVar portal2_ground_probe;
+#endif
+
 ConVar sv_player_trace_through_portals("sv_player_trace_through_portals", "1", FCVAR_REPLICATED | FCVAR_CHEAT, "Causes player movement traces to trace through portals." );
 ConVar sv_player_funnel_into_portals("sv_player_funnel_into_portals", "1", FCVAR_REPLICATED, "Causes the player to auto correct toward the center of floor portals." ); 
 ConVar sv_player_funnel_snap_threshold("sv_player_funnel_snap_threshold", "10.f", FCVAR_REPLICATED);
@@ -1525,6 +1535,30 @@ void CPortalGameMovement::SetGroundEntity( trace_t *pm )
 
 	player->SetBaseVelocity( vecBaseVelocity );
 	player->SetGroundEntity( newGround );
+
+#if defined( PORTAL2_DLL ) && !defined( CLIENT_DLL )
+	// Portal 2 port instrumentation: report every ground transition with the
+	// base velocity that results from it, so the exact frame a ride loses its
+	// ground entity (ALLAZGOS.md sections 38-40) is visible in the log. This
+	// override reimplements CGameMovement::SetGroundEntity (and does not call
+	// the base), so the base-class log in gamemovement.cpp cannot capture these
+	// transitions for the Portal player.
+	if ( portal2_ground_probe.GetBool() && oldGround != newGround )
+	{
+		Msg( "PORTAL2_GROUND_SET tick=%d old=%s new=%s old_vel=(%.1f %.1f %.1f) new_vel=(%.1f %.1f %.1f) base_vel=(%.1f %.1f %.1f) new_flags=%d\n",
+			player->CurrentCommandNumber(),
+			oldGround ? oldGround->GetClassname() : "NULL",
+			newGround ? newGround->GetClassname() : "NULL",
+			oldGround ? oldGround->GetAbsVelocity().x : 0.0f,
+			oldGround ? oldGround->GetAbsVelocity().y : 0.0f,
+			oldGround ? oldGround->GetAbsVelocity().z : 0.0f,
+			newGround ? newGround->GetAbsVelocity().x : 0.0f,
+			newGround ? newGround->GetAbsVelocity().y : 0.0f,
+			newGround ? newGround->GetAbsVelocity().z : 0.0f,
+			vecBaseVelocity.x, vecBaseVelocity.y, vecBaseVelocity.z,
+			newGround ? newGround->GetFlags() : 0 );
+	}
+#endif // PORTAL2_DLL && !CLIENT_DLL ground transition probe
 
 	// If we are on something...
 

@@ -33,6 +33,8 @@ p.add_argument('--boss', action='store_true',
                help='run the opt-in Wheatley boss hit/phase regression on sp_a4_finale4')
 p.add_argument('--placement-helper', action='store_true',
                help='run the isolated info_placement_helper selection and state test')
+p.add_argument('--ground-probe', action='store_true',
+               help='log GroundEntity/BaseVelocity transitions and per-frame ride state (use with --elevator-transition)')
 p.add_argument('--extra-cvar', action='append', default=[], metavar='NAME=VALUE',
                help='append a +NAME VALUE pair to the engine command line (repeatable)')
 args = p.parse_args()
@@ -92,6 +94,8 @@ if args.boss:
     command += ['-portal2_boss_test']
 if args.placement_helper:
     command += ['-portal2_placement_helper_test']
+if args.ground_probe:
+    command += ['+portal2_ground_probe', '1']
 if args.no_prop_lighting:
     command += ['+r_proplightingfromdisk', '0']
 if args.portal_texture:
@@ -200,6 +204,9 @@ if args.intro2_exit:
 if args.phys_probe:
     passed = passed and 'PORTAL2_PHYS PASS settled' in text
     passed = passed and 'PORTAL2_PHYS FAIL' not in text
+if args.ground_probe:
+    passed = passed and 'PORTAL2_GROUND_SET ' in text
+    passed = passed and 'PORTAL2_GROUND tick=' in text
 if args.vscript:
     passed = passed and text.count('VSCRIPT_BASIC PASS') == 1
     passed = passed and 'VSCRIPT_BASIC FAIL' not in text
@@ -222,6 +229,8 @@ if args.intro2_exit:
     label = 'INTRO2 EXIT'
 if args.phys_probe:
     label = 'PHYS PROBE'
+if args.ground_probe:
+    label = 'GROUND PROBE'
 if args.vscript:
     label = 'VSCRIPT BASIC'
 if args.script_nugget:

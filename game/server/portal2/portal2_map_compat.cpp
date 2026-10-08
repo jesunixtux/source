@@ -12,6 +12,11 @@
 // the arrival adapter honours it after a plain changelevel (no player state).
 extern ConVar portal2_resume_portalgun;
 
+// Set by the arrival/departure runtimes and read by the -portal2_ground_probe
+// trace below, so the ride car's state keeps being logged even after the
+// player has lost contact with it (the ALLAZGOS.md section 40 failure mode).
+static EHANDLE g_pPortal2RideTrain;
+
 #define PORTAL2_PROXY_CHANNELS( MACRO ) \
     MACRO( 1 ) MACRO( 2 ) MACRO( 3 ) MACRO( 4 ) \
     MACRO( 5 ) MACRO( 6 ) MACRO( 7 ) MACRO( 8 ) \
@@ -64,6 +69,7 @@ public:
         if(!player || !destination || !m_train || !m_bottom)
         { Warning("PORTAL2_ARRIVAL missing player/car/destination/path\n"); return; }
         m_started=true;
+        g_pPortal2RideTrain=m_train;
         // MoveToPathNode is not an Orange Box train input. Use its supported
         // real-speed input on this two-node arrival path, then detect arrival.
         variant_t empty;
@@ -205,6 +211,7 @@ public:
         if(m_started) return;
         m_started=true;
         m_car=car;
+        g_pPortal2RideTrain=car;
         m_startTime=gpGlobals->curtime;
         variant_t speed; speed.SetFloat(200.0f);
         g_EventQueue.AddEvent(car,"SetSpeedReal",speed,0.0f,this,this);
@@ -449,6 +456,77 @@ private:
     int m_state; float m_spawnTime,m_pollTime,m_lastZ,m_lastVel; int m_stableCount;
 };
 static CPortal2PhysicsProbe g_Portal2PhysicsProbe;
+
+// Opt-in per-frame GroundEntity/BaseVelocity trace (ALLAZGOS.md sections
+// 38-40). Enabled with +portal2_ground_probe 1 (same ConVar as the
+// SetGroundEntity transition log in gamemovement.cpp). Logs every frame the
+// player is on or near the instrumented ride car, plus a few seconds after
+// the car parks, and always on a ground-entity change, so the first divergent
+// tick of an elevator descent can be located in the log.
+extern ConVar portal2_ground_probe;
+
+class CPortal2GroundProbe : public CAutoGameSystemPerFrame
+{
+public:
+    CPortal2GroundProbe() : CAutoGameSystemPerFrame("Portal2GroundProbe"),
+        m_windowEnd(-1.0f), m_lastGround(NULL) {}
+    void LevelInitPreEntity() { m_windowEnd=-1.0f; m_lastGround=NULL; }
+    void FrameUpdatePostEntityThink()
+    {
+        if(!portal2_ground_probe.GetBool()) return;
+        CBasePlayer *player=UTIL_GetLocalPlayer();
+        if(!player) return;
+        CBaseEntity *train=g_pPortal2RideTrain.Get();
+        if(train)
+        {
+            const float dist=player->GetAbsOrigin().DistTo(train->GetAbsOrigin());
+            if(dist<512.0f || train->GetAbsVelocity().LengthSqr()>1.0f)
+                m_windowEnd=gpGlobals->curtime+5.0f;
+        }
+        CBaseEntity *ground=player->GetGroundEntity();
+        const bool changed=ground!=m_lastGround.Get();
+        m_lastGround=ground;
+        if(gpGlobals->curtime>m_windowEnd && !changed) return;
+        const char *groundId="NULL";
+        if(ground)
+        {
+            const char *n=ground->GetEntityName().ToCStr();
+            groundId=(n&&n[0])?n:ground->GetClassname();
+        }
+        const char *trainId="none";
+        if(train)
+        {
+            const char *n=train->GetEntityName().ToCStr();
+            trainId=(n&&n[0])?n:train->GetClassname();
+        }
+        const Vector &baseVel=player->GetBaseVelocity();
+        Msg("PORTAL2_GROUND tick=%d t=%.3f ground=%s changed=%d train=%s "
+            "player_z=%.1f ground_z=%.1f ground_vel=(%.1f %.1f %.1f) "
+            "train_z=%.1f train_vel=(%.1f %.1f %.1f) "
+            "base_vel=(%.1f %.1f %.1f) player_vel=(%.1f %.1f %.1f) "
+            "onground=%d movetype=%d\n",
+            gpGlobals->tickcount,gpGlobals->curtime,groundId,changed?1:0,trainId,
+            player->GetAbsOrigin().z,
+            ground?ground->GetAbsOrigin().z:0.0f,
+            ground?ground->GetAbsVelocity().x:0.0f,
+            ground?ground->GetAbsVelocity().y:0.0f,
+            ground?ground->GetAbsVelocity().z:0.0f,
+            train?train->GetAbsOrigin().z:0.0f,
+            train?train->GetAbsVelocity().x:0.0f,
+            train?train->GetAbsVelocity().y:0.0f,
+            train?train->GetAbsVelocity().z:0.0f,
+            baseVel.x,baseVel.y,baseVel.z,
+            player->GetAbsVelocity().x,
+            player->GetAbsVelocity().y,
+            player->GetAbsVelocity().z,
+            (player->GetFlags()&FL_ONGROUND)?1:0,
+            (int)player->GetMoveType());
+    }
+private:
+    float m_windowEnd;
+    EHANDLE m_lastGround;
+};
+static CPortal2GroundProbe g_Portal2GroundProbe;
 
 // Portal 2's transition script sends the destination as the ChangeLevel input
 // parameter, unlike the old trigger_changelevel's map key. Use the engine's

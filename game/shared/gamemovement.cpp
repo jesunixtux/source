@@ -35,6 +35,15 @@ extern IFileSystem *filesystem;
 	static ConVar dispcoll_drawplane( "dispcoll_drawplane", "0" );
 #endif
 
+#if defined( PORTAL2_DLL ) && !defined( CLIENT_DLL )
+	// Portal 2 port: opt-in GroundEntity/BaseVelocity instrumentation
+	// (ALLAZGOS.md section 38). Server-side only. Consumed by the transition
+	// log in CPortalGameMovement::SetGroundEntity (portal_gamemovement.cpp) and
+	// the PORTAL2_GROUND per-frame trace in portal2_map_compat.cpp.
+	ConVar portal2_ground_probe( "portal2_ground_probe", "0", FCVAR_NONE,
+		"Log ground entity and base velocity transitions in server GameMovement." );
+#endif
+
 
 // tickcount currently isn't set during prediction, although gpGlobals->curtime and
 // gpGlobals->frametime are. We should probably set tickcount (to player->m_nTickBase),
