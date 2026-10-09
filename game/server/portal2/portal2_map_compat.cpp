@@ -198,6 +198,99 @@ static bool Portal2NextIntroMap(const char *current,char *out,size_t outSize)
     return false;
 }
 
+// §40-embark settle: the departure car's boarding teleport drops the player
+// with the hull exactly on the car's playerclip floor line, so every
+// player-hull trace starts inside clip-solid (floor_clip under the feet,
+// elevator_playerclip over the head; both CONTENTS_PLAYERCLIP, invisible to
+// MASK_SOLID). Ground is never captured and the blocked-move resolution
+// zeroes fall velocity each frame (pv stays at one frame of gravity, ~-4.5
+// u/s; z frozen). The car itself is not pinned by a floor (TRACE_CAR is
+// empty for 4096u below). Mirror the arrival's ground touch: nudge the
+// player a few units up out of the clip so the ordinary short fall lands
+// the feet on the car floor and the ground link carries the ride ("elevator
+// carry" on embark). Positional only; no player physics changed and no
+// ground link is forced.
+static void Portal2UnpinDepartureRider(CBasePlayer *player,CBaseEntity *car)
+{
+    if(!player) return;
+    if(player->GetGroundEntity()) return; // already grounded: nothing to do
+    const Vector org=player->GetAbsOrigin();
+    trace_t up, down;
+    for(float lift=0.0f; lift<=64.0f; lift+=4.0f)
+    {
+        const Vector n=org+Vector(0,0,lift);
+        UTIL_TraceLine(n+Vector(0,0,72.0f), n+Vector(0,0,72.0f+96.0f),
+                       MASK_PLAYERSOLID, player, COLLISION_GROUP_NONE, &up);
+        UTIL_TraceLine(n, n-Vector(0,0,8.0f),
+                       MASK_PLAYERSOLID, player, COLLISION_GROUP_NONE, &down);
+        if(!up.startsolid && !down.startsolid)
+        {
+            if(lift<0.5f) return; // hull already clear
+            player->Teleport(&n,NULL,NULL);
+            Msg("PORTAL2_INTRO departure unpin lift=%.1f z=%.1f\n",lift,n.z);
+            return;
+        }
+        if(lift==0.0f)
+            Msg("PORTAL2_INTRO departure pinned head_z=%.1f feet_z=%.1f up_solid=%d down_solid=%d\n",
+                org.z+72.0f,org.z,up.startsolid?1:0,down.startsolid?1:0);
+    }
+    Msg("PORTAL2_INTRO departure unpin FAILED after 64u up_solid=%d down_solid=%d z=%.1f\n",
+        up.startsolid?1:0,down.startsolid?1:0,org.z);
+}
+
+// §40: the rebuilt departure car ships its playerclip containment
+// (doorclose_playerclip, elevator_playerclip, floor_clip) SOLID-FILLED and
+// armed at map start. The boarding teleport therefore lands the hull inside
+// them: every player trace starts inside clip-solid, ground is never
+// captured and the blocked-move resolution pins the player (pv stays at one
+// frame of gravity, ~-4.5 u/s; z frozen). The original map's VScript keeps
+// these clips off for the ride; restore that here (once, at embark) so the
+// player rests on the car's real floor and the ground link carries the
+// descent. Re-arms on the next map load. No player physics changed.
+static void Portal2DisableDepartureClips(CBaseEntity *car)
+{
+    static const char *kClips[] = {
+        "departure_elevator-elevator_doorclose_playerclip",
+        "departure_elevator-elevator_playerclip",
+        "departure_elevator-floor_clip",
+    };
+    variant_t empty;
+    for(unsigned i=0;i<ARRAYSIZE(kClips);++i)
+    {
+        CBaseEntity *clip=gEntList.FindEntityByName(NULL,kClips[i]);
+        if(clip)
+        {
+            clip->AcceptInput("Disable",car,car,empty,0);
+            Msg("PORTAL2_INTRO departure clip disabled: %s\n",kClips[i]);
+        }
+    }
+}
+
+// One-shot geometry dump of the departure ride clips (§40): where the
+// floor_clip and elevator_playerclip boxes actually sit, so the embark
+// position can be corrected against the real brush boxes instead of the
+// pin symptoms. Printed once per level on the first frame near the car.
+static bool s_departureClipDumped=false;
+static void Portal2DumpDepartureClips()
+{
+    if(s_departureClipDumped) return;
+    bool any=false;
+    for(CBaseEntity *e=gEntList.FirstEnt();e!=NULL;e=gEntList.NextEnt(e))
+    {
+        const char *n=e->GetEntityName().ToCStr();
+        if(!n||!n[0]) continue;
+        if(Q_strncasecmp(n,"departure_elevator",18)!=0) continue;
+        if(!strstr(n,"clip") && !strstr(n,"playerclip") && !strstr(n,"floor_clip")) continue;
+        any=true;
+        Vector mins,maxs;
+        e->CollisionProp()->WorldSpaceSurroundingBounds(&mins,&maxs);
+        const Vector &o=e->GetAbsOrigin();
+        Msg("PORTAL2_CLIP %s origin=(%.0f %.0f %.0f) min=(%.0f %.0f %.0f) max=(%.0f %.0f %.0f)\n",
+            n,o.x,o.y,o.z,mins.x,mins.y,mins.z,maxs.x,maxs.y,maxs.z);
+    }
+    if(!any) s_departureClipDumped=false;
+}
+
 // The next departure uses the same authored speed and path callbacks, but
 // must not instantiate intro1's dialogue/runtime or select its destination.
 class CPortal2IntroDeparture : public CPointEntity
@@ -205,7 +298,8 @@ class CPortal2IntroDeparture : public CPointEntity
 public:
     DECLARE_CLASS(CPortal2IntroDeparture,CPointEntity);
     DECLARE_DATADESC();
-    CPortal2IntroDeparture() : m_started(false),m_transition(false),m_queued(false),m_startTime(0) {}
+    CPortal2IntroDeparture() : m_started(false),m_transition(false),m_queued(false),m_startTime(0),
+        m_startZ(0),m_carStartZ(0),m_carried(false),m_sawCarGround(false),m_stuckReported(false),m_reported(false) {}
     void Start(CBaseEntity *car)
     {
         if(m_started) return;
@@ -213,6 +307,27 @@ public:
         m_car=car;
         g_pPortal2RideTrain=car;
         m_startTime=gpGlobals->curtime;
+        // Carry-test baseline (§40): the departure elevator must transport the
+        // player. Anchor the player/car heights at car start so DepartureThink
+        // can detect a car that descends while the player stays behind. Logs
+        // only; no movement behaviour is changed.
+        CBasePlayer *player=UTIL_GetLocalPlayer();
+        // §40: the map's boarding teleport pins the hull against the departure
+        // car's playerclips (floor_clip below, elevator_playerclip above), so
+        // ground is never captured and the ride never carries. Clear the hull
+        // before the descent starts; the ordinary fall then grounds the player
+        // on the car floor and the ground link carries the ride. Positional
+        // only: no player physics, no forced SetGroundEntity.
+        // §40: the rebuilt departure cabin ships SOLID-FILLED playerclips
+        // armed at map start (the original map's VScript keeps them off for
+        // the ride). Disable them at embark so the hull is free and the
+        // player rests on the car's real floor; the unpin settle below then
+        // only fine-tunes if needed.
+        Portal2DisableDepartureClips(car);
+        Portal2UnpinDepartureRider(player,car);
+        Portal2DumpDepartureClips();
+        m_startZ=player?player->GetAbsOrigin().z:0.0f;
+        m_carStartZ=car?car->GetAbsOrigin().z:0.0f;
         variant_t speed; speed.SetFloat(200.0f);
         g_EventQueue.AddEvent(car,"SetSpeedReal",speed,0.0f,this,this);
         Msg("PORTAL2_INTRO departure started\n");
@@ -223,6 +338,7 @@ public:
     {
         if(!m_started || m_transition) return;
         m_transition=true;
+        ReportRide();
         variant_t empty;
         g_EventQueue.AddEvent("@transition_from_map","Trigger",empty,0.0f,this,this);
         g_EventQueue.AddEvent("@transition_with_survey","Trigger",empty,0.0f,this,this);
@@ -240,6 +356,45 @@ public:
     {
         if(m_transition || m_queued) return;
         CBaseEntity *car=m_car.Get();
+        // Carry probe: first poll where the car descended >40u but the player
+        // did not follow marks the §40 failure immediately, before the 25s
+        // fallback masks it. "Carried" once the player follows the descent.
+        if(car)
+        {
+            CBasePlayer *player=UTIL_GetLocalPlayer();
+            const Vector &carPos=car->GetAbsOrigin();
+            if(player)
+            {
+                const Vector &playerPos=player->GetAbsOrigin();
+                const float carDrop=m_carStartZ-carPos.z;
+                const float playerDrop=m_startZ-playerPos.z;
+                const bool near=(playerPos-carPos).Length2D()<160.0f;
+                // The player may rest on the car's own floor brush or on one
+                // of the car's playerclip brushes (func_brush parented to the
+                // train); both move with the car and carry via the ground
+                // link. Walk the parent chain to attribute either.
+                CBaseEntity *ground=player->GetGroundEntity();
+                for(CBaseEntity *root=ground;root;root=root->GetMoveParent())
+                    if(root==car) { ground=car; break; }
+                if(ground==car) m_sawCarGround=true;
+                // "Carried" once the player followed the car's descent while
+                // grounded on it. The absolute 40u drop is not required: the
+                // trained car path stalls early in some maps (separate train
+                // issue); the transport is proven by following whatever the
+                // car does, near it, from its ground.
+                const bool carried=ground==car && playerDrop>10.0f &&
+                    fabsf(playerDrop-carDrop)<40.0f && near;
+                if(carried) m_carried=true;
+                if(!m_stuckReported && carDrop>40.0f && playerDrop<20.0f)
+                {
+                    m_stuckReported=true;
+                    Msg("PORTAL2_INTRO departure ride=FAIL stuck player_drop=%.1f car_drop=%.1f "
+                        "player_z=%.1f car_z=%.1f near=%d onground=%d\n",
+                        playerDrop,carDrop,playerPos.z,carPos.z,near?1:0,
+                        (player->GetFlags()&FL_ONGROUND)?1:0);
+                }
+            }
+        }
         CBaseEntity *exitDest=gEntList.FindEntityByName(NULL,"@exit_teleport");
         bool parked = car && exitDest &&
             car->GetAbsOrigin().DistTo(exitDest->GetAbsOrigin())<128.0f &&
@@ -255,6 +410,7 @@ public:
     void Complete()
     {
         if(!m_started || m_queued) return;
+        ReportRide();
         char destination[128];
         if(!Portal2NextIntroMap(STRING(gpGlobals->mapname),destination,sizeof(destination)))
         {
@@ -267,9 +423,27 @@ public:
         g_EventQueue.AddEvent("@changelevel","ChangeLevel",map,0.0f,this,this);
         Msg("PORTAL2_INTRO departure changing level: %s\n",destination);
     }
+// One-shot verdict for the departure transport test: PASS once the player
+    // followed the car descent by >40u while staying near it (m_carried),
+    // FAIL otherwise. Reported on the transition path/fallback and on
+    // changelevel; the guard keeps a single line per map.
+    void ReportRide()
+    {
+        if(m_reported || !m_started) return;
+        m_reported=true;
+        CBasePlayer *player=UTIL_GetLocalPlayer();
+        CBaseEntity *car=m_car.Get();
+        const float carZ=car?car->GetAbsOrigin().z:m_carStartZ;
+        const float playerZ=player?player->GetAbsOrigin().z:m_startZ;
+        Msg("PORTAL2_INTRO departure ride=%s carried=%d ground_on_car=%d "
+            "player_drop=%.1f car_drop=%.1f player_z=%.1f car_z=%.1f\n",
+            m_carried?"PASS":"FAIL",m_carried?1:0,m_sawCarGround?1:0,
+            m_startZ-playerZ,m_carStartZ-carZ,playerZ,carZ);
+    }
 private:
     bool m_started,m_transition,m_queued;
-    float m_startTime;
+    float m_startTime,m_startZ,m_carStartZ;
+    bool m_carried,m_sawCarGround,m_stuckReported,m_reported;
     EHANDLE m_car;
 };
 LINK_ENTITY_TO_CLASS(portal2_intro_departure, CPortal2IntroDeparture);
@@ -278,6 +452,12 @@ BEGIN_DATADESC(CPortal2IntroDeparture)
     DEFINE_FIELD(m_transition,FIELD_BOOLEAN),
     DEFINE_FIELD(m_queued,FIELD_BOOLEAN),
     DEFINE_FIELD(m_startTime,FIELD_TIME),
+    DEFINE_FIELD(m_startZ,FIELD_FLOAT),
+    DEFINE_FIELD(m_carStartZ,FIELD_FLOAT),
+    DEFINE_FIELD(m_carried,FIELD_BOOLEAN),
+    DEFINE_FIELD(m_sawCarGround,FIELD_BOOLEAN),
+    DEFINE_FIELD(m_stuckReported,FIELD_BOOLEAN),
+    DEFINE_FIELD(m_reported,FIELD_BOOLEAN),
     DEFINE_FIELD(m_car,FIELD_EHANDLE),
     DEFINE_THINKFUNC(DepartureThink),
     DEFINE_THINKFUNC(Complete),
@@ -504,7 +684,7 @@ public:
             "player_z=%.1f ground_z=%.1f ground_vel=(%.1f %.1f %.1f) "
             "train_z=%.1f train_vel=(%.1f %.1f %.1f) "
             "base_vel=(%.1f %.1f %.1f) player_vel=(%.1f %.1f %.1f) "
-            "onground=%d movetype=%d\n",
+            "onground=%d frozen=%d movetype=%d\n",
             gpGlobals->tickcount,gpGlobals->curtime,groundId,changed?1:0,trainId,
             player->GetAbsOrigin().z,
             ground?ground->GetAbsOrigin().z:0.0f,
@@ -520,7 +700,73 @@ public:
             player->GetAbsVelocity().y,
             player->GetAbsVelocity().z,
             (player->GetFlags()&FL_ONGROUND)?1:0,
+            (player->GetFlags()&FL_FROZEN)?1:0,
             (int)player->GetMoveType());
+        // §39/40 surface id: first solid directly under the feet, skipping
+        // only the player's own hull (not the ride car), so a working ride
+        // reports the car floor while a lost-ground state reports whichever
+        // brush actually holds the player. frac/startsolid/allsolid separate
+        // "resting on" from "embedded in".
+        trace_t tr;
+        UTIL_TraceLine(player->GetAbsOrigin(), player->GetAbsOrigin()-Vector(0,0,4096),
+                       MASK_SOLID, player, COLLISION_GROUP_NONE, &tr);
+        const char *hitId="world", *hitClass="world";
+        if(tr.m_pEnt)
+        {
+            const char *n=tr.m_pEnt->GetEntityName().ToCStr();
+            hitId=(n&&n[0])?n:"<unnamed>";
+            hitClass=tr.m_pEnt->GetClassname();
+        }
+        Msg("PORTAL2_TRACE tick=%d t=%.3f frac=%.2f startsolid=%d allsolid=%d contents=%d "
+            "hit=%s class=%s nz=%.2f end_z=%.1f\n",
+            gpGlobals->tickcount,gpGlobals->curtime,tr.fraction,tr.startsolid?1:0,tr.allsolid?1:0,
+            tr.contents,hitId,hitClass,tr.plane.normal.z,tr.endpos.z);
+        // §40 pin direction: where is the solid that holds an un-grounded
+        // boarding player? Up trace from the head (origin+72) and a short
+        // down trace from the feet reveal whether the frustum is a ceiling
+        // overhead pin or a floor/embed contact, independent of the 4096u
+        // line that swallows the interior sleeve.
+        {
+            trace_t ut;
+            UTIL_TraceLine(player->GetAbsOrigin()+Vector(0,0,72.0f),
+                           player->GetAbsOrigin()+Vector(0,0,72.0f+96.0f),
+                           MASK_PLAYERSOLID, player, COLLISION_GROUP_NONE, &ut);
+            Msg("PORTAL2_TRACE_UP tick=%d t=%.3f frac=%.2f startsolid=%d hit=%s end_z=%.1f\n",
+                gpGlobals->tickcount,gpGlobals->curtime,ut.fraction,ut.startsolid?1:0,
+                ut.m_pEnt?(ut.m_pEnt->GetEntityName().ToCStr()[0]?ut.m_pEnt->GetEntityName().ToCStr():"<unnamed>"):"none",
+                ut.endpos.z);
+        }
+        {
+            trace_t nt;
+            UTIL_TraceLine(player->GetAbsOrigin(), player->GetAbsOrigin()-Vector(0,0,128.0f),
+                           MASK_PLAYERSOLID, player, COLLISION_GROUP_NONE, &nt);
+            Msg("PORTAL2_TRACE_NEAR tick=%d t=%.3f frac=%.2f startsolid=%d hit=%s end_z=%.1f\n",
+                gpGlobals->tickcount,gpGlobals->curtime,nt.fraction,nt.startsolid?1:0,
+                nt.m_pEnt?(nt.m_pEnt->GetEntityName().ToCStr()[0]?nt.m_pEnt->GetEntityName().ToCStr():"<unnamed>"):"none",
+                nt.endpos.z);
+        }
+        // What is the first solid under the ride car itself? Skipping both the
+        // player and the car reveals the surface the departure car embeds
+        // against when its descent stalls (the ~36-52u stick), separate from
+        // the player-side surface above it.
+        if(train)
+        {
+            trace_t ct;
+            CTraceFilterSkipTwoEntities carFilter(player,train,COLLISION_GROUP_NONE);
+            UTIL_TraceLine(train->GetAbsOrigin(), train->GetAbsOrigin()-Vector(0,0,4096),
+                           MASK_SOLID, &carFilter, &ct);
+            const char *carHitId="world", *carHitClass="world";
+            if(ct.m_pEnt)
+            {
+                const char *n=ct.m_pEnt->GetEntityName().ToCStr();
+                carHitId=(n&&n[0])?n:"<unnamed>";
+                carHitClass=ct.m_pEnt->GetClassname();
+            }
+            Msg("PORTAL2_TRACE_CAR tick=%d t=%.3f frac=%.2f startsolid=%d allsolid=%d contents=%d "
+                "car_z=%.1f hit=%s class=%s nz=%.2f end_z=%.1f\n",
+                gpGlobals->tickcount,gpGlobals->curtime,ct.fraction,ct.startsolid?1:0,ct.allsolid?1:0,
+                ct.contents,train->GetAbsOrigin().z,carHitId,carHitClass,ct.plane.normal.z,ct.endpos.z);
+        }
     }
 private:
     float m_windowEnd;

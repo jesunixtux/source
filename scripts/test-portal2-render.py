@@ -196,6 +196,9 @@ if args.buttons:
 if args.intro2_exit:
     passed = passed and 'PORTAL2_INTRO_EXIT entered departure car in ' in text
     passed = passed and 'PORTAL2_INTRO departure started' in text
+    passed = passed and 'PORTAL2_INTRO departure ride=PASS' in text
+    passed = passed and 'PORTAL2_INTRO departure ride=FAIL' not in text
+    passed = passed and 'PORTAL2_TRACE tick=' in text
     passed = passed and 'Portal2 level transition: ' in text
     passed = passed and ('departure fallback' in text or 'PORTAL2_INTRO departure path reached' in text)
     passed = passed and text.count('PORTAL2_ARRIVAL ride=PASS') >= 2
