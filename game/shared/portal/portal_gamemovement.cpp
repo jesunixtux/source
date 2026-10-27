@@ -1364,8 +1364,10 @@ void CPortalGameMovement::CategorizePosition( void )
 				mv->m_nPlayerHandle.Get(), MASK_PLAYERSOLID, COLLISION_GROUP_PLAYER_MOVEMENT,
 				pm, -m_vGravityDirection );
 			UnlockTraceFilter( pFilter );
+			// The quadrant retry replaces pm.plane.normal, so classify its result.
+			const float subBoxTraceNormalAngle = DotProduct( pm.plane.normal, stickNormal );
 
-			if ( !pm.m_pEnt || (( traceNormalAngle < flStandableAngle ) && !pm.HitPortalRamp(stickNormal)) || bRampLaunch )
+			if ( !pm.m_pEnt || (( subBoxTraceNormalAngle < flStandableAngle ) && !pm.HitPortalRamp(stickNormal)) || bRampLaunch )
 			{
 				//DiffPrint( "Categorize() failed to find new one" );
 				SetGroundEntity( NULL );

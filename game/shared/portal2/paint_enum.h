@@ -9,19 +9,14 @@
 
 enum PaintPowerType
 {
-	INVALID_PAINT_POWER = -1,
-	SPEED_POWER = 0,
-	BOUNCE_POWER,
-	CLEANSER_POWER,
+	BOUNCE_POWER = 0,
 	REFLECT_POWER,
+	SPEED_POWER,
 	PORTAL_POWER,
-	VISUALIZER_POWER,
 	NO_POWER,
-	PAINT_POWER_TYPE_COUNT,
-
-	// Force an extra slot so we can always allocate one past the count, even
-	// when NO_POWER is the enum value being used.
-	PAINT_POWER_TYPE_COUNT_PLUS_NO_POWER
+	PAINT_POWER_TYPE_COUNT = NO_POWER,
+	PAINT_POWER_TYPE_COUNT_PLUS_NO_POWER,
+	INVALID_PAINT_POWER = -1
 };
 
 #endif // ifndef PAINT_ENUM_H

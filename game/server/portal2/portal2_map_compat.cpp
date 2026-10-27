@@ -49,9 +49,9 @@ BEGIN_DATADESC( CPortal2InstanceIOProxy )
 #undef PORTAL2_DESCRIBE_PROXY
 END_DATADESC()
 
-// intro2..intro5 start in a sealed transition room. OnPostTransition must
+// intro2..intro7 start in a sealed transition room. OnPostTransition must
 // put the player in the authored arrival car, not leave them at player_start.
-// This adapter is deliberately limited to the intro car rig (intro2..intro5)
+// This adapter is deliberately limited to the intro car rig (intro2..intro7)
 // and does not emulate the general Portal 2 campaign/landmark persistence.
 class CPortal2ArrivalRuntime : public CPointEntity
 {
@@ -173,7 +173,8 @@ bool Portal2RunArrivalScript(CBaseEntity *host,const char *code)
 {
     const char *map=STRING(gpGlobals->mapname);
     if((!FStrEq(map,"sp_a1_intro2") && !FStrEq(map,"sp_a1_intro3") &&
-        !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5")) ||
+        !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5") &&
+        !FStrEq(map,"sp_a1_intro6") && !FStrEq(map,"sp_a1_intro7")) ||
        !FStrEq(host->GetEntityName().ToCStr(),"@transition_script") ||
        (!FStrEq(code,"OnPostTransition()") && !FStrEq(code,"OnPostTransition"))) return false;
     CPortal2ArrivalRuntime *runtime=dynamic_cast<CPortal2ArrivalRuntime *>(gEntList.FindEntityByClassname(NULL,"portal2_arrival_runtime"));
@@ -183,7 +184,7 @@ bool Portal2RunArrivalScript(CBaseEntity *host,const char *code)
     return true;
 }
 
-// Departure linkage for the homogeneous intro car chain (intro2..intro5).
+// Departure linkage for the homogeneous intro car chain (intro2..intro6).
 // Each map uses the same car, teleport and transition relays; the destination
 // is looked up here instead of the BSP so one adapter drives the whole chain.
 static bool Portal2NextIntroMap(const char *current,char *out,size_t outSize)
@@ -192,6 +193,8 @@ static bool Portal2NextIntroMap(const char *current,char *out,size_t outSize)
         {"sp_a1_intro2","sp_a1_intro3"},
         {"sp_a1_intro3","sp_a1_intro4"},
         {"sp_a1_intro4","sp_a1_intro5"},
+        {"sp_a1_intro5","sp_a1_intro6"},
+        {"sp_a1_intro6","sp_a1_intro7"},
     };
     for(unsigned i=0;i<ARRAYSIZE(kNext);++i)
         if(FStrEq(current,kNext[i].from)) { Q_strncpy(out,kNext[i].to,outSize); return true; }
@@ -466,8 +469,22 @@ END_DATADESC()
 bool Portal2RunIntroDepartureScript(CBaseEntity *host,const char *code)
 {
     const char *map=STRING(gpGlobals->mapname);
+    const char *chapterDestination=FStrEq(map,"sp_a1_wakeup")?"sp_a1_intro1":
+        FStrEq(map,"sp_a1_intro7")?"sp_a2_intro":NULL;
+    if(chapterDestination)
+    {
+        if(!FStrEq(host->GetEntityName().ToCStr(),"@transition_script") ||
+           !FStrEq(code,"TransitionFromMap()")) return false;
+        variant_t empty, destination;
+        destination.SetString(AllocPooledString(chapterDestination));
+        g_EventQueue.AddEvent("@transition_from_map","Trigger",empty,0,host,host);
+        g_EventQueue.AddEvent("@changelevel","ChangeLevel",destination,2.0f,host,host);
+        Msg("PORTAL2_INTRO chapter transition: %s -> %s\n",map,chapterDestination);
+        return true;
+    }
     if(!FStrEq(map,"sp_a1_intro2") && !FStrEq(map,"sp_a1_intro3") &&
-       !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5")) return false;
+       !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5") &&
+       !FStrEq(map,"sp_a1_intro6")) return false;
     const char *name=host->GetEntityName().ToCStr();
     const bool start=FStrEq(name,"departure_elevator-elevator_1") && FStrEq(code,"StartMoving()");
     const bool ready=FStrEq(name,"departure_elevator-elevator_1_player_teleport") &&
@@ -483,9 +500,34 @@ bool Portal2RunIntroDepartureScript(CBaseEntity *host,const char *code)
     return true;
 }
 
+class CPortal2ChapterTransitionTest : public CAutoGameSystemPerFrame
+{
+public:
+    CPortal2ChapterTransitionTest() : CAutoGameSystemPerFrame("Portal2ChapterTransitionTest"),m_start(-1),m_done(false) {}
+    void LevelInitPreEntity() { m_start=-1; m_done=false; }
+    void FrameUpdatePostEntityThink()
+    {
+        if(m_done || !CommandLine()->FindParm("-portal2_chapter_transition_test")) return;
+        const char *map=STRING(gpGlobals->mapname);
+        if(!FStrEq(map,"sp_a1_wakeup") && !FStrEq(map,"sp_a1_intro7")) return;
+        if(!UTIL_GetLocalPlayer()) return;
+        if(m_start<0) m_start=gpGlobals->curtime;
+        if(gpGlobals->curtime-m_start<3.0f) return;
+        CBaseEntity *script=gEntList.FindEntityByName(NULL,"@transition_script");
+        m_done=true;
+        if(!script || !Portal2RunIntroDepartureScript(script,"TransitionFromMap()"))
+        { Warning("PORTAL2_CHAPTER_TRANSITION FAIL map=%s\n",map); return; }
+        Msg("PORTAL2_CHAPTER_TRANSITION requested map=%s\n",map);
+    }
+private:
+    float m_start;
+    bool m_done;
+};
+static CPortal2ChapterTransitionTest g_Portal2ChapterTransitionTest;
+
 // Opt-in integration fixture: enter the actual departure trigger, without
 // sending StartMoving or ChangeLevel directly. Never active in normal play.
-// Runs on any intro chain map so the intro3/intro4 departures can be
+// Runs on any intro chain map so intro2..intro6 departures can be
 // exercised the same way as intro2.
 class CPortal2Intro2ExitTest : public CAutoGameSystemPerFrame
 {
@@ -498,7 +540,8 @@ public:
                       !CommandLine()->FindParm("-portal2_intro_exit_test"))) return;
         const char *map=STRING(gpGlobals->mapname);
         if(!FStrEq(map,"sp_a1_intro2") && !FStrEq(map,"sp_a1_intro3") &&
-           !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5")) return;
+           !FStrEq(map,"sp_a1_intro4") && !FStrEq(map,"sp_a1_intro5") &&
+           !FStrEq(map,"sp_a1_intro6")) return;
         CBasePlayer *player=UTIL_GetLocalPlayer();
         if(!player || !player->IsAlive()) return;
         if(m_start<0) m_start=gpGlobals->curtime;
@@ -517,7 +560,7 @@ static CPortal2Intro2ExitTest g_Portal2Intro2ExitTest;
 
 // One-line per-map probe of which intro rig entities are present, dumped on
 // the first post-entity frame after loading any intro map. Diagnoses maps
-// whose arrival/departure rig renames the homogeneous intro2..intro5 chain.
+// whose arrival/departure rig renames the homogeneous intro2..intro6 chain.
 static int Portal2RigNameCompare(const CUtlString *a,const CUtlString *b)
 { return Q_stricmp(a->String(),b->String()); }
 class CPortal2RigProbe : public CAutoGameSystemPerFrame
@@ -531,7 +574,8 @@ public:
         const char *map=STRING(gpGlobals->mapname);
         if(!FStrEq(map,"sp_a1_intro1") && !FStrEq(map,"sp_a1_intro2") &&
            !FStrEq(map,"sp_a1_intro3") && !FStrEq(map,"sp_a1_intro4") &&
-           !FStrEq(map,"sp_a1_intro5")) return;
+           !FStrEq(map,"sp_a1_intro5") && !FStrEq(map,"sp_a1_intro6") &&
+           !FStrEq(map,"sp_a1_intro7")) return;
         m_dumped=true;
         static const char *kPrefixes[]={
             "arrival_","departure_","@arrival_","@elevator_",

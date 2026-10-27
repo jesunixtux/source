@@ -3379,7 +3379,7 @@ IVTFTexture *CTexture::HandleFileLoadFailedTexture( IVTFTexture *pVTFTexture )
 {
 	// create the error texture
 
-	// This will make a checkerboard texture to indicate failure
+	// Create the fallback pixels; the error flag and material warnings preserve failure visibility.
 	pVTFTexture->Init( 32, 32, 1, IMAGE_FORMAT_BGRA8888, m_nFlags, 1 );
 	Init( pVTFTexture->Width(), pVTFTexture->Height(), pVTFTexture->Depth(), pVTFTexture->Format(), 
 		  pVTFTexture->Flags(), pVTFTexture->FrameCount() );
@@ -3395,7 +3395,7 @@ IVTFTexture *CTexture::HandleFileLoadFailedTexture( IVTFTexture *pVTFTexture )
 
 	
 
-	// generate the checkerboard
+	// generate the configured fallback texture
 	TextureManager()->GenerateErrorTexture( this, pVTFTexture );
 	ConvertToActualFormat( pVTFTexture );
 

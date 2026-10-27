@@ -12,6 +12,14 @@ class CPaintSprayer : public CBaseEntity
 {
 public:
 	DECLARE_CLASS( CPaintSprayer, CBaseEntity );
+	#ifdef PORTAL2
+	DECLARE_DATADESC();
+	void Spawn() override;
+	void PaintSprayerThink();
+	void InputStart( inputdata_t &inputdata );
+	void InputStop( inputdata_t &inputdata );
+	void InputChangePaintType( inputdata_t &inputdata );
+	#endif
 	void SprayPaint( float flDeltaTime );
 	CHandle<CPaintStream> m_hPaintStream;
 	int m_PaintPowerType = NO_POWER, m_nAmbientSound = 0, m_nBlobRandomSeed = 0, m_nMaxBlobCount = 128;
@@ -20,6 +28,10 @@ public:
 	float m_flMinStreakTime = 0, m_flMaxStreakTime = 0, m_flMinStreakSpeedDampen = 0, m_flMaxStreakSpeedDampen = 0;
 	float m_flNoisyBlobPercentage = 0, m_flPercentageSinceLastNoisyBlob = 0;
 	bool m_bSilent = false, m_bDrawOnly = false;
+	#ifdef PORTAL2
+	bool m_bStartActive = true, m_bActive = false;
+	bool m_bPaintProbeLoggedThink = false;
+	#endif
 };
 
 #endif

@@ -75,10 +75,12 @@ private:
 
 	// Entities that get created during a frame are remembered here.
 	unsigned short m_EntsCreatedIndices[MAX_EDICTS];
+	int m_EntsCreatedSerials[MAX_EDICTS];
 	int m_nEntsCreated;
 
 	// Entities that changed but weren't created go here.	
 	unsigned short m_EntsChangedIndices[MAX_EDICTS];
+	int m_EntsChangedSerials[MAX_EDICTS];
 	int m_nEntsChanged;
 
 	// Tell the client DLL about entities that need to be notified about being dormant.

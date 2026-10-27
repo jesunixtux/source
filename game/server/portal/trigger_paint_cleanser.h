@@ -1,14 +1,20 @@
 #ifndef TRIGGER_PAINT_CLEANSER_H
 #define TRIGGER_PAINT_CLEANSER_H
 
-#include "baseentity.h"
+#include "triggers.h"
 
-// Compatibility surface for the paint blob tracer.  Maps that do not ship
-// the original cleanser entity simply behave as if no cleanser was enabled.
-class CTriggerPaintCleanser : public CBaseEntity
+class CTriggerPaintCleanser : public CBaseTrigger
 {
+    DECLARE_CLASS( CTriggerPaintCleanser, CBaseTrigger );
+
 public:
-	bool IsEnabled() const { return false; }
+    void Spawn() override
+    {
+        BaseClass::Spawn();
+        InitTrigger();
+    }
+
+    bool IsEnabled() const { return !m_bDisabled; }
 };
 
 #endif

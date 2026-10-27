@@ -22,7 +22,7 @@ namespace CEG
 	// They are resolved from the paint enum and bsp flags:
 	//   - PaintSpeedPower     -> SPEED_POWER
 	//   - PaintBouncePower    -> BOUNCE_POWER
-	//   - PaintCleanserPower  -> CLEANSER_POWER
+	//   - PaintCleanserPower  -> NO_POWER (erase)
 	//   - PaintReflectPower   -> REFLECT_POWER
 	//   - PaintPortalPower    -> PORTAL_POWER
 	//   - SurfNoPortalFlag    -> SURF_NOPORTAL
@@ -30,7 +30,7 @@ namespace CEG
 	//   - SurfNoportalFlag    -> SURF_NOPORTAL
 	static const int PaintSpeedPower	= SPEED_POWER;
 	static const int PaintBouncePower	= BOUNCE_POWER;
-	static const int PaintCleanserPower = CLEANSER_POWER;
+	static const int PaintCleanserPower = NO_POWER;
 	static const int PaintReflectPower	= REFLECT_POWER;
 	static const int PaintPortalPower	= PORTAL_POWER;
 	static const int SurfNoPortalFlag	= SURF_NOPORTAL;

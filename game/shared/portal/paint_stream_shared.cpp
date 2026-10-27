@@ -52,6 +52,12 @@ void CPaintStream::RemoveAllPaintBlobs( void )
 {
 #ifdef CLIENT_DLL
 	RemoveFromLeafSystem();
+#elif defined( PORTAL2 )
+	for ( int i = 0; i < m_blobs.Count(); ++i )
+	{
+		PaintStreamManager.FreeBlob( m_blobs[i] );
+	}
+	m_blobs.RemoveAll();
 #endif
 }
 

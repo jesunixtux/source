@@ -20,8 +20,14 @@ class CPaintStream : public CBaseEntity, public IPaintStreamAutoList
 {
 public:
 	DECLARE_CLASS( CPaintStream, CBaseEntity );
+	#ifndef PORTAL2
 	DECLARE_SERVERCLASS();
+	#endif
 	DECLARE_DATADESC();
+	#ifdef PORTAL2
+	void Spawn() override;
+	int UpdateTransmitState() override;
+	#endif
 
 	CPaintStream() : m_nPaintType( NO_POWER ), m_nRenderMode( BLOB_RENDER_BLOBULATOR ), m_nMaxBlobCount( 128 ), m_vCachedWorldMins( vec3_origin ), m_vCachedWorldMaxs( vec3_origin ) {}
 	virtual ~CPaintStream() {}

@@ -10,11 +10,20 @@
 #include "eiface.h"
 #include "cdll_engine_int.h"
 #include "dt_localtransfer.h"
+#include "basehandle.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 CLocalNetworkBackdoor *g_pLocalNetworkBackdoor = NULL;
+
+static bool IsCurrentNetworkable( int iEnt, int iSerialNum, IClientNetworkable *pNetworkable )
+{
+	if ( iEnt < 0 || iEnt >= MAX_EDICTS || !pNetworkable )
+		return false;
+
+	return entitylist->GetClientNetworkableFromHandle( CBaseHandle( iEnt, iSerialNum ) ) == pNetworkable;
+}
 
 #ifndef SWDS
 // This is called 
@@ -104,8 +113,16 @@ void CLocalNetworkBackdoor::EndEntityStateUpdate()
 		int iEdict = m_EntsCreatedIndices[i];
 		CCachedEntState *pCached = &m_CachedEntState[iEdict];
 		IClientNetworkable *pNet = pCached->m_pNetworkable;
+		if ( pCached->m_iSerialNumber != m_EntsCreatedSerials[i] ||
+			!IsCurrentNetworkable( iEdict, m_EntsCreatedSerials[i], pNet ) )
+		{
+			AssertOnce( !"EndEntityStateUpdate: skipping stale created entity update" );
+			continue;
+		}
 
 		pNet->PostDataUpdate( DATA_UPDATE_CREATED );
+		if ( !IsCurrentNetworkable( iEdict, m_EntsCreatedSerials[i], pNet ) )
+			continue;
 		pNet->NotifyShouldTransmit( SHOULDTRANSMIT_START );
 		pCached->m_bDormant = false;
 	}
@@ -116,7 +133,16 @@ void CLocalNetworkBackdoor::EndEntityStateUpdate()
 		MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 
 		int iEdict = m_EntsChangedIndices[i];
-		m_CachedEntState[iEdict].m_pNetworkable->PostDataUpdate( DATA_UPDATE_DATATABLE_CHANGED );
+		CCachedEntState *pCached = &m_CachedEntState[iEdict];
+		IClientNetworkable *pNet = pCached->m_pNetworkable;
+		if ( pCached->m_iSerialNumber != m_EntsChangedSerials[i] ||
+			!IsCurrentNetworkable( iEdict, m_EntsChangedSerials[i], pNet ) )
+		{
+			AssertOnce( !"EndEntityStateUpdate: skipping stale changed entity update" );
+			continue;
+		}
+
+		pNet->PostDataUpdate( DATA_UPDATE_DATATABLE_CHANGED );
 	}
 
 	ClientDLL_FrameStageNotify( FRAME_NET_UPDATE_POSTDATAUPDATE_END );
@@ -140,14 +166,19 @@ void CLocalNetworkBackdoor::EndEntityStateUpdate()
 					int iEdict = (i<<5) + iBit;
 					if ( iEdict >= 0 && iEdict < MAX_EDICTS )
 					{
-						if ( m_CachedEntState[iEdict].m_pNetworkable )
+						CCachedEntState &cached = m_CachedEntState[iEdict];
+						IClientNetworkable *pNet = cached.m_pNetworkable;
+						if ( pNet && IsCurrentNetworkable( iEdict, cached.m_iSerialNumber, pNet ) )
 						{
-							m_CachedEntState[iEdict].m_pNetworkable->Release();
-							m_CachedEntState[iEdict].m_pNetworkable = NULL;
+							pNet->Release();
+							cached.m_pNetworkable = NULL;
+							cached.m_iSerialNumber = -1;
 						}
 						else
 						{
-							AssertOnce( !"EndEntityStateUpdate:  Would have crashed with NULL m_pNetworkable\n" );
+							AssertOnce( !"EndEntityStateUpdate: skipping stale deleted entity" );
+							cached.m_pNetworkable = NULL;
+							cached.m_iSerialNumber = -1;
 						}
 					}
 					else
@@ -195,10 +226,16 @@ void CLocalNetworkBackdoor::EntityDormant( int iEnt, int iSerialNum )
 	CCachedEntState *pCached = &m_CachedEntState[iEnt];
 
 	IClientNetworkable *pNet = pCached->m_pNetworkable;
-	Assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
+	if ( pNet && !IsCurrentNetworkable( iEnt, pCached->m_iSerialNumber, pNet ) )
+	{
+		pNet = NULL;
+		pCached->m_pNetworkable = NULL;
+		pCached->m_iSerialNumber = -1;
+		pCached->m_pDataPointer = NULL;
+		m_PrevEntsAlive.Clear( iEnt );
+	}
 	if ( pNet )
 	{
-		Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 		if ( pCached->m_iSerialNumber == iSerialNum )
 		{
 			m_EntsAlive.Set( iEnt );
@@ -261,6 +298,28 @@ void CLocalNetworkBackdoor::EntState(
 					 bool bShouldTransmit )
 {
 	CCachedEntState *pCached = &m_CachedEntState[iEnt];
+	IClientNetworkable *pNet = pCached->m_pNetworkable;
+	bool bCachedEntityReplaced = false;
+	if ( pNet && !IsCurrentNetworkable( iEnt, pCached->m_iSerialNumber, pNet ) )
+	{
+		pNet = entitylist->GetClientNetworkableFromHandle( CBaseHandle( iEnt, iSerialNum ) );
+		if ( pNet )
+		{
+			bCachedEntityReplaced = true;
+			pCached->m_pNetworkable = pNet;
+			pCached->m_iSerialNumber = iSerialNum;
+			pCached->m_pDataPointer = pNet->GetDataTableBasePtr();
+			pCached->m_bDormant = pNet->IsDormant();
+		}
+		else
+		{
+			pNet = NULL;
+			pCached->m_pNetworkable = NULL;
+			pCached->m_iSerialNumber = -1;
+			pCached->m_pDataPointer = NULL;
+			m_PrevEntsAlive.Clear( iEnt );
+		}
+	}
 
 	// Remember that this ent is alive.
 	m_EntsAlive.Set(iEnt);
@@ -269,14 +328,10 @@ void CLocalNetworkBackdoor::EntState(
 	if ( !pClientClass )
 		Error( "CLocalNetworkBackdoor::EntState - missing client class %d", iClass );
 
-	IClientNetworkable *pNet = pCached->m_pNetworkable;
-	Assert( pNet == entitylist->GetClientNetworkable( iEnt ) );
-
 	if ( !bShouldTransmit )
 	{
 		if ( pNet )
 		{
-			Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 			if ( pCached->m_iSerialNumber == iSerialNum )
 			{
 				// Tell the game code that this guy is now dormant.
@@ -303,12 +358,16 @@ void CLocalNetworkBackdoor::EntState(
 		}
 		return;
 	}
+	if ( bCachedEntityReplaced )
+	{
+		m_EntsCreatedIndices[m_nEntsCreated] = iEnt;
+		m_EntsCreatedSerials[m_nEntsCreated++] = iSerialNum;
+	}
 	// Do we have an entity here already?
 	bool bExistedAndWasDormant = false;
 	if ( pNet )
 	{
 		// If the serial numbers are different, make it recreate the ent.
-		Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 		if ( iSerialNum == pCached->m_iSerialNumber )
 		{
 			bExistedAndWasDormant = pCached->m_bDormant;
@@ -322,18 +381,19 @@ void CLocalNetworkBackdoor::EntState(
 	}
 
 	// Create the entity?
-	bool bCreated = false;
-	DataUpdateType_t updateType;
+	bool bCreated = bCachedEntityReplaced;
+	DataUpdateType_t updateType = bCreated ? DATA_UPDATE_CREATED : DATA_UPDATE_DATATABLE_CHANGED;
 	if ( pNet )
 	{
-		updateType = DATA_UPDATE_DATATABLE_CHANGED;
+		// A reused entity was found by its current serial above.
 	}
 	else		
 	{
 		updateType = DATA_UPDATE_CREATED;
 		pNet = pClientClass->m_pCreateFn( iEnt, iSerialNum );
 		bCreated = true;
-		m_EntsCreatedIndices[m_nEntsCreated++] = iEnt;
+		m_EntsCreatedIndices[m_nEntsCreated] = iEnt;
+		m_EntsCreatedSerials[m_nEntsCreated++] = iSerialNum;
 
 		pCached->m_iSerialNumber = iSerialNum;
 		pCached->m_pDataPointer = pNet->GetDataTableBasePtr();
@@ -360,16 +420,18 @@ void CLocalNetworkBackdoor::EntState(
 			bExistedAndWasDormant,
 			iEnt );
 
-		if ( bExistedAndWasDormant )
+		if ( bExistedAndWasDormant && !bCachedEntityReplaced )
 		{
 			// Set this so we use DATA_UPDATE_CREATED logic
 			m_EntsCreatedIndices[m_nEntsCreated++] = iEnt;
+			m_EntsCreatedSerials[m_nEntsCreated - 1] = iSerialNum;
 		}
 		else
 		{
 			if ( !bCreated )
 			{
 				m_EntsChangedIndices[m_nEntsChanged++] = iEnt;
+				m_EntsChangedSerials[m_nEntsChanged - 1] = iSerialNum;
 			}
 		}
 	}

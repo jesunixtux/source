@@ -63,6 +63,7 @@ def build(bld):
 		'sv_uploaddata.cpp',
 		'sv_uploadgamestats.cpp',
 		'vengineserver_impl.cpp',
+		'paint_cpu.cpp',
 		'sv_main.cpp',
 		'sv_client.cpp',
 		'sv_ents_write.cpp',

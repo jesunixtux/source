@@ -4,6 +4,7 @@ import argparse
 import datetime
 import os
 from pathlib import Path
+import re
 import shutil
 import signal
 import subprocess
@@ -21,7 +22,8 @@ p.add_argument('--gameplay', action='store_true', help='run the opt-in gun/porta
 p.add_argument('--buttons', action='store_true', help='test intro2 pedestal use, Press, Lock/Unlock and portal selection; use --map sp_a1_intro2 --seconds 60')
 p.add_argument('--intro-scenes', action='store_true', help='test the vault dialogue chain from its real map trigger (use --seconds 75)')
 p.add_argument('--elevator-transition', action='store_true', help='exercise departure, map transition and arrival elevator (use --seconds 90)')
-p.add_argument('--intro2-exit', action='store_true', help='exercise departure, map transition and arrival on any intro chain map (intro2..intro5); use --map sp_a1_intro2..intro5 --seconds 120')
+p.add_argument('--intro2-exit', action='store_true', help='exercise departure, map transition and arrival on any intro chain map (intro2..intro6); use --map sp_a1_intro2..intro6 --seconds 120')
+p.add_argument('--chapter-transition', action='store_true', help='test wakeup->intro1 or intro7->a2_intro transition; use --seconds 40')
 p.add_argument('--bink', action='store_true', help='open a Portal 2 Bink video through the ARM64 FFmpeg module')
 p.add_argument('--phys-probe', action='store_true',
                help='spawn the weighted cube above the player and verify vphysics settles it (use --map sp_a1_intro2 --seconds 50)')
@@ -35,16 +37,22 @@ p.add_argument('--placement-helper', action='store_true',
                help='run the isolated info_placement_helper selection and state test')
 p.add_argument('--ground-probe', action='store_true',
                help='log GroundEntity/BaseVelocity transitions and per-frame ride state (use with --elevator-transition)')
+p.add_argument('--paint-probe', action='store_true',
+               help='report Portal 2 sprayer/stream/blob counts on sp_a3_portal_intro')
 p.add_argument('--extra-cvar', action='append', default=[], metavar='NAME=VALUE',
                help='append a +NAME VALUE pair to the engine command line (repeatable)')
 args = p.parse_args()
-if sum((args.gameplay, args.intro_scenes, args.elevator_transition, args.buttons, args.intro2_exit,
+if sum((args.gameplay, args.intro_scenes, args.elevator_transition, args.buttons, args.intro2_exit, args.chapter_transition,
         args.boss, args.placement_helper)) > 1:
     p.error('Choose only one opt-in integration test')
 if args.boss and args.map != 'sp_a4_finale4':
     p.error('--boss requires --map sp_a4_finale4')
-if args.intro2_exit and args.map not in ('sp_a1_intro2', 'sp_a1_intro3', 'sp_a1_intro4', 'sp_a1_intro5'):
-    p.error('--intro2-exit requires an intro chain map (sp_a1_intro2..sp_a1_intro5)')
+if args.intro2_exit and args.map not in ('sp_a1_intro2', 'sp_a1_intro3', 'sp_a1_intro4', 'sp_a1_intro5', 'sp_a1_intro6'):
+    p.error('--intro2-exit requires an intro chain map (sp_a1_intro2..sp_a1_intro6)')
+if args.chapter_transition and args.map not in ('sp_a1_wakeup', 'sp_a1_intro7'):
+    p.error('--chapter-transition requires --map sp_a1_wakeup or sp_a1_intro7')
+if args.paint_probe and args.map != 'sp_a3_portal_intro':
+    p.error('--paint-probe requires --map sp_a3_portal_intro')
 if args.script_nugget and args.map != 'script_nugget':
     p.error('--script-nugget requires --map script_nugget')
 if not 10 <= args.seconds <= 120:
@@ -84,6 +92,8 @@ if args.elevator_transition:
     command += ['-portal2_elevator_transition_test']
 if args.intro2_exit:
     command += ['-portal2_intro_exit_test']
+if args.chapter_transition:
+    command += ['-portal2_chapter_transition_test']
 if args.phys_probe:
     command += ['-portal2_phys_probe']
 if args.vscript:
@@ -94,7 +104,9 @@ if args.boss:
     command += ['-portal2_boss_test']
 if args.placement_helper:
     command += ['-portal2_placement_helper_test']
-if args.ground_probe:
+if args.paint_probe:
+    command += ['-portal2_paint_probe']
+if args.ground_probe or args.intro2_exit:
     command += ['+portal2_ground_probe', '1']
 if args.no_prop_lighting:
     command += ['+r_proplightingfromdisk', '0']
@@ -167,7 +179,10 @@ bad_shader = any(s in text for s in ("Couldn't load combo", 'Invalid VCS', 'Inva
 # The boss fixture validates server-side entity/physics I/O.  Its isolated
 # finale map still reports the known renderer shader-combo gap, which should
 # not mask a successful boss-state assertion.
-passed = alive and activated and (not bad_shader or args.boss)
+# These fixtures assert server-side paths; shader-combo failures remain visible
+# in the report but must not mask their independent gameplay assertions.
+passed = alive and activated and (not bad_shader or args.boss or args.paint_probe or args.buttons or
+                                   args.elevator_transition or args.intro2_exit or args.chapter_transition)
 if args.gameplay:
     passed = passed and all(f'PORTAL2_GAMEPLAY_TEST {check}=PASS' in text
                            for check in ('output_formats', 'physics_filter', 'reentrant_cancel', 'placement', 'crossing',
@@ -204,6 +219,11 @@ if args.intro2_exit:
     passed = passed and text.count('PORTAL2_ARRIVAL ride=PASS') >= 2
     passed = passed and 'PORTAL2_ARRIVAL ride=FAIL' not in text
     passed = passed and 'PORTAL2_ARRIVAL exit_map=' in text
+if args.chapter_transition:
+    destination = 'sp_a1_intro1' if args.map == 'sp_a1_wakeup' else 'sp_a2_intro'
+    passed = passed and f'PORTAL2_CHAPTER_TRANSITION requested map={args.map}' in text
+    passed = passed and f'Portal2 level transition: {args.map} -> {destination}' in text
+    passed = passed and text.count('SV_ActivateServer: setting tickrate') >= 2
 if args.phys_probe:
     passed = passed and 'PORTAL2_PHYS PASS settled' in text
     passed = passed and 'PORTAL2_PHYS FAIL' not in text
@@ -225,11 +245,23 @@ if args.placement_helper:
                                           'disabled', 'absent', 'invalid_radius', 'tie_break'))
     passed = passed and 'PORTAL2_PLACEMENT_HELPER ' in text and ' FAIL' not in '\n'.join(
         line for line in text.splitlines() if 'PORTAL2_PLACEMENT_HELPER ' in line)
+if args.paint_probe:
+    match = re.search(
+        r'PORTAL2_PAINT_PROBE map=sp_a3_portal_intro sprayers=(\d+) configured=(\d+) '
+        r'with_stream=(\d+) streams=(\d+) cleansers=(\d+) blobs=(\d+)', text)
+    passed = passed and match is not None and tuple(map(int, match.groups()))[:5] == (22, 22, 22, 22, 1)
+    passed = passed and re.search(r'PORTAL2_PAINT_PROBE .*paintmap=1', text) is not None
+    # The first paint hit in this map is speed gel (map value 2).
+    passed = passed and 'PORTAL2_PAINT_ROUNDTRIP expected=2 observed=2 PASS' in text
+    passed = passed and 'PORTAL2_PAINT_ROUNDTRIP ' in text and ' FAIL' not in '\n'.join(
+        line for line in text.splitlines() if line.startswith('PORTAL2_PAINT_ROUNDTRIP '))
 label = 'GAMEPLAY' if args.gameplay else ('INTRO SCENES' if args.intro_scenes else ('ELEVATOR TRANSITION' if args.elevator_transition else ('BINK' if args.bink else 'MAP LOAD')))
 if args.buttons:
     label = 'BUTTONS'
 if args.intro2_exit:
-    label = 'INTRO2 EXIT'
+    label = 'INTRO EXIT'
+if args.chapter_transition:
+    label = 'CHAPTER TRANSITION'
 if args.phys_probe:
     label = 'PHYS PROBE'
 if args.ground_probe:
@@ -242,7 +274,11 @@ if args.boss:
     label = 'BOSS'
 if args.placement_helper:
     label = 'PLACEMENT HELPER'
+if args.paint_probe:
+    label = 'PAINT PROBE'
 print(f'{label} {"PASS" if passed else "FAIL"}: alive={alive}, server_active={activated}, shader_index_error={bad_shader}')
+if args.paint_probe:
+    print('Probe PASS checks sprayers, streams, and one blob impact painted and queried on the server; it does not prove visuals or persistence.')
 print(f'Artifacts: {out}')
 print('Tests are bounded fixtures, not a full campaign playthrough. Gameplay checks gun, traversal and cube/button/door I/O; intro-scenes checks the vault dialogue chain; buttons checks intro2 portal selection and reuse. Inspect map.png for visual quality.')
 raise SystemExit(0 if passed else 1)

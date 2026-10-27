@@ -220,8 +220,6 @@ BEGIN_DATADESC(CCompatPaintBomb)
 	DEFINE_KEYFIELD(m_bAllowFunnel, FIELD_BOOLEAN, "allowfunnel"),
 END_DATADESC()
 
-LINK_ENTITY_TO_CLASS(info_paint_sprayer, CPaintSprayer);
-
 class CCompatTriggerCatapult : public CBaseTrigger
 {
 public:

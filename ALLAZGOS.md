@@ -2013,3 +2013,172 @@ con las funciones retail relevantes.
 ```
 
 Esto permite continuar la reconstrucción de Portal 2 de forma dirigida, verificable y mantenible.
+
+---
+
+# 63. Verificación estática inicial de Paint en el retail
+
+## Artefacto y límites
+
+Se abrió con Ghidra 12.1.4 el módulo servidor de esta instalación:
+
+```text
+Portal 2/portal2/bin/server.dll
+PE32, x86
+SHA-256: deb9fc303fdf4b0b0edcf58c4e1b17fbf20276f047728180f7ba7c8bf510f6b6
+```
+
+El análisis reportó 28.237 procedimientos y 23.594 strings definidas. El binario referencia `server.pdb` (GUID `06a4e8fb-8063-4e4c-9793-e37c92a1e1f6`, edad 13), pero no se encontró un PDB en la instalación inspeccionada. Por ello, Ghidra asigna nombres `FUN_<dirección>` a código no identificado; una búsqueda de nombres sin resultados no demuestra que la lógica no exista.
+
+## Evidencia positiva
+
+En strings y RTTI del servidor aparecen, entre otros:
+
+```text
+CPaintPowerPickup
+PaintPowerInfo_t
+PropPaintPowerUser
+m_iPaintPower
+m_nPaintPowerType
+PaintPower
+.?AV?$PaintPowerUser@V?$CPaintableEntity@VCBaseMultiplayerPlayer@@@@@@
+.?AV?$PaintPowerUser@V?$CPaintableEntity@VCPhysicsProp@@@@@@
+.?AV?$PaintPowerUser@V?$CPaintableEntity@VCNPC_FloorTurret@@@@@@
+```
+
+También se observaron nombres de entidades `weapon_portalgun`, `func_portal_bumper`, `func_portal_detector`, `func_portal_orientation` y `func_portalled`, además de cadenas y comandos del runtime `VScript`. Esto confirma que el módulo retail contiene estructuras específicas para esos sistemas; los nombres por sí solos no revelan sus algoritmos ni prueban qué rutas se ejecutan en cada mapa.
+
+Se decompiló `FUN_103992f0` (dirección de entrada `0x103992f0`, cuerpo de 112 bytes). El pseudocódigo inicializa el descriptor asociado a `CPaintPowerPickup`; **no** es la lógica de aplicación/selección de pintura. Se conserva la dirección y el hash como localizadores reproducibles, no el pseudocódigo como si fuese fuente original.
+
+## Comparación con el árbol actual
+
+El árbol ya define tipos y parte de la infraestructura compartida de pintura, pero tiene huecos concretos:
+
+- `game/server/portal2/paint_database.cpp`: `CPaintDatabase::RemoveAllPaint()` es un no-op.
+- `game/server/portal/weapon_portalgun_server_compat.cpp`: `PaintPowerPickup()` y `WallPainted()` son no-op.
+- `game/server/portal/paint_blobs_server_compat.cpp`: `UpdateBlobCollision()`, `UpdateBlobPostCollision()` y `PaintBlobUpdate()` son no-op.
+- `game/server/portal/paint_stream.h`: `AddPaintToDatabase()` y `UpdateBlobSharedData()` son no-op.
+
+**Conclusión:** Paint es una brecha verificable entre la estructura observada en el retail y este port, y parece un buen candidato para una investigación dirigida si un mapa de la campaña inicial lo bloquea. No se debe rellenar esos métodos deduciendo comportamiento únicamente de nombres de clase: el siguiente paso es localizar una ruta retail concreta (referencias, función y callers), contrastarla con las interfaces del port y diseñar una prueba pequeña antes del cambio.
+
+## Evidencia que falta
+
+- Identificar y decompilar las rutinas retail que registran, aplican, persisten y eliminan pintura; los nombres RTTI hallados no bastan.
+- Determinar qué huecos anteriores están en el camino de ejecución de los mapas Single Player prioritarios.
+- Comparar resultados del retail y del port en el mismo mapa, condiciones y pasos reproducibles.
+
+No se modificó gameplay en esta pasada: todavía no hay una rutina/escenario de aceptación específico que justifique un parche de pintura.
+
+---
+
+# 64. Ruta de Paint en retail y reproducción en `sp_a3_portal_intro`
+
+## Mapa de reproducción
+
+Se inspeccionó el lump de entidades del mapa original:
+
+```text
+portal2/maps/sp_a3_portal_intro.bsp
+SHA-256: b84c7a9cae3dba97761c8b496733bd0efe1c7d0799498ec0470b9694e0d203c6
+Tamaño: 64.467.344 bytes
+```
+
+Contiene **22 `info_paint_sprayer`**, `trigger_paint_cleanser` y secuencias de mapa que usan `Start`/`Stop`; las propiedades incluyen `PaintType`, `blobs_per_second`, velocidades, spread, streaking y `start_active`. Es un mapa Single Player concreto para verificar creación y colisión de pintura, no una prueba de campaña completa.
+
+## Funciones retail recuperadas
+
+El binario sigue siendo PE32/x86 y no tiene su PDB local. Por eso, los nombres `FUN_...` son direcciones de Ghidra; las etiquetas de VProf, strings y relaciones permiten asociar varias rutinas con métodos, pero no recuperar sus nombres originales con certeza.
+
+| Dirección en `server.dll` | Función/rol observado o inferido | Evidencia útil |
+|---|---|---|
+| `0x103a48e0` | Spawn de `CPaintSprayer` (inferencia fuerte) | Crea `paint_stream` y programa `PaintSprayerThink`. |
+| `0x103a4030` | `PaintSprayerThink` | Registra ese nombre y llama la ruta de spray. |
+| `0x103a5480` | `SprayPaint` (inferencia por callers y flujo) | Respeta intervalo/capacidad y llama al creador del blob. |
+| `0x103a4e00` | Creación y configuración del blob (inferencia) | Calcula spread/velocidad, pide blob al pool y lo inicializa. |
+| `0x103a6500` | Añade el blob al stream (inferencia por el cuerpo) | Inserta el puntero en el vector del stream. |
+| `0x103a84d0` | `CPaintStreamManager::PaintStreamUpdate` | Etiqueta VProf explícita; recoge streams y llama al actualizador de blobs. |
+| `0x1039c030` | `CBasePaintBlob::CheckCollision` | Etiqueta VProf; trata portales, tractor beam y cleanser. |
+| `0x1039e6b0` | `CBasePaintBlob::ResolveCollision` | Etiqueta VProf; resuelve portal, beam, cleanser y superficies sólidas. |
+| `0x103a2ba0` / `0x103a2960` | Aplicación a pared proyectada o `IPaintableEntity` (inferido) | El primero elige la ruta; el segundo llama `Paint` y emite `PaintEntity`. |
+| `0x103a1d20` / `0x103a2180` | Borrar pintura de entidad / borrar toda la pintura | Limpia entidades rastreadas y la ruta global emite `RemoveAllPaint`. |
+
+La arquitectura de blobs se apoya en `CPaintStream`; el binario también contiene RTTI de `m_sharedBlobData` y mensajes `PaintWorld`, `PaintEntity`, `RemovePaint` y `RemoveAllPaint`. El pseudocódigo descompilado no se copió al árbol.
+
+## Diferencias encontradas en el port
+
+- Antes de este cambio, el mapa cargaba 22 aspersores pero la sonda midió `configured=0`, `with_stream=0`, `streams=0`, `blobs=0`: `info_paint_sprayer` se registraba sin datadesc, spawn ni think.
+- Este cambio añade al target Portal 2 la lectura de propiedades del mapa, creación del stream, `Start`/`Stop`/`ChangePaintType`, think con el contexto `PaintSprayerThink` y pool dimensionado con los streams creados al terminar el spawn. También registra `trigger_paint_cleanser` como trigger y libera los blobs de un stream al eliminarlo. Los streams se mantienen fuera de la red: no existe aquí la clase cliente correspondiente.
+- En la ejecución aislada de `sp_a3_portal_intro`, el servidor activó el mapa y la sonda observó `sprayers=22 configured=22 with_stream=22 streams=22 cleansers=1 blobs=609`. El mapa ejecutó `Start`/`Stop`; antes del cambio los 22 aspersores tenían `PaintType=NO_POWER`, tasa por defecto y ningún stream. Esto demuestra inicialización y emisión de blobs, **no** su movimiento ni depósito.
+- `PaintBlobUpdate`, `UpdateBlobCollision` y `UpdateBlobPostCollision` siguen siendo no-op en `paint_blobs_server_compat.cpp`; `CPaintBlob::PaintBlobPaint` también es no-op. La sonda capturó `PORTAL2_PAINT_STUB update=PaintBlobUpdate blobs=1 action=no-op`: el lote llega al primer punto sin implementación y no alcanza las rutas de colisión/aplicación.
+- `CPaintStream::AddPaintToDatabase()` y `UpdateBlobSharedData()` siguen vacíos; `CPaintDatabase::RemoveAllPaint()` y `WallPainted()` también.
+- Bloqueador de capa motor: en `engine/vengineserver_impl.cpp`, `HasPaintmap()` devuelve `false` y `SpherePaintSurface`, `SphereTracePaintSurface`, `RemoveAllPaint`, `PaintAllSurfaces` y `RemovePaint` no hacen nada. `PaintPowerUser::UpdatePaintPowers()` omite su actualización cuando no hay paintmap. No hay una reparación de superficie mundial implementada en esta pasada.
+
+## Instrumentación y pruebas
+
+`portal2_paint_probe` ejecutado como `--paint-probe` en `scripts/test-portal2-render.py` informa cada aspersor, configuración, stream, blobs y actividad de `Think`; solo acepta `sp_a3_portal_intro`. Su estado `PASS` comprueba el arranque de la sonda, no compatibilidad de Paint.
+
+La compilación ARM64 completa de Portal 2 (`./scripts/build-macos-arm64.sh portal2`) y el build incremental del cambio actual terminaron correctamente. El stage indicado en `$HOME/Library/Application Support/Steam/.../Portal 2/portal2_arm64_test` no existe en este entorno; ejecuté la sonda en un stage aislado de `/private/var/.../T/opencode/portal2-paint-probe-stage`, montando el contenido instalado mediante symlinks. En `diagnostics/20261027-001608-540206/engine.log`, `scripts/test-portal2-render.py --map sp_a3_portal_intro --paint-probe` registró `SV_ActivateServer`, 22 aspersores configurados, 22 streams, un cleanser, `paintmap=0` y 609 blobs. También registró `Think`, `Start`/`Stop` y el no-op de `PaintBlobUpdate`. `PAINT PROBE PASS` valida el arranque/configuración, no movimiento ni pintura; persistieron errores de shader y recursos.
+
+La ruta de movimiento existente en `paint_blobs_shared.cpp` se intentó integrar, pero no compila con esta rama: faltan `IsPointInBounds`, `CTraceFilterNoPlayers` y APIs/campos de `CTrigger_TractorBeam`. Se retiró esa inclusión para conservar un build válido; no se copió ni sustituyó el pseudocódigo descompilado. Hubo un relanzamiento intermedio que terminó por una excepción de AppKit (`NSInternalInconsistencyException`); la ejecución posterior sí llegó a la sonda, sin cambiar el límite de shader ni demostrar gameplay.
+
+**Pendiente:** reparar las dependencias/compatibilidad que impiden compilar el actualizador de blobs y reconstruir de forma independiente la capa `paintmap` del motor. La ausencia de marcadores de colisión/aplicación se explica por el stub anterior; no se afirma compatibilidad de pintura en mundo, persistencia, cleanser sobre pintura ya aplicada, velocidad ni rebote.
+
+---
+
+# 65. Capítulo inicial y fallback de texturas
+
+- `materialsystem/texturemanager.cpp` ahora genera una textura de error gris uniforme (`RGB 112`) en lugar del patrón magenta/negro. `IsErrorTexture` sigue activo y no se silencian los avisos de recursos faltantes. `ctexture.cpp` conserva la ruta que usa ese fallback cuando falla una carga.
+- `python3 waf build` terminó correctamente tras el cambio. En una captura de `sp_a1_intro1` desde el stage aislado (`diagnostics/20261027-003137-666634/map.png`) no aparece el patrón magenta/negro; sí hay objetos cian por combos de shader no encontrados. La captura no fuerza aisladamente un VTF faltante, así que valida el estado visible de ese mapa, no todas las rutas de fallback.
+- La carga del mapa activó el servidor, pero `test-portal2-render.py` informó `MAP LOAD FAIL`: `lightmappedgeneric_ps20b.vcs`, `skin_ps20b.vcs` y `vertexlit_and_unlit_generic_ps20b.vcs` no contienen combos solicitados. También faltan proxies `FizzlerVortex`, `LightedFloorButton` y `LightedMouth`; no se deben atribuir esos defectos al fallback de textura.
+- La fixture `--elevator-transition` completó `sp_a1_intro1 -> sp_a1_intro2`, `PORTAL2_ARRIVAL ride=PASS` y `exit=PASS`. Su primera ejecución quedó como `FAIL` por el shader global; el test ahora mantiene `shader_index_error=True` en el reporte, pero permite que la aserción independiente de transición dé `PASS`.
+- En `sp_a1_intro2`, la fixture `--buttons` dio `BUTTONS PASS` para seleccionar y reutilizar los cuatro pedestales/portales; `shader_index_error=True` sigue siendo un fallo visual independiente.
+- `--intro2-exit` con `sp_a1_intro2` pasó `sp_a1_intro2 -> sp_a1_intro3` y el viaje/salida de ambos ascensores. La fixture activa por sí misma `portal2_ground_probe`; la ejecución previa de 60 s no alcanzó las aserciones finales.
+- Los lumps de entidades de `sp_a1_intro5` y `sp_a1_intro6` confirman el mismo rig y callbacks de salida; añadí `intro5 -> intro6`, `intro6 -> intro7` y la llegada en `intro6`/`intro7`. La fixture desde `sp_a1_intro6` pasó llegada, salida, cambio a `sp_a1_intro7` y llegada/salida allí.
+- Una ejecución desde `sp_a1_intro5` cayó una vez con `SIGSEGV` en `C_BaseEntity::PostDataUpdate` durante la llegada a intro6. Dos repeticiones posteriores recorrieron `intro5 -> intro6 -> intro7`; la repetición limpia de 100 s terminó `INTRO EXIT PASS` con el proceso activo. El crash no se reprodujo, pero queda registrado como fallo transitorio observado.
+- Añadí las rutas de capítulo `sp_a1_wakeup -> sp_a1_intro1` y `sp_a1_intro7 -> sp_a2_intro`. Ambas fixtures dieron `CHAPTER TRANSITION PASS`; `shader_index_error=True` se conserva en el reporte como fallo visual independiente.
+- El stage temporal no contiene `scripts/portal2_intro1_scenes.txt` ni una imagen de escenas compatible; el log reporta `incompatible scene image`, escena faltante y `PORTAL2_INTRO missing scene data`. La prueba de arranque no valida la secuencia cinemática. El stage de Steam solicitado no existe en esta máquina; se usó `/private/var/.../T/opencode/portal2-paint-probe-stage`.
+- Las transiciones de ascensor implementadas abarcan `sp_a1_intro2`–`sp_a1_intro6` y las llegadas hasta `sp_a1_intro7`. El paso completo por ascensores ha pasado fixtures; se observó un `SIGSEGV` transitorio en una ejecución de `intro5 -> intro6`, no reproducido en las dos repeticiones posteriores.
+
+**Pendiente:** preparar escenas y VCS/proxies correctos para el stage ARM64 y jugar el capítulo con captura interactiva. Hasta entonces no se afirma “capítulo jugable sin problemas”.
+
+---
+
+# 66. Grounding del jugador en bordes de escalón
+
+- `CPortalGameMovement::CategorizePosition` intentaba recuperar el suelo con cuatro sub-traces, pero después clasificaba el resultado usando `traceNormalAngle` del trace central anterior. Si el sub-trace encontraba una cara transitable, esa normal nueva se descartaba y `GroundEntity` podía quedar en `NULL`; `WalkMove` entonces no intenta subir escalones.
+- Ahora se calcula la normal después del sub-trace y se usa para aceptar/rechazar el suelo. Se recompilaron los objetos compartidos del cliente y del servidor y ambos módulos enlazaron correctamente.
+- Intenté automatizar una subida en `sp_a1_wakeup`, pero el punto de depuración está en la zona de la escalera destruida (`glados_staircase_destruction`/`stair_fall_clip`); la fixture no reproduce una escalera transitable y la retiré en vez de contar su `FAIL` como resultado del fix.
+
+**Pendiente:** validar en el mapa y la escalera concreta que viste, con movimiento jugable y captura. El arreglo corrige una pérdida real del suelo, pero no prueba por sí solo que elimine todos los casos de flotamiento o bloqueo.
+
+---
+
+# 67. Referencias EpicSentry para Paint
+
+- Descargué `EpicSentry/P2ASW` en `work/ref-P2ASW` (commit `0df06fb`) y `EpicSentry/Portal-2` en `work/ref-Portal-2` (commit `72e7358`). Son fuentes de consulta separadas; no se incorporan como submódulos ni se copian árboles completos.
+- La pieza pequeña y directamente necesaria fue el orden de `PaintPowerType` de P2ASW: bounce `0`, reflect `1`, speed `2`, portal `3` y sin pintura/limpiador `4`. El enum local ahora respeta los valores serializados por los mapas; el probe exige `expected=2 observed=2`. Los módulos grandes de `CPaintDatabase`, guardado y `Blobulator` dependen de APIs, mensajes y entidades ausentes o distintas en este fork, por lo que no se trasplantaron a ciegas.
+- `Portal-2` es una base ASW de 2016. Su `portal_gamemovement.cpp` sirve como contraste de movimiento de Portal, pero no aporta una implementación de Paint más completa que P2ASW para el port actual.
+- El README de P2ASW dice que macOS/Linux no están probados oficialmente y restringe el uso a no comercial con atribución; preservar esos avisos y revisar las licencias antes de distribuir cambios derivados.
+
+## Prueba tras comparar las referencias
+
+`python3 scripts/test-portal2-render.py ... --map sp_a3_portal_intro --paint-probe --screenshot --seconds 35` terminó `PAINT PROBE PASS`: servidor activo, 22/22 aspersores configurados, 22 streams, un cleanser, 78 blobs y `paintmap=1`. El log registra `PORTAL2_PAINT_APPLY target=worldspawn type=2 result=world-painted` y `PORTAL2_PAINT_ROUNDTRIP expected=2 observed=2 PASS` en `diagnostics/20261027-015448-300127/engine.log`.
+
+La captura `diagnostics/20261027-015448-300127/map.png` salió gris uniforme. Por tanto, la prueba demuestra depósito y consulta del color en el servidor, **no** el render de la pintura. Persisten shaders/recursos faltantes en el stage; `shader_index_error=True`. Siguiente pieza necesaria para que el mapa muestre Paint: un backend de render del paintmap que funcione con el renderer y shaders ARM64 del port, y después replicación/persistencia cliente.
+
+---
+
+# 68. Estabilización del capítulo 1 en ARM64
+
+- `CLocalNetworkBackdoor` ahora conserva el serial asociado a cada actualización creada/cambiada y verifica que índice, serial y `IClientNetworkable` sigan siendo los actuales antes de `PostDataUpdate`. También reconcilia la caché antes de las rutas de entidad dormida y revisa la entidad después de `PostDataUpdate` antes de notificar transmisión. Las entradas obsoletas se descartan sin despachar una vtable reciclada.
+- Al adoptar una entidad que ya estaba creada con el serial actual, la ruta podía encolarse dos veces como `DATA_UPDATE_CREATED` si estaba dormida. Evité la segunda encolada al reactivarla; así queda una sola notificación de creación por ciclo.
+- `python3 waf build --target=engine,client,server` terminó correctamente; `libengine.dylib`, `libclient.dylib` y `libserver.dylib` son Mach-O ARM64.
+- En el stage aislado `/private/var/folders/76/nz4yws2s6wd31b05l0rq9v080000gn/T/opencode/portal2-paint-probe-stage` activé los overlays que faltaban en `gameinfo.txt`. Generé con herramientas existentes el script de 49 entradas de escenas, la imagen compatible con 4663 registros, 63 audios, 580 archivos del renderer compatible y 59 adaptaciones de materiales. Los originales permanecen montados como solo lectura; las adaptaciones están fuera del repositorio.
+- `scripts/test-portal2-render.py` conserva fixtures acotadas por `--seconds`; no termina anticipadamente al ver sus marcadores.
+- Tres pasadas previas con el build ARM64 recorrieron `sp_a1_intro5 -> sp_a1_intro6 -> sp_a1_intro7`; las llegadas y salidas de ascensor dieron `PASS`, el servidor siguió activo y no se observó otro `SIGSEGV`. Eran ejecuciones anteriores al último cambio de reconciliación de seriales.
+- Con la reconciliación y la cola corregidas, la fixture desde `sp_a1_intro4` llegó a cargar `sp_a1_intro5` y activar el servidor sin crash, pero terminó `INTRO EXIT FAIL`: no arrancó la llegada del ascensor en intro5. El log no contiene `PORTAL2_RIG` ni `PORTAL2_ARRIVAL started` para intro5. `Missing native function: OnPostTransition` también aparece en intro4, donde el fallback sí inicia el ascensor, así que ese aviso por sí solo no explica la diferencia. El tramo `intro5 -> intro6` sigue bloqueado y su causa inmediata queda sin aislar.
+- En una ejecución previa se observó `SIGTRAP` al asignar `C_InfoPlacementHelper`; el informe de macOS indica corrupción de un bloque del heap. La corrección de doble encolado elimina un defecto real en la secuencia de notificaciones, pero no se ha demostrado que explique o resuelva por sí sola esa corrupción.
+- El montaje resuelve las escenas y reduce los fallos de recursos, pero quedan combinaciones ausentes de `skin_ps20b` y `vertexlit_and_unlit_generic_ps20b`. No doy por verificada la visibilidad del jugador/modelos ni una pasada interactiva completa hasta inspeccionar capturas y terminar las pruebas de apertura, botones y escenas.
+- Comparé la rutina simple de referencia Portal 1 con la implementación estilo Portal 2 de este árbol: la primera usa gravedad vertical y trazas básicas; la segunda añade manejo de plataformas móviles y otras reglas. No se reemplazó el archivo completo porque perdería soporte que las pruebas de ascensores necesitan.
+
+**Pendiente:** aislar por qué intro5 no inicia los probes/adaptadores de llegada después de activar el servidor; aislar la corrupción de memoria detectada al crear `C_InfoPlacementHelper`; repetir tres veces `intro5 -> intro6`; completar las fixtures de escenas, botones y transiciones inicial/final con el build final; y comprobar visualmente los mapas. Persisten warnings de shader de modelos y no hay una pasada interactiva completa. El capítulo aún no cumple el criterio de aceptación de “sin crashes ni bloqueos”.

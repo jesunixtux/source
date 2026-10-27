@@ -1493,9 +1493,9 @@ void CTextureManager::Init( int nFlags )
 	color32 color, color2;
 	m_iNextTexID = 4096;
 
-	// setup the checkerboard generator for failed texture loading
-	color.r = color.g = color.b = 0; color.a = 128;
-	color2.r = color2.b = color2.a = 255; color2.g = 0;
+	// Use a neutral fallback for failed textures; warnings and IsErrorTexture still identify the failure.
+	color.r = color.g = color.b = 112; color.a = 255;
+	color2 = color;
 	m_pErrorRegen = new CCheckerboardTexture( 4, color, color2 );
 
 	// Create an error texture
@@ -3134,4 +3134,3 @@ static ImageFormat GetImageFormatRawReadback( ImageFormat fmt )
 
 	return fmt;
 }
-

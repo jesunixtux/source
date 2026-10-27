@@ -10,6 +10,7 @@
 #include <algorithm>
 #include "tier0/valve_minmax_on.h"
 #include "vengineserver_impl.h"
+#include "paint_cpu.h"
 #include "vox.h"
 #include "sound.h"
 #include "gl_model_private.h"
@@ -1732,29 +1733,32 @@ public:
 
 	virtual bool HasPaintmap() OVERRIDE
 	{
-		return false;
+		return PaintCPU_HasPaintmap();
 	}
 
 	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent ) OVERRIDE
 	{
-		return false;
+		return PaintCPU_SpherePaintSurface( pModel, vPosition, color, flSphereRadius );
 	}
 
 	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColor ) OVERRIDE
 	{
-		surfColor.RemoveAll();
+		PaintCPU_SphereTracePaintSurface( pModel, vPosition, vContactNormal, flSphereRadius, surfColor );
 	}
 
 	virtual void RemoveAllPaint() OVERRIDE
 	{
+		PaintCPU_RemoveAllPaint();
 	}
 
 	virtual void PaintAllSurfaces( BYTE color ) OVERRIDE
 	{
+		PaintCPU_PaintAllSurfaces( color );
 	}
 
 	virtual void RemovePaint( const model_t* pModel ) OVERRIDE
 	{
+		PaintCPU_RemovePaint( pModel );
 	}
 
 	virtual void RefreshScreenIfNecessary() OVERRIDE

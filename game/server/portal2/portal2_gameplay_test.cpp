@@ -12,7 +12,72 @@
 #include "weapon_physcannon.h"
 #include "baseviewmodel.h"
 #include "prop_button_base.h"
+#include "paint_sprayer.h"
+#include "paint_stream.h"
 #include "tier0/memdbgon.h"
+
+static void ReportPortal2PaintState()
+{
+    int sprayers = 0;
+    int initializedSprayers = 0;
+    int configuredSprayers = 0;
+    int blobs = 0;
+    int cleansers = 0;
+    CBaseEntity *entity = NULL;
+    while ((entity = gEntList.FindEntityByClassname(entity, "info_paint_sprayer")) != NULL)
+    {
+        ++sprayers;
+        CPaintSprayer *sprayer = static_cast<CPaintSprayer *>(entity);
+        configuredSprayers += sprayer->m_PaintPowerType != NO_POWER;
+        CPaintStream *stream = sprayer->m_hPaintStream;
+        if (stream)
+        {
+            ++initializedSprayers;
+            blobs += stream->GetBlobsCount();
+        }
+        Msg("PORTAL2_PAINT_PROBE sprayer=%s type=%d rate=%.1f start_active=%d active=%d seed=%d next=%.3f context_next=%.3f stream=%d blobs=%u\n",
+            STRING(entity->GetEntityName()), sprayer->m_PaintPowerType,
+            sprayer->m_flBlobsPerSecond, sprayer->m_bStartActive, sprayer->m_bActive,
+            sprayer->m_nBlobRandomSeed, sprayer->GetNextThink(),
+            sprayer->GetNextThink("PaintSprayerThink"), stream != NULL,
+            stream ? stream->GetBlobsCount() : 0);
+    }
+    entity = NULL;
+    while ((entity = gEntList.FindEntityByClassname(entity, "trigger_paint_cleanser")) != NULL)
+        ++cleansers;
+
+    Msg("PORTAL2_PAINT_PROBE map=%s sprayers=%d configured=%d with_stream=%d streams=%d cleansers=%d blobs=%d paintmap=%d\n",
+        STRING(gpGlobals->mapname), sprayers, configuredSprayers, initializedSprayers,
+        IPaintStreamAutoList::AutoList().Count(), cleansers, blobs, engine->HasPaintmap());
+}
+
+class CPortal2PaintProbe : public CAutoGameSystemPerFrame
+{
+public:
+    CPortal2PaintProbe() : CAutoGameSystemPerFrame("Portal2PaintProbe"), m_startTime(-1.0f), m_reported(false) {}
+
+    void LevelInitPreEntity() { m_startTime = -1.0f; m_reported = false; }
+
+    void FrameUpdatePostEntityThink()
+    {
+        if (m_reported || !CommandLine()->FindParm("-portal2_paint_probe") ||
+            !FStrEq(STRING(gpGlobals->mapname), "sp_a3_portal_intro"))
+            return;
+
+        if (m_startTime < 0.0f)
+            m_startTime = gpGlobals->curtime;
+        if (gpGlobals->curtime - m_startTime < 3.0f)
+            return;
+
+        ReportPortal2PaintState();
+        m_reported = true;
+    }
+
+private:
+    float m_startTime;
+    bool m_reported;
+};
+static CPortal2PaintProbe g_Portal2PaintProbe;
 
 static bool CheckOutputFormats()
 {
