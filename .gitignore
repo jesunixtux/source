@@ -65,3 +65,9 @@ DerivedData/
 # waf / build helpers
 compile_commands.json
 config.log
+
+# Local source checkouts used for reference
+/work/csgo-src/
+/work/paint-gun-src/
+/work/ref-P2ASW/
+/work/ref-Portal-2/
