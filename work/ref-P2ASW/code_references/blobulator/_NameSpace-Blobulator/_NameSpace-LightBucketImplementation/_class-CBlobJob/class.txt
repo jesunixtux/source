@@ -1,0 +1,8 @@
+class Blobulator::LightBucketImplementation::CBlobJob : public CJob
+{
+public:
+    Blobulator::LightBucketImplementation::CThreadData *m_pThreadData;
+    int DoExecute();
+    CBlobJob();
+    ~CBlobJob();
+};

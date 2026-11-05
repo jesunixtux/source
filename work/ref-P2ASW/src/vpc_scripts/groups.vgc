@@ -1,0 +1,26 @@
+$Group "game"
+{
+	"client"
+	"server"
+	"missionchooser"
+	"shaderlib"
+	"portal_shader"
+}
+
+$Group "shaders"
+{
+	"shaderlib"
+//	"game_shader"
+	"portal_shader"
+}
+
+$Group "everything"
+{
+	"client"
+	"server"
+	"missionchooser"
+	"shaderlib"
+	"portal_shader"
+	"bonesetup"
+	"meshutils"
+}

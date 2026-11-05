@@ -1,0 +1,28 @@
+"GameInfo"
+{
+	"game"		"Portal 2 In Alien Swarm"
+	"title"		"    "	// asw - leave this blank as we have a texture logo
+	"type"		"multiplayer_only"
+	GameData	"portal2.fgd"
+	InstancePath "tilegen/instances/"
+	
+	SupportsDX8     0
+	
+	"FileSystem"
+	{
+		"SteamAppId"	"630"
+		"ToolsAppId"	"211"
+		
+		"SearchPaths"
+		{
+			"Game"	"|gameinfo_path|."
+			// Portal 2 code mounts this, but it isn't used by Valve
+			"Game"	"../Portal 2/xlsppatch"
+			"Game"	"../Portal 2/update"
+			"Game"	"../Portal 2/portal2_dlc2"
+			"Game"	"../Portal 2/portal2_dlc1"
+			"Game"	"../Portal 2/portal2"
+			"Game"	"platform"
+		}
+	}
+}
