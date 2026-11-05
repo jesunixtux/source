@@ -255,7 +255,16 @@ public:
             ++m_step;
         }
         if(sceneTest) return; // The unmodified map trigger starts the scene chain.
-        if(m_step==1 && elapsed>18) { Shoot(p,false); ++m_step; }
+        if(m_step==1 && elapsed>18)
+        {
+            CBaseViewModel *view=p->GetViewModel();
+            CBaseCombatWeapon *active=p->GetActiveWeapon();
+            Msg("PORTAL2_GAMEPLAY_TEST viewmodel model=%s index=%d effects=%d draw=%d sequence=%d weapon_model=%s\n",
+                view?STRING(view->GetModelName()):"none",view?view->GetModelIndex():-1,
+                view?view->GetEffects():-1,p->m_Local.m_bDrawViewmodel?1:0,view?view->GetSequence():-1,
+                active?active->GetViewModel():"none");
+            Shoot(p,false); ++m_step;
+        }
         if(m_step==2 && elapsed>21) { Shoot(p,true); ++m_step; }
         CWeaponPortalgun *gun=Gun(p);
         if(!gun) return;

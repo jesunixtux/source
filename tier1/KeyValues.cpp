@@ -597,10 +597,11 @@ const char *KeyValues::ReadToken( CUtlBuffer &buf, bool &wasQuoted, bool &wasCon
 		if ( *c == ']' && bConditionalStart )
 		{
 			wasConditional = true;
+			bConditionalStart = false;
 		}
 
-		// break on whitespace
-		if ( isspace(*c) )
+		// Spaces inside a conditional belong to its expression, not the next key.
+		if ( isspace( (unsigned char)*c ) && !bConditionalStart )
 			break;
 
 		if (nCount < (KEYVALUES_TOKEN_SIZE-1) )
@@ -616,6 +617,11 @@ const char *KeyValues::ReadToken( CUtlBuffer &buf, bool &wasQuoted, bool &wasCon
 		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 1 );
 	}
 	s_pTokenBuf[ nCount ] = 0;
+	if ( bConditionalStart || bReportedError )
+	{
+		g_KeyValuesErrorStack.ReportError( "ReadToken: invalid or unterminated token" );
+		return NULL;
+	}
 	return s_pTokenBuf;
 }
 #pragma warning (default:4706)
@@ -2209,42 +2215,149 @@ bool IsSteamDeck()
 
 //-----------------------------------------------------------------------------
 // Returns whether a keyvalues conditional evaluates to true or false
-// Needs more flexibility with conditionals, checking convars would be nice.
 //-----------------------------------------------------------------------------
-bool EvaluateConditional( const char *str )
+static bool EvaluateConditionalSymbol( const char *str )
 {
-	if ( !str )
-		return false;
+	if ( !Q_stricmp( str, "$DECK" ) )
+		return IsSteamDeck();
 
-	if ( *str == '[' )
-		str++;
+	if ( !Q_stricmp( str, "$X360" ) )
+		return IsX360();
 
-	bool bNot = false; // should we negate this command?
-	if ( *str == '!' )
-		bNot = true;
+	if ( !Q_stricmp( str, "$GAMECONSOLE" ) )
+		return IsGameConsole();
 
-	if ( Q_stristr( str, "$DECK" ) )
-		return IsSteamDeck() ^ bNot;
+	if ( !Q_stricmp( str, "$WIN32" ) )
+		return IsPC(); // Legacy WIN32 means desktop PC, including macOS.
 
-	if ( Q_stristr( str, "$X360" ) )
-		return IsX360() ^ bNot;
+	if ( !Q_stricmp( str, "$WINDOWS" ) )
+		return IsWindows();
 
-	if ( Q_stristr( str, "$WIN32" ) )
-		return IsPC() ^ bNot; // hack hack - for now WIN32 really means IsPC
+	if ( !Q_stricmp( str, "$OSX" ) )
+		return false; // Preserve this port's legacy resource selection.
 
-	if ( Q_stristr( str, "$WINDOWS" ) )
-		return IsWindows() ^ bNot;
+	if ( !Q_stricmp( str, "$LINUX" ) )
+		return IsLinux() || IsBSD() || IsOSX();
 
-	if ( Q_stristr( str, "$OSX" ) )
-		return bNot;
-
-	if ( Q_stristr( str, "$LINUX" ) )
-		return ( IsLinux() || IsBSD() || IsOSX() ) ^ bNot;
-
-	if ( Q_stristr( str, "$POSIX" ) )
-		return IsPosix() ^ bNot;
+	if ( !Q_stricmp( str, "$POSIX" ) )
+		return IsPosix();
 
 	return false;
+}
+
+// The VPC evaluator depends on a newer KeyValuesSystem ABI; keep resource parsing local.
+class CKeyValuesConditionParser
+{
+public:
+	explicit CKeyValuesConditionParser( const char *text ) : m_pText( text ), m_bValid( text != NULL ), m_nDepth( 0 ) {}
+
+	bool Evaluate()
+	{
+		if ( !m_pText )
+			return false;
+		bool bracketed = Consume( "[" );
+		bool value = ReadOr();
+		if ( bracketed && !Consume( "]" ) )
+			m_bValid = false;
+		SkipSpace();
+		if ( !m_bValid || *m_pText )
+		{
+			g_KeyValuesErrorStack.ReportError( "Invalid conditional expression" );
+			return false;
+		}
+		return value;
+	}
+
+private:
+	void SkipSpace()
+	{
+		while ( isspace( (unsigned char)*m_pText ) )
+			++m_pText;
+	}
+
+	bool Consume( const char *token )
+	{
+		SkipSpace();
+		int length = Q_strlen( token );
+		if ( Q_strncmp( m_pText, token, length ) )
+			return false;
+		m_pText += length;
+		return true;
+	}
+
+	bool ReadOr()
+	{
+		bool value = ReadAnd();
+		while ( Consume( "||" ) )
+		{
+			bool right = ReadAnd(); // Always consume the RHS, even when value is true.
+			value = value || right;
+		}
+		return value;
+	}
+
+	bool ReadAnd()
+	{
+		bool value = ReadFactor();
+		while ( Consume( "&&" ) )
+		{
+			bool right = ReadFactor();
+			value = value && right;
+		}
+		return value;
+	}
+
+	bool ReadFactor()
+	{
+		if ( ++m_nDepth > 64 )
+		{
+			m_bValid = false;
+			return false;
+		}
+		bool value = false;
+		if ( Consume( "!" ) )
+			value = !ReadFactor();
+		else if ( Consume( "(" ) )
+		{
+			value = ReadOr();
+			if ( !Consume( ")" ) )
+				m_bValid = false;
+		}
+		else if ( isdigit( (unsigned char)*m_pText ) )
+		{
+			while ( isdigit( (unsigned char)*m_pText ) )
+				value = ( *m_pText++ != '0' ) || value;
+		}
+		else if ( *m_pText == '$' )
+		{
+			const char *start = m_pText++;
+			while ( isalnum( (unsigned char)*m_pText ) || *m_pText == '_' )
+				++m_pText;
+			char symbol[128];
+			int length = m_pText - start;
+			if ( length <= 1 || length >= sizeof( symbol ) )
+				m_bValid = false;
+			else
+			{
+				Q_memcpy( symbol, start, length );
+				symbol[length] = 0;
+				value = EvaluateConditionalSymbol( symbol );
+			}
+		}
+		else
+			m_bValid = false;
+		--m_nDepth;
+		return value;
+	}
+
+	const char *m_pText;
+	bool m_bValid;
+	int m_nDepth;
+};
+
+bool EvaluateConditional( const char *str )
+{
+	return CKeyValuesConditionParser( str ).Evaluate();
 }
 
 

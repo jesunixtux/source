@@ -2182,3 +2182,79 @@ La captura `diagnostics/20261027-015448-300127/map.png` salió gris uniforme. Po
 - Comparé la rutina simple de referencia Portal 1 con la implementación estilo Portal 2 de este árbol: la primera usa gravedad vertical y trazas básicas; la segunda añade manejo de plataformas móviles y otras reglas. No se reemplazó el archivo completo porque perdería soporte que las pruebas de ascensores necesitan.
 
 **Pendiente:** aislar por qué intro5 no inicia los probes/adaptadores de llegada después de activar el servidor; aislar la corrupción de memoria detectada al crear `C_InfoPlacementHelper`; repetir tres veces `intro5 -> intro6`; completar las fixtures de escenas, botones y transiciones inicial/final con el build final; y comprobar visualmente los mapas. Persisten warnings de shader de modelos y no hay una pasada interactiva completa. El capítulo aún no cumple el criterio de aceptación de “sin crashes ni bloqueos”.
+
+---
+
+# 69. Beta Portal 2 de 2010: recompilación y arranque ARM64 (2026-11-03)
+
+## Resultado comprobado
+
+- `scripts/build-macos-arm64.sh portal2` terminó correctamente (2m48.518s). Launcher, cliente y servidor son Mach-O ARM64. Se reutiliza el motor y gameplay experimental de este repositorio; no se han reconstruido las DLL originales de la beta.
+- Se añadió `scripts/stage-macos-portal2-beta.py` para el contenido suelto de `/Volumes/External-SSD-WDGreen/Games/Local/Portal_2_beta_2010_corehub_2/game`. El script de staging retail requiere VPK y no sirve directamente para este depot.
+- El staging nuevo es `/Volumes/External-SSD-WDGreen/Games/Local/Portal_2_beta_2010_corehub_2/portal2_arm64_verify`; se conservó `portal2_arm64_stage`, la prueba anterior, sin sobrescribirla. Los binarios i386 originales no se sustituyen. Las bibliotecas del staging enlazan al directorio de build y necesitan ese árbol y las dependencias locales de Homebrew.
+- La beta tiene `lightmappedgeneric_ps20b` VCS 6 con 64 combinaciones dinámicas; el renderer actual requiere 288. Se extrajeron 574 archivos de shaders/materiales compatibles desde `/Users/jesus/GameHub/steamapps/common/Portal/hl2/hl2_misc_dir.vpk`. Esta dimensión coincidente no garantiza todos los combos.
+- Los esquemas VGUI de Portal se extraen a un override. En el log de la prueba nueva hay **0** `KeyValues Error`, frente a los errores de `SourceScheme.res` del montaje anterior.
+- Se reutilizó `prepare-portal2-scenes.py`: convirtió **3.423 registros** VSIF 3 a VSIF 2 verificando VCD v4. En la prueba nueva no aparece `incompatible scene image`; esto no demuestra que todos los diálogos o eventos se reproduzcan.
+
+## Pruebas y evidencia
+
+`python3 scripts/tests-stage-macos-portal2-beta.py`: **4 pruebas OK**. Cubren VPK 1/2, preload, datos embebidos/externos, entradas raíz, rechazo de rutas inseguras, datos truncados y escapes mediante symlinks de salida. La extracción valida CRC y lee solo el rango requerido de los archivos externos.
+
+`python3 scripts/test-portal2-render.py .../portal2_arm64_verify --map sp_a1_intro1 --seconds 30 --screenshot` produjo:
+
+```text
+MAP LOAD FAIL: alive=True, server_active=True, shader_index_error=True
+```
+
+Evidencia conservada en `portal2_arm64_verify/diagnostics/20261103-151237-608673/`:
+
+- `engine.log:896`: `Host_NewGame map=sp_a1_intro1 background=0`.
+- `engine.log:980`: `SV_ActivateServer: setting tickrate to 66.7`.
+- `map.png`: habitación inicial visible con geometría, muebles y texturas; se ven paneles grises y una etiqueta de ayuda sin localizar. No es validación de portales, movimiento, campaña ni fidelidad gráfica.
+
+## Bloqueos pendientes
+
+- **Shaders:** dos errores para `lightmappedgeneric_ps20b`, combo `1586130048`, incluso con `dyn=288`. La selección del caché mejoró el montaje, pero no resolvió la compatibilidad completa del renderer/materiales.
+- **Partículas:** 62 mensajes `Unable to read particle definition`; una muestra del depot usa DMX binary 5. No se corrigió el decoder ni se sustituyeron silenciosamente por efectos de Portal 1.
+- **Diálogo/VScript:** faltan `GladosPlayVcd`, los datos `portal2_intro1_scenes.txt` y la escena de intro con id 0. Convertir `scenes.image` no reimplementa la lógica de la beta.
+- **Audio:** seis avisos `AUDIOQUEUE STARVED` durante la prueba de mapa.
+- **Salida automática:** `test-macos-portal2.sh` no recibió salida por `+quit` antes de 15 segundos y terminó el proceso. Una prueba anterior acotada a 35 segundos también agotó su plazo. La causa no está aislada; no se amplió el timeout para declarar éxito.
+- El contenido sigue montado mediante symlinks: **no es aislamiento de escritura garantizado por el sistema operativo**. El montaje nuevo copia `platform` para no compartir sus configuraciones y dirige las escrituras normales al override, pero no se auditó cada posible ruta de escritura del motor.
+
+**Siguiente prioridad:** aislar el despacho de `+quit` y el combo de shader ausente; después adaptar partículas y guiones de la beta con pruebas específicas. El resultado actual es un arranque ARM64 con render parcial, no una versión completa jugable de Portal 2 beta.
+
+---
+
+# 70. Primera etapa VGUI de la beta: esquemas originales (2026-11-03)
+
+## Cambios
+
+- El fallo se reprodujo contra la biblioteca `tier1` anterior: la prueba fallaba en `desktop is not GAMECONSOLE`. `KeyValues::ReadToken` separaba condiciones por espacios y `EvaluateConditional` solo buscaba subcadenas de plataforma, sin evaluar `&&`, `||` ni paréntesis.
+- Se corrigió `tier1/KeyValues.cpp`: conserva las condiciones completas, evalúa operadores con precedencia, reconoce `$GAMECONSOLE` y rechaza expresiones incompletas, desbordadas o con más de 64 niveles de anidamiento. Se conservan las selecciones existentes de `$WIN32`, `$WINDOWS`, `$OSX`, `$LINUX`, `$POSIX` y `$DECK`; los símbolos se comparan completos. El evaluador de VPC no se enlazó porque depende de una ABI más reciente de `KeyValuesSystem`.
+- `scripts/stage-macos-portal2-beta.py` ya no extrae los esquemas VGUI de Portal 1, no genera un `GameMenu.res` sustituto y no copia su mapa de fondo. Copia **sin modificar bytes** `SourceScheme.res`, `ClientScheme.res`, `basemodui_scheme.res` y `GameMenu.res` de la beta. `resource/VGUI_ORIGIN.txt` conserva sus hashes SHA-256 y procedencia.
+- La beta referencia `background_menu` pero no contiene ese BSP. El lanzador de menú usa `-nobackgroundlevel` y alias locales para las imágenes/materiales `background01` de la propia beta, incluidos los de pantalla ancha; no introduce un mapa o arte de Portal 1.
+- Montaje nuevo: `/Volumes/External-SSD-WDGreen/Games/Local/Portal_2_beta_2010_corehub_2/portal2_arm64_vgui`. Los montajes anteriores se conservaron, pero sus enlaces a `build` usan las bibliotecas recompiladas: **no son snapshots independientes del motor**.
+
+## Pruebas
+
+- `python3 waf build`: compilación/enlace ARM64 correctos (7.245 s).
+- `python3 scripts/tests-stage-macos-portal2-beta.py`: cinco pruebas correctas, incluida procedencia byte a byte de los cuatro recursos originales.
+- `sh scripts/test-keyvalues-condition.sh <archivos .res>` enlaza contra la implementación real de `build/tier1/libtier1.a`. Pasan condiciones simples, compuestas, precedencia, bloques, valores condicionados, texto entre comillas, expresiones malformadas y límite de profundidad. Los errores impresos por los casos deliberadamente inválidos son esperados.
+- Cargan sin errores sintácticos los cuatro recursos originales probados: SourceScheme, ClientScheme, basemodui_scheme y UI/basemodui/mainmenu. También se probaron tres recursos clásicos extraídos del VPK de Portal (ClientScheme, GameMenu y SourceScheme). Esto no sustituye una pasada completa de Portal/HL2 ni valida sus inclusiones `#base` con un filesystem real.
+- `python3 scripts/test-portal2-beta-vgui.py .../portal2_arm64_vgui`: `RESOURCE LOAD PASS`. Verifica hashes frente a los archivos originales, arranque vivo durante 20 s, log nuevo, cero errores de KeyValues y ausencia del fondo faltante; conserva una captura para revisión visual. **No es una prueba de interacción BaseModUI.**
+- Evidencia: `portal2_arm64_vgui/diagnostics/20261103-153049-vgui/{engine.log,report.json,menu.png}`. La captura muestra el arte de Aperture de la beta y los botones New Game, Matchmaking, Load Game, Developer Commentary, Achievements, Options y Quit; el texto tiene contraste limitado sobre ese fondo claro.
+- Prueba adicional con `-nobackgroundlevel +quit`: salida `0`, sin timeout de 15 s, registrada en `diagnostics/20261103-153156-quit/report.json`. No se declara resuelto el fallo anterior de salida con mapa de fondo: solo se verificó este modo sin fondo 3D.
+
+## Cómo repetir
+
+```bash
+cd /Volumes/External-SSD-WDGreen/source-engine/source
+python3 scripts/tests-stage-macos-portal2-beta.py
+sh scripts/test-keyvalues-condition.sh
+python3 scripts/test-portal2-beta-vgui.py \
+  /Volumes/External-SSD-WDGreen/Games/Local/Portal_2_beta_2010_corehub_2/portal2_arm64_vgui
+```
+
+Para la prueba interactiva, abrir `portal2_arm64_vgui/Menu-Portal2-Beta.command`.
+
+**Límite:** el backend que dibuja el menú sigue siendo GameUI clásico con los recursos de la beta; no se ha portado toda su pila BaseModUI ni se ha validado Matchmaking, opciones, guardado/carga o navegación de campaña. La lectura de `mainmenu.res` en la prueba de parser no implica que sus controles BaseModHybridButton estén instanciados. Los fallos de partículas, guiones y shaders del gameplay siguen fuera de esta etapa.
